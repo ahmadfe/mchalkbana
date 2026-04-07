@@ -548,12 +548,17 @@ export default function AdminPage() {
                         <td className="py-3 px-5">
                           <span className={clsx(
                             'px-2.5 py-1 rounded-full text-xs font-semibold',
-                            c.type === 'Risk1' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-700'
+                            c.type === 'Risk1' ? 'bg-blue-100 text-blue-800' :
+                            c.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
+                            c.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-700'
                           )}>
                             {c.type}
                           </span>
                         </td>
-                        <td className="py-3 px-5 text-gray-500">{c.vehicle === 'Car' ? '🚗 Bil' : '🏍️ Motorcykel'}</td>
+                        <td className="py-3 px-5 text-gray-500">
+                          {c.vehicle === 'Car' ? '🚗 Bil' : c.vehicle === 'Motorcycle' ? '🏍️ Motorcykel' : c.vehicle === 'Moped' ? '🛵 Moped' : c.vehicle}
+                        </td>
                         <td className="py-3 px-5 font-mono font-semibold text-swedish-blue">{c.behorighet}</td>
                         <td className="py-3 px-5 font-semibold">{c.price.toLocaleString('sv-SE')} kr</td>
                         <td className="py-3 px-5">
@@ -597,9 +602,12 @@ export default function AdminPage() {
                       <div className="flex items-center gap-4">
                         <div className={clsx(
                           'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                          s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+                          s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' :
+                          s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
+                          s.course?.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-600'
                         )}>
-                          {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
+                          {s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'AM' ? 'AM' : s.course?.type?.slice(0, 2) || '?'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -1055,6 +1063,9 @@ export default function AdminPage() {
                   <select className="input-field" value={newCourse.type} onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })}>
                     <option value="Risk1">Risk 1</option>
                     <option value="Risk2">Risk 2</option>
+                    <option value="AM">AM-kurs (Moped)</option>
+                    <option value="Intro">Introduktionskurs</option>
+                    <option value="Other">Övrigt</option>
                   </select>
                 </div>
                 <div>
@@ -1062,6 +1073,8 @@ export default function AdminPage() {
                   <select className="input-field" value={newCourse.vehicle} onChange={(e) => setNewCourse({ ...newCourse, vehicle: e.target.value })}>
                     <option value="Car">Bil</option>
                     <option value="Motorcycle">Motorcykel</option>
+                    <option value="Moped">Moped</option>
+                    <option value="Other">Övrigt</option>
                   </select>
                 </div>
                 <div>

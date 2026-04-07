@@ -245,9 +245,12 @@ export default function SchoolPage() {
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={clsx(
                             'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                            s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+                            s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' :
+                            s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
+                            s.course?.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-600'
                           )}>
-                            {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
+                            {s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'AM' ? 'AM' : s.course?.type?.slice(0, 2) || '?'}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900">{title}</p>
