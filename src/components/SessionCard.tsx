@@ -104,19 +104,12 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
             <button disabled className="bg-gray-100 text-gray-400 text-sm font-medium px-5 py-2 rounded-xl cursor-not-allowed">
               {t('sold_out')}
             </button>
-          ) : isLoggedIn ? (
+          ) : (
             <Link
               href={`/${locale}/checkout?session=${session.id}`}
               className="bg-swedish-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-blue-700 transition"
             >
               {t('book_session')}
-            </Link>
-          ) : (
-            <Link
-              href={`/${locale}/login`}
-              className="bg-gray-800 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-gray-700 transition"
-            >
-              {t('login_to_book')}
             </Link>
           )}
         </div>
