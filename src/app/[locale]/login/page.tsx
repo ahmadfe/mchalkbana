@@ -132,18 +132,8 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Demo credentials */}
-            <div className="mt-6 p-3 bg-blue-50 rounded-xl text-xs text-blue-700">
-              <p className="font-semibold mb-1">Demo-inloggning:</p>
-              <p>Elev: student@test.se / password123</p>
-              <p>Admin: admin@test.se / password123</p>
-            </div>
-
-            <p className="text-center text-sm text-gray-500 mt-6">
-              {t('no_account')}{' '}
-              <Link href={`/${locale}/register`} className="text-swedish-blue font-medium hover:underline">
-                {t('register_btn')}
-              </Link>
+            <p className="text-center text-xs text-gray-400 mt-6">
+              Inloggning för trafikskolor och administratörer
             </p>
           </div>
         </div>

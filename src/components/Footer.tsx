@@ -47,10 +47,7 @@ export default function Footer() {
                 <Link href={`${base}/courses`} className="hover:text-swedish-yellow transition-colors">Kurser</Link>
               </li>
               <li>
-                <Link href={`${base}/register`} className="hover:text-swedish-yellow transition-colors">Registrera</Link>
-              </li>
-              <li>
-                <Link href={`${base}/login`} className="hover:text-swedish-yellow transition-colors">Logga in</Link>
+                <Link href={`${base}/login`} className="hover:text-swedish-yellow transition-colors text-gray-500">För trafikskolor</Link>
               </li>
             </ul>
           </div>

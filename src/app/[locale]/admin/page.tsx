@@ -23,11 +23,13 @@ import {
   Lock,
   Save,
   FileText,
+  School,
+  EyeOff,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools';
 
 interface AdminStats {
   totalBookings: number;
@@ -82,26 +84,33 @@ export default function AdminPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
 
   const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
+  const [schoolAccounts, setSchoolAccounts] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
+  const [newSchoolAccount, setNewSchoolAccount] = useState({ name: '', email: '', password: '' });
+  const [schoolAccountError, setSchoolAccountError] = useState('');
+  const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
+  const [showSchoolPwd, setShowSchoolPwd] = useState(false);
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
       fetch('/api/admin/bookings'),
       fetch('/api/admin/settings?key=receipt_message'),
       fetch('/api/admin/schools'),
+      fetch('/api/admin/school-accounts'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
       bookingsRes.json(),
       msgRes.json(),
       schoolsRes.json(),
+      schoolAccountsRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
@@ -113,6 +122,7 @@ export default function AdminPage() {
     if (loadedSchools.length > 0) {
       setNewSession((prev) => ({ ...prev, schoolId: String(loadedSchools[0].id) }));
     }
+    setSchoolAccounts(schoolAccountsData.accounts || []);
     setLoading(false);
   }, []);
 
@@ -127,6 +137,7 @@ export default function AdminPage() {
     { id: 'courses', label: t('manage_courses'), icon: <BookOpen className="w-4 h-4" /> },
     { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
+    { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
   ];
 
   const handleDeleteCourse = async (id: number) => {
@@ -195,6 +206,36 @@ export default function AdminPage() {
     setMessageSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleCreateSchoolAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSchoolAccountError('');
+    setSchoolAccountSaving(true);
+    const res = await fetch('/api/admin/school-accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSchoolAccount),
+    });
+    const data = await res.json();
+    setSchoolAccountSaving(false);
+    if (!res.ok) {
+      setSchoolAccountError(data.error || 'Något gick fel');
+      return;
+    }
+    setSchoolAccounts((prev) => [data.account, ...prev]);
+    setNewSchoolAccount({ name: '', email: '', password: '' });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleDeleteSchoolAccount = async (id: number) => {
+    await fetch('/api/admin/school-accounts', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleViewStudents = async (sessionId: number) => {
@@ -588,6 +629,109 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* School Accounts */}
+          {tab === 'schools' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Create form */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <School className="w-5 h-5 text-swedish-blue" />
+                  <h2 className="font-bold text-gray-900">Skapa trafikskola-konto</h2>
+                </div>
+                {schoolAccountError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+                    {schoolAccountError}
+                  </div>
+                )}
+                <form className="space-y-4" onSubmit={handleCreateSchoolAccount}>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Trafikskolans namn</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="Uppsala Trafikskola AB"
+                      value={newSchoolAccount.name}
+                      onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress</label>
+                    <input
+                      type="email"
+                      className="input-field"
+                      placeholder="skola@example.se"
+                      value={newSchoolAccount.email}
+                      onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Lösenord</label>
+                    <div className="relative">
+                      <input
+                        type={showSchoolPwd ? 'text' : 'password'}
+                        className="input-field pr-10"
+                        placeholder="Minst 8 tecken"
+                        value={newSchoolAccount.password}
+                        onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, password: e.target.value })}
+                        required
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSchoolPwd(!showSchoolPwd)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showSchoolPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={schoolAccountSaving}
+                    className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {schoolAccountSaving ? (
+                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skapar...</>
+                    ) : (
+                      <><Plus className="w-4 h-4" />Skapa konto</>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Existing accounts */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Befintliga trafikskolor ({schoolAccounts.length})</h2>
+                {schoolAccounts.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <School className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                    <p className="text-sm">Inga trafikskola-konton ännu.</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {schoolAccounts.map((acc) => (
+                      <li key={acc.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{acc.name}</p>
+                          <p className="text-xs text-gray-500">{acc.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteSchoolAccount(acc.id)}
+                          className="text-gray-400 hover:text-red-500 transition p-1"
+                          title="Ta bort konto"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           )}
