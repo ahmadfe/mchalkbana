@@ -16,8 +16,8 @@ export interface School {
   contactEmail: string;
 }
 
-export type CourseType = 'Risk1' | 'Risk2';
-export type VehicleType = 'Car' | 'Motorcycle';
+export type CourseType = 'Risk1' | 'Risk2' | 'AM' | 'Intro' | 'Other';
+export type VehicleType = 'Car' | 'Motorcycle' | 'Moped' | 'Other';
 
 export interface Course {
   id: number;
