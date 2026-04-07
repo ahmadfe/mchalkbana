@@ -97,7 +97,7 @@ export default function AdminPage() {
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -197,7 +197,7 @@ export default function AdminPage() {
       const data = await res.json();
       setSessions((prev) => [...prev, data.session]);
       setShowAddSession(false);
-      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
+      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -1023,12 +1023,26 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Synlighet</label>
-                  <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value })}>
+                  <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value, assignedSchoolUserId: '' })}>
                     <option value="public">Offentlig</option>
                     <option value="school">Skolkonto</option>
                   </select>
                 </div>
               </div>
+              {newSession.visibility === 'school' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tilldela trafikskola</label>
+                  <select className="input-field" value={newSession.assignedSchoolUserId} onChange={(e) => setNewSession({ ...newSession, assignedSchoolUserId: e.target.value })} required>
+                    <option value="">Välj trafikskola...</option>
+                    {schoolAccounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                    ))}
+                  </select>
+                  {schoolAccounts.length === 0 && (
+                    <p className="text-xs text-orange-500 mt-1">Inga trafikskola-konton skapade ännu. Gå till fliken Trafikskolor.</p>
+                  )}
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
                   Avbryt

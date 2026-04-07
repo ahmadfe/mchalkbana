@@ -9,27 +9,42 @@ export async function GET(request: Request) {
   const availableOnly = searchParams.get('availableOnly') === 'true';
   const includeSchool = searchParams.get('includeSchool') === 'true';
 
-  // Determine if the requester is a school account
-  let isSchool = false;
+  let authUser = null;
   if (includeSchool) {
-    const authUser = await getAuthUserFromRequest(request);
-    isSchool = authUser?.role === 'school' || authUser?.role === 'admin';
+    authUser = await getAuthUserFromRequest(request);
+  }
+
+  const isAdmin = authUser?.role === 'admin';
+  const isSchool = authUser?.role === 'school';
+
+  let visibilityFilter = {};
+
+  if (isAdmin) {
+    // Admin sees everything
+    visibilityFilter = {};
+  } else if (isSchool) {
+    // School sees public + sessions specifically assigned to them
+    visibilityFilter = {
+      OR: [
+        { visibility: 'public' },
+        { visibility: 'school', assignedSchoolUserId: authUser!.userId },
+      ],
+    };
+  } else {
+    // Public: only public sessions
+    visibilityFilter = { visibility: 'public' };
   }
 
   const sessions = await prisma.session.findMany({
     where: {
-      // Only show school sessions to school/admin accounts
-      ...(isSchool ? {} : { visibility: 'public' }),
+      ...visibilityFilter,
       ...(availableOnly ? { seatsAvailable: { gt: 0 } } : {}),
       course: {
         ...(type ? { type } : {}),
         ...(vehicle ? { vehicle } : {}),
       },
     },
-    include: {
-      course: true,
-      school: true,
-    },
+    include: { course: true, school: true },
     orderBy: { startTime: 'asc' },
   });
 

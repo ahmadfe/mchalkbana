@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { courseId, schoolId, startTime, endTime, seatLimit, visibility } = await request.json();
+  const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserId } = await request.json();
   if (!courseId || !startTime || !endTime || !seatLimit) {
     return NextResponse.json({ error: 'Obligatoriska fält saknas' }, { status: 400 });
   }
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
       seatLimit: seats,
       seatsAvailable: seats,
       visibility: visibility || 'public',
+      assignedSchoolUserId: visibility === 'school' && assignedSchoolUserId ? parseInt(assignedSchoolUserId) : null,
     },
     include: { course: true, school: true },
   });
