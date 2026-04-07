@@ -62,6 +62,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
       location: booking.session.school?.name || '',
       price: booking.session.course.price,
+      startTimeIso: booking.session.startTime,
+      endTimeIso: booking.session.endTime,
       personnummer: booking.personnummer,
       phone: booking.guestPhone,
       customMessage,

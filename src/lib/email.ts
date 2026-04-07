@@ -1,4 +1,4 @@
-interface InvoiceEmailData {
+interface ReceiptEmailData {
   recipientEmail: string;
   recipientName: string;
   bookingId: number;
@@ -7,120 +7,155 @@ interface InvoiceEmailData {
   courseDate: string;
   courseTime: string;
   location: string;
-  price: number;
+  price: number; // total inkl. 25% moms
+  startTimeIso: string; // for Google Calendar
+  endTimeIso: string;   // for Google Calendar
   personnummer?: string | null;
   phone?: string | null;
   customMessage?: string;
 }
 
-function buildInvoiceHtml(data: InvoiceEmailData): string {
-  const invoiceNumber = `UH-${new Date().getFullYear()}-${String(data.bookingId).padStart(5, '0')}`;
+function toGCalDate(iso: string): string {
+  // Format: YYYYMMDDTHHmmssZ
+  return new Date(iso).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+}
+
+function buildReceiptHtml(data: ReceiptEmailData): string {
+  const receiptNumber = `UH-${new Date().getFullYear()}-${String(data.bookingId).padStart(5, '0')}`;
   const issuedDate = new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  // VAT breakdown (price is total inkl. 25% moms)
+  const priceExVat = Math.round(data.price / 1.25);
+  const vatAmount = data.price - priceExVat;
+
+  // Google Calendar URL
+  const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE`
+    + `&text=${encodeURIComponent('Uppsala Halkbana – ' + data.courseName)}`
+    + `&dates=${toGCalDate(data.startTimeIso)}/${toGCalDate(data.endTimeIso)}`
+    + `&details=${encodeURIComponent('Boknings-ID: #' + data.bookingId + '\nKvitto: ' + receiptNumber)}`
+    + `&location=${encodeURIComponent(data.location + ', Uppsala')}`;
 
   return `
 <!DOCTYPE html>
 <html lang="sv">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif;">
-  <div style="max-width:620px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
 
     <!-- Header -->
-    <div style="background:#003DA5;padding:28px 32px;display:flex;justify-content:space-between;align-items:flex-start;">
-      <div>
-        <h1 style="color:#FCD116;margin:0;font-size:20px;font-weight:700;letter-spacing:-0.3px;">Uppsala Halkbana</h1>
-        <p style="color:#93c5fd;margin:4px 0 0;font-size:12px;">Industrigatan 12, 753 30 Uppsala</p>
-        <p style="color:#93c5fd;margin:2px 0 0;font-size:12px;">info@ihalka.se · 018-123 45 67</p>
-      </div>
-      <div style="text-align:right;">
-        <p style="color:#fff;margin:0;font-size:18px;font-weight:700;">FAKTURA</p>
-        <p style="color:#93c5fd;margin:4px 0 0;font-size:12px;">${invoiceNumber}</p>
-      </div>
+    <div style="background:#003DA5;border-radius:12px 12px 0 0;padding:32px;text-align:center;">
+      <h1 style="color:#FCD116;margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Uppsala Halkbana</h1>
+      <p style="color:#93c5fd;margin:0;font-size:13px;">Riskutbildning – Godkänd av Transportstyrelsen</p>
     </div>
 
-    <!-- Invoice meta -->
-    <div style="padding:24px 32px 0;display:flex;justify-content:space-between;border-bottom:1px solid #f3f4f6;padding-bottom:20px;">
-      <div>
-        <p style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Faktura till</p>
-        <p style="color:#111827;font-size:15px;font-weight:600;margin:0;">${data.recipientName}</p>
-        ${data.personnummer ? `<p style="color:#6b7280;font-size:13px;margin:2px 0 0;">${data.personnummer}</p>` : ''}
-        ${data.phone ? `<p style="color:#6b7280;font-size:13px;margin:2px 0 0;">${data.phone}</p>` : ''}
-        <p style="color:#6b7280;font-size:13px;margin:2px 0 0;">${data.recipientEmail}</p>
-      </div>
-      <div style="text-align:right;">
-        <p style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 4px;">Fakturadatum</p>
-        <p style="color:#111827;font-size:13px;font-weight:600;margin:0;">${issuedDate}</p>
-        <p style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 4px;">Boknings-ID</p>
-        <p style="color:#111827;font-size:13px;font-weight:600;margin:0;">#${data.bookingId}</p>
-      </div>
+    <!-- Status banner -->
+    <div style="background:#16a34a;padding:16px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:16px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BETALNING BEKRÄFTAD</p>
     </div>
 
-    <!-- Line items -->
-    <div style="padding:24px 32px;">
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead>
-          <tr style="border-bottom:2px solid #e5e7eb;">
-            <th style="text-align:left;color:#6b7280;font-weight:600;padding:0 0 10px;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;">Tjänst</th>
-            <th style="text-align:left;color:#6b7280;font-weight:600;padding:0 0 10px;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;">Datum</th>
-            <th style="text-align:left;color:#6b7280;font-weight:600;padding:0 0 10px;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;">Plats</th>
-            <th style="text-align:right;color:#6b7280;font-weight:600;padding:0 0 10px;text-transform:uppercase;font-size:11px;letter-spacing:0.5px;">Belopp</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding:14px 0;color:#111827;font-weight:600;">${data.courseName}</td>
-            <td style="padding:14px 0;color:#374151;">${data.courseDate}<br/><span style="color:#6b7280;font-size:12px;">kl. ${data.courseTime}</span></td>
-            <td style="padding:14px 0;color:#374151;">${data.location}</td>
-            <td style="padding:14px 0;color:#111827;font-weight:700;text-align:right;">${data.price.toLocaleString('sv-SE')} kr</td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Body -->
+    <div style="background:#fff;padding:32px;">
 
-      <!-- Total -->
-      <div style="border-top:2px solid #003DA5;margin-top:8px;padding-top:16px;display:flex;justify-content:flex-end;">
-        <table style="font-size:13px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Tack för din bokning! Nedan hittar du ditt kvitto.</p>
+
+      <!-- Receipt meta -->
+      <div style="display:flex;justify-content:space-between;margin-bottom:24px;">
+        <div>
+          <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3px;">Kvittonummer</p>
+          <p style="color:#111827;font-size:14px;font-weight:700;margin:0;">${receiptNumber}</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3px;">Datum</p>
+          <p style="color:#111827;font-size:14px;font-weight:600;margin:0;">${issuedDate}</p>
+        </div>
+      </div>
+
+      <!-- Course details card -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;">Kursdetaljer</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr>
-            <td style="color:#6b7280;padding:4px 24px 4px 0;">Delsumma (inkl. moms):</td>
-            <td style="color:#111827;font-weight:600;text-align:right;">${data.price.toLocaleString('sv-SE')} kr</td>
+            <td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td>
+            <td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td>
           </tr>
           <tr>
-            <td style="color:#111827;font-weight:700;font-size:15px;padding:8px 24px 0 0;">Totalt betalt:</td>
-            <td style="color:#003DA5;font-weight:700;font-size:16px;text-align:right;padding-top:8px;">${data.price.toLocaleString('sv-SE')} kr</td>
+            <td style="color:#6b7280;padding:5px 0;">Datum</td>
+            <td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Tid</td>
+            <td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Plats</td>
+            <td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td>
+          </tr>
+          ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
+          ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Boknings-ID</td>
+            <td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td>
           </tr>
         </table>
       </div>
 
-      <!-- Status badge -->
-      <div style="margin-top:20px;text-align:center;">
-        <span style="display:inline-block;background:#dcfce7;color:#166534;font-weight:700;font-size:13px;padding:8px 20px;border-radius:20px;letter-spacing:0.3px;">✓ BETALD</span>
+      <!-- Price breakdown -->
+      <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-bottom:24px;">
+        <table style="width:100%;font-size:14px;">
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Pris exkl. moms</td>
+            <td style="color:#374151;text-align:right;">${priceExVat.toLocaleString('sv-SE')} kr</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Moms (25%)</td>
+            <td style="color:#374151;text-align:right;">${vatAmount.toLocaleString('sv-SE')} kr</td>
+          </tr>
+          <tr style="border-top:2px solid #003DA5;">
+            <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">Totalt betalt</td>
+            <td style="color:#003DA5;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
+          </tr>
+        </table>
       </div>
 
       ${data.customMessage ? `
-      <!-- Custom message -->
-      <div style="border-left:4px solid #003DA5;padding:12px 16px;background:#eff6ff;border-radius:0 8px 8px 0;margin-top:24px;">
+      <div style="border-left:4px solid #003DA5;padding:12px 16px;background:#eff6ff;border-radius:0 8px 8px 0;margin-bottom:24px;">
         <p style="margin:0;color:#1e40af;font-size:14px;">${data.customMessage}</p>
       </div>
       ` : ''}
+
+      <!-- Google Calendar button -->
+      <div style="text-align:center;margin-top:8px;">
+        <a href="${gcalUrl}" target="_blank"
+          style="display:inline-block;background:#003DA5;color:#fff;font-weight:700;font-size:14px;padding:14px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+          📅 &nbsp;Lägg till i Google Kalender
+        </a>
+        <p style="color:#9ca3af;font-size:12px;margin:10px 0 0;">Klicka på knappen för att spara kursdatumet i din kalender.</p>
+      </div>
+
     </div>
 
     <!-- Footer -->
-    <div style="background:#f9fafb;padding:20px 32px;border-top:1px solid #f3f4f6;">
-      <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">Uppsala Halkbana · Industrigatan 12, 753 30 Uppsala</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;text-align:center;">info@ihalka.se · 018-123 45 67</p>
-      <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;text-align:center;">Transaktions-ID: ${data.transactionId}</p>
+    <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Industrigatan 12, 753 30 Uppsala</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 018-123 45 67</p>
+      <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Transaktions-ID: ${data.transactionId}</p>
+      <p style="color:#d1d5db;font-size:11px;margin:4px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
+
   </div>
 </body>
 </html>`;
 }
 
-export async function sendReceiptEmail(data: InvoiceEmailData): Promise<void> {
+export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.log('[Email] No RESEND_API_KEY set — skipping invoice for booking #' + data.bookingId);
+    console.log('[Email] No RESEND_API_KEY set — skipping receipt for booking #' + data.bookingId);
     return;
   }
 
-  const invoiceNumber = `UH-${new Date().getFullYear()}-${String(data.bookingId).padStart(5, '0')}`;
+  const receiptNumber = `UH-${new Date().getFullYear()}-${String(data.bookingId).padStart(5, '0')}`;
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -132,8 +167,8 @@ export async function sendReceiptEmail(data: InvoiceEmailData): Promise<void> {
       body: JSON.stringify({
         from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.recipientEmail],
-        subject: `Faktura ${invoiceNumber} – Uppsala Halkbana`,
-        html: buildInvoiceHtml(data),
+        subject: `Kvitto ${receiptNumber} – Din bokning är bekräftad`,
+        html: buildReceiptHtml(data),
       }),
     });
 
@@ -141,9 +176,9 @@ export async function sendReceiptEmail(data: InvoiceEmailData): Promise<void> {
       const err = await res.text();
       console.error('[Email] Resend error:', err);
     } else {
-      console.log('[Email] Invoice sent to', data.recipientEmail, 'for booking #' + data.bookingId);
+      console.log('[Email] Receipt sent to', data.recipientEmail, 'for booking #' + data.bookingId);
     }
   } catch (err) {
-    console.error('[Email] Failed to send invoice:', err);
+    console.error('[Email] Failed to send receipt:', err);
   }
 }
