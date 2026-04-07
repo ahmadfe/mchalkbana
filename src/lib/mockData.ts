@@ -13,6 +13,7 @@ export const mockCourses: Course[] = [
     description: 'Teoretisk utbildning om alkohol, droger och trötthet i trafiken.',
     type: 'Risk1',
     vehicle: 'Car',
+    behorighet: 'B',
     price: 1500,
   },
   {
@@ -22,6 +23,7 @@ export const mockCourses: Course[] = [
     description: 'Praktisk körning på halkbana – lär dig hantera bilen i svåra vägförhållanden.',
     type: 'Risk2',
     vehicle: 'Car',
+    behorighet: 'B',
     price: 2500,
   },
   {
@@ -31,6 +33,7 @@ export const mockCourses: Course[] = [
     description: 'Teoretisk riskutbildning för motorcykelförare.',
     type: 'Risk1',
     vehicle: 'Motorcycle',
+    behorighet: 'A',
     price: 1500,
   },
   {
@@ -40,6 +43,7 @@ export const mockCourses: Course[] = [
     description: 'Praktisk körning på halkbana för motorcykelförare.',
     type: 'Risk2',
     vehicle: 'Motorcycle',
+    behorighet: 'A',
     price: 2800,
   },
 ];
@@ -55,6 +59,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-10T12:00:00',
     seatLimit: 20,
     seatsAvailable: 8,
+    visibility: 'public',
   },
   {
     id: 2,
@@ -66,6 +71,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-12T16:00:00',
     seatLimit: 15,
     seatsAvailable: 3,
+    visibility: 'public',
   },
   {
     id: 3,
@@ -77,6 +83,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-15T17:00:00',
     seatLimit: 12,
     seatsAvailable: 0,
+    visibility: 'public',
   },
   {
     id: 4,
@@ -88,6 +95,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-18T14:00:00',
     seatLimit: 10,
     seatsAvailable: 6,
+    visibility: 'public',
   },
   {
     id: 5,
@@ -99,6 +107,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-22T12:00:00',
     seatLimit: 20,
     seatsAvailable: 15,
+    visibility: 'public',
   },
   {
     id: 6,
@@ -110,6 +119,7 @@ export const mockSessions: Session[] = [
     endTime: '2026-04-25T16:00:00',
     seatLimit: 15,
     seatsAvailable: 11,
+    visibility: 'public',
   },
 ];
 
