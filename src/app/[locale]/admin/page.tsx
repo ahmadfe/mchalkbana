@@ -104,6 +104,11 @@ export default function AdminPage() {
   const [groupSaving, setGroupSaving] = useState(false);
   const [groupError, setGroupError] = useState('');
 
+  // Test email
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [testEmailStatus, setTestEmailStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
+  const [testEmailError, setTestEmailError] = useState('');
+
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
 
@@ -149,6 +154,24 @@ export default function AdminPage() {
     if (!authLoading && user?.role !== 'admin') { router.push(`/${locale}/dashboard`); return; }
     if (user?.role === 'admin') loadData();
   }, [user, authLoading, locale, router, loadData]);
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTestEmailStatus('sending');
+    setTestEmailError('');
+    const res = await fetch('/api/admin/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: testEmailTo }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setTestEmailStatus('error');
+      setTestEmailError(data.error || 'Något gick fel');
+    } else {
+      setTestEmailStatus('ok');
+    }
+  };
 
   const handleAddGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -458,6 +481,42 @@ export default function AdminPage() {
                     {messageSaving ? 'Sparar...' : 'Spara meddelande'}
                   </button>
                 </div>
+              </div>
+
+              {/* Test email */}
+              <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-swedish-blue" />
+                  <h2 className="font-bold text-gray-900">Testa e-postutskick</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-3">Skicka ett testmail för att verifiera att Resend och domänen är korrekt konfigurerade.</p>
+                {testEmailStatus === 'ok' && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3 mb-3">
+                    ✓ Testmail skickat! Kolla inkorgen för <strong>{testEmailTo}</strong>.
+                  </div>
+                )}
+                {testEmailStatus === 'error' && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-3">
+                    <strong>Fel:</strong> {testEmailError}
+                  </div>
+                )}
+                <form onSubmit={handleSendTestEmail} className="flex gap-3">
+                  <input
+                    type="email"
+                    required
+                    className="input-field flex-1"
+                    placeholder="din@email.se"
+                    value={testEmailTo}
+                    onChange={(e) => { setTestEmailTo(e.target.value); setTestEmailStatus('idle'); }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={testEmailStatus === 'sending'}
+                    className="btn-primary px-5 py-2 text-sm whitespace-nowrap disabled:opacity-60"
+                  >
+                    {testEmailStatus === 'sending' ? 'Skickar...' : 'Skicka test'}
+                  </button>
+                </form>
               </div>
 
               {/* Recent bookings table */}
