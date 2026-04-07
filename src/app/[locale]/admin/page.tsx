@@ -46,6 +46,7 @@ interface StudentRecord {
   personnummer: string;
   phone: string;
   email: string;
+  bookedBySchool: string | null;
 }
 
 interface SessionStudentsData {
@@ -53,6 +54,8 @@ interface SessionStudentsData {
     id: number;
     startTime: string;
     endTime: string;
+    seatLimit: number;
+    seatsAvailable: number;
     course: Course;
     school: { name: string };
   };
@@ -82,6 +85,10 @@ export default function AdminPage() {
   // Session students modal
   const [studentsData, setStudentsData] = useState<SessionStudentsData | null>(null);
   const [studentsLoading, setStudentsLoading] = useState(false);
+  const [addStudentForm, setAddStudentForm] = useState({ name: '', personnummer: '', phone: '', email: '' });
+  const [addStudentError, setAddStudentError] = useState('');
+  const [addStudentSaving, setAddStudentSaving] = useState(false);
+  const [showAddStudent, setShowAddStudent] = useState(false);
 
   const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
   const [schoolAccounts, setSchoolAccounts] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
@@ -236,6 +243,35 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentsData) return;
+    setAddStudentError('');
+    setAddStudentSaving(true);
+    const res = await fetch(`/api/admin/bookings/${studentsData.session.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addStudentForm),
+    });
+    const data = await res.json();
+    setAddStudentSaving(false);
+    if (!res.ok) { setAddStudentError(data.error || 'Något gick fel'); return; }
+    // Reload students
+    const updated = await fetch(`/api/admin/sessions/${studentsData.session.id}/students`);
+    const updatedData = await updated.json();
+    setStudentsData(updatedData);
+    setAddStudentForm({ name: '', personnummer: '', phone: '', email: '' });
+    setShowAddStudent(false);
+  };
+
+  const handleDeleteStudent = async (bookingId: number) => {
+    if (!studentsData) return;
+    await fetch(`/api/admin/bookings/${bookingId}`, { method: 'DELETE' });
+    const updated = await fetch(`/api/admin/sessions/${studentsData.session.id}/students`);
+    const updatedData = await updated.json();
+    setStudentsData(updatedData);
   };
 
   const handleViewStudents = async (sessionId: number) => {
@@ -741,36 +777,69 @@ export default function AdminPage() {
       {/* Session Students Modal */}
       {(studentsData || studentsLoading) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-bold text-lg">
-                  {studentsData ? `Elever – ${locale === 'sv' ? studentsData.session.course.titleSv : studentsData.session.course.titleEn}` : 'Laddar...'}
+                  {studentsData ? `${locale === 'sv' ? studentsData.session.course.titleSv : studentsData.session.course.titleEn}` : 'Laddar...'}
                 </h3>
                 {studentsData && (
                   <p className="text-sm text-gray-500 mt-0.5">
-                    {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE')} · {studentsData.session.school.name}
+                    {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE')} · {studentsData.session.school.name} · {studentsData.students.length}/{studentsData.session.seatLimit} platser
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 {studentsData && studentsData.students.length > 0 && (
-                  <button
-                    onClick={() => exportXml(studentsData)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-blue-700 transition"
-                  >
-                    <Download className="w-4 h-4" />
-                    Exportera XML
+                  <button onClick={() => exportXml(studentsData)} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-blue-700 transition">
+                    <Download className="w-4 h-4" />Exportera XML
                   </button>
                 )}
-                <button
-                  onClick={() => { setStudentsData(null); setStudentsLoading(false); }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
+                {studentsData && (
+                  <button
+                    onClick={() => { setShowAddStudent(!showAddStudent); setAddStudentError(''); }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  >
+                    <Plus className="w-4 h-4" />Lägg till elev
+                  </button>
+                )}
+                <button onClick={() => { setStudentsData(null); setStudentsLoading(false); setShowAddStudent(false); }} className="text-gray-400 hover:text-gray-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
+
+            {/* Add student form */}
+            {showAddStudent && studentsData && (
+              <form onSubmit={handleAddStudent} className="bg-gray-50 rounded-xl p-4 mb-4 grid grid-cols-2 gap-3">
+                {addStudentError && (
+                  <div className="col-span-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addStudentError}</div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Namn *</label>
+                  <input type="text" className="input-field text-sm" placeholder="Anna Svensson" value={addStudentForm.name} onChange={(e) => setAddStudentForm({ ...addStudentForm, name: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Personnummer *</label>
+                  <input type="text" className="input-field text-sm" placeholder="YYYYMMDD-XXXX" value={addStudentForm.personnummer} onChange={(e) => setAddStudentForm({ ...addStudentForm, personnummer: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Telefon</label>
+                  <input type="text" className="input-field text-sm" placeholder="070-000 00 00" value={addStudentForm.phone} onChange={(e) => setAddStudentForm({ ...addStudentForm, phone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">E-post</label>
+                  <input type="email" className="input-field text-sm" placeholder="elev@example.se" value={addStudentForm.email} onChange={(e) => setAddStudentForm({ ...addStudentForm, email: e.target.value })} />
+                </div>
+                <div className="col-span-2 flex gap-2 justify-end">
+                  <button type="button" onClick={() => setShowAddStudent(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100">Avbryt</button>
+                  <button type="submit" disabled={addStudentSaving} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2">
+                    {addStudentSaving ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</> : 'Lägg till'}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {studentsLoading && (
               <div className="flex-1 flex items-center justify-center py-12">
@@ -794,7 +863,9 @@ export default function AdminPage() {
                         <th className="text-left py-3 px-4">Personnummer</th>
                         <th className="text-left py-3 px-4">Telefon</th>
                         <th className="text-left py-3 px-4">E-post</th>
+                        <th className="text-left py-3 px-4">Bokad av</th>
                         <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -802,18 +873,29 @@ export default function AdminPage() {
                         <tr key={s.bookingId} className="hover:bg-gray-50">
                           <td className="py-2.5 px-4 text-gray-400">{i + 1}</td>
                           <td className="py-2.5 px-4 font-medium">{s.name}</td>
-                          <td className="py-2.5 px-4 font-mono text-xs text-gray-600">{s.personnummer}</td>
-                          <td className="py-2.5 px-4 text-gray-500">{s.phone}</td>
+                          <td className="py-2.5 px-4 font-mono text-xs text-gray-700">{s.personnummer}</td>
+                          <td className="py-2.5 px-4 text-gray-500 text-xs">{s.phone}</td>
                           <td className="py-2.5 px-4 text-gray-500 text-xs">{s.email}</td>
+                          <td className="py-2.5 px-4 text-xs">
+                            {s.bookedBySchool ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
+                                <School className="w-3 h-3" />{s.bookedBySchool}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">Elev</span>
+                            )}
+                          </td>
                           <td className="py-2.5 px-4">
-                            <span className={clsx(
-                              'px-2 py-0.5 rounded-full text-xs font-semibold',
+                            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-semibold',
                               s.status === 'Paid' ? 'bg-green-100 text-green-700' :
                               s.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
                               'bg-yellow-100 text-yellow-700'
-                            )}>
-                              {s.status}
-                            </span>
+                            )}>{s.status}</span>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-gray-300 hover:text-red-500 transition" title="Ta bort">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -821,7 +903,7 @@ export default function AdminPage() {
                   </table>
                 )}
                 <p className="text-xs text-gray-400 mt-4 text-right">
-                  Totalt: {studentsData.students.length} elev{studentsData.students.length !== 1 ? 'er' : ''}
+                  Totalt: {studentsData.students.length} elev{studentsData.students.length !== 1 ? 'er' : ''} · {studentsData.session.seatsAvailable} platser kvar
                 </p>
               </div>
             )}

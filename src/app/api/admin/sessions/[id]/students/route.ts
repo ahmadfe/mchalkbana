@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       bookings: {
         where: { status: { not: 'Canceled' } },
         include: {
-          user: { select: { name: true, email: true, phone: true } },
+          user: { select: { name: true, email: true, phone: true, role: true } },
         },
         orderBy: { bookingTime: 'asc' },
       },
@@ -27,7 +27,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
 
-  // Normalize each booking to a flat student record
   const students = session.bookings.map((b) => ({
     bookingId: b.id,
     status: b.status,
@@ -36,6 +35,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     personnummer: b.personnummer || '–',
     phone: b.guestPhone || b.user?.phone || '–',
     email: b.guestEmail || b.user?.email || '–',
+    bookedBySchool: b.user?.role === 'school' ? b.user.name : null,
   }));
 
   return NextResponse.json({
@@ -43,6 +43,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       id: session.id,
       startTime: session.startTime,
       endTime: session.endTime,
+      seatLimit: session.seatLimit,
+      seatsAvailable: session.seatsAvailable,
       course: session.course,
       school: session.school,
     },
