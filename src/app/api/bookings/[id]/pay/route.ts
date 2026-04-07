@@ -9,7 +9,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { session: { include: { course: true, school: true } } },
+    include: {
+      session: { include: { course: true, school: true } },
+      user: { select: { name: true, email: true } },
+    },
   });
 
   if (!booking) return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
@@ -38,16 +41,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }),
   ]);
 
-  // Determine recipient email and name
-  const recipientEmail = booking.guestEmail || null;
-  const recipientName = booking.guestName || 'Kund';
+  // Resolve recipient — prefer guest fields, fall back to logged-in user
+  const recipientEmail = booking.guestEmail || booking.user?.email || null;
+  const recipientName = booking.guestName || booking.user?.name || 'Kund';
 
   if (recipientEmail) {
-    // Fetch custom message from settings
     const setting = await prisma.settings.findUnique({ where: { key: 'receipt_message' } });
     const customMessage = setting?.value || '';
 
     const start = new Date(booking.session.startTime);
+    const end = new Date(booking.session.endTime);
+
     await sendReceiptEmail({
       recipientEmail,
       recipientName,
@@ -55,13 +59,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
       transactionId,
       courseName: booking.session.course.titleSv,
       courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-      courseTime: start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }),
+      courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
       location: booking.session.school?.name || '',
       price: booking.session.course.price,
       personnummer: booking.personnummer,
       phone: booking.guestPhone,
       customMessage,
     });
+  } else {
+    console.warn('[Pay] No email address found for booking #' + bookingId + ' — skipping invoice email');
   }
 
   return NextResponse.json({ bookingId, transactionId });
