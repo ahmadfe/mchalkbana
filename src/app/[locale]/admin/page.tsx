@@ -18,6 +18,11 @@ import {
   Trash2,
   X,
   CheckCircle2,
+  Eye,
+  Globe,
+  Lock,
+  Save,
+  FileText,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -29,6 +34,27 @@ interface AdminStats {
   revenue: number;
   upcomingSessions: number;
   totalStudents: number;
+}
+
+interface StudentRecord {
+  bookingId: number;
+  status: string;
+  bookingTime: string;
+  name: string;
+  personnummer: string;
+  phone: string;
+  email: string;
+}
+
+interface SessionStudentsData {
+  session: {
+    id: number;
+    startTime: string;
+    endTime: string;
+    course: Course;
+    school: { name: string };
+  };
+  students: StudentRecord[];
 }
 
 export default function AdminPage() {
@@ -47,29 +73,38 @@ export default function AdminPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // New course form state
-  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', price: '' });
-  // New session form state
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20' });
+  // Custom receipt message
+  const [receiptMessage, setReceiptMessage] = useState('');
+  const [messageSaving, setMessageSaving] = useState(false);
+
+  // Session students modal
+  const [studentsData, setStudentsData] = useState<SessionStudentsData | null>(null);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+
+  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
       fetch('/api/admin/bookings'),
+      fetch('/api/admin/settings?key=receipt_message'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
       bookingsRes.json(),
+      msgRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
     setSessions(sessionsData.sessions || []);
     setBookings(bookingsData.bookings || []);
+    setReceiptMessage(msgData.value || '');
     setLoading(false);
   }, []);
 
@@ -96,6 +131,18 @@ export default function AdminPage() {
     setSessions((prev) => prev.filter((s) => s.id !== id));
   };
 
+  const handleToggleVisibility = async (session: Session) => {
+    const newVisibility = session.visibility === 'public' ? 'school' : 'public';
+    const res = await fetch(`/api/admin/sessions/${session.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibility: newVisibility }),
+    });
+    if (res.ok) {
+      setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, visibility: newVisibility } : s));
+    }
+  };
+
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await fetch('/api/admin/courses', {
@@ -107,7 +154,7 @@ export default function AdminPage() {
       const data = await res.json();
       setCourses((prev) => [...prev, data.course]);
       setShowAddCourse(false);
-      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', price: '' });
+      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -124,20 +171,63 @@ export default function AdminPage() {
       const data = await res.json();
       setSessions((prev) => [...prev, data.session]);
       setShowAddSession(false);
-      setNewSession({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20' });
+      setNewSession({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
   };
 
-  const exportCSV = () => {
+  const handleSaveReceiptMessage = async () => {
+    setMessageSaving(true);
+    await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'receipt_message', value: receiptMessage }),
+    });
+    setMessageSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleViewStudents = async (sessionId: number) => {
+    setStudentsLoading(true);
+    setStudentsData(null);
+    const res = await fetch(`/api/admin/sessions/${sessionId}/students`);
+    const data = await res.json();
+    setStudentsData(data);
+    setStudentsLoading(false);
+  };
+
+  const exportXml = (data: SessionStudentsData) => {
+    const course = data.session.course;
+    const utbDatum = new Date(data.session.startTime).toISOString().split('T')[0];
+
+    const elevRows = data.students
+      .filter((s) => s.personnummer && s.personnummer !== '–')
+      .map((s) => `    <Elev>\n        <PersonNr>${s.personnummer}</PersonNr>\n        <UtbDatum>${utbDatum}</UtbDatum>\n    </Elev>`)
+      .join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<Rapport>\n    <Behorighet>${course.behorighet || 'B'}</Behorighet>\n${elevRows}\n</Rapport>`;
+
+    const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `elever_session_${data.session.id}_${utbDatum}.xml`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCsv = () => {
     const rows = [
-      ['ID', 'Student', 'Kurs', 'Datum', 'Status', 'Belopp'],
+      ['ID', 'Elev', 'Personnummer', 'E-post', 'Kurs', 'Datum', 'Status', 'Belopp'],
       ...bookings.map((b) => [
         b.id,
-        (b as Booking & { user?: { name: string } }).user?.name || '–',
+        b.guestName || b.user?.name || '–',
+        b.personnummer || '–',
+        b.guestEmail || b.user?.email || '–',
         locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn,
-        new Date(b.session!.startTime).toLocaleDateString('sv-SE'),
+        b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–',
         b.status,
         b.session?.course?.price || 0,
       ]),
@@ -151,6 +241,8 @@ export default function AdminPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const getStudentName = (b: Booking) => b.guestName || (b.user as { name?: string } | null | undefined)?.name || '–';
 
   if (authLoading || loading) {
     return (
@@ -219,11 +311,37 @@ export default function AdminPage() {
                 ))}
               </div>
 
+              {/* Custom receipt message */}
+              <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-4 h-4 text-swedish-blue" />
+                  <h2 className="font-bold text-gray-900">Meddelande på kvitto</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-3">Detta meddelande visas på bokningskvittot som skickas till eleven.</p>
+                <textarea
+                  value={receiptMessage}
+                  onChange={(e) => setReceiptMessage(e.target.value)}
+                  rows={3}
+                  className="input-field resize-none"
+                  placeholder="T.ex. &quot;Ta med körkort och ID-handling. Parkering finns på framsidan.&quot;"
+                />
+                <div className="flex justify-end mt-3">
+                  <button
+                    onClick={handleSaveReceiptMessage}
+                    disabled={messageSaving}
+                    className="btn-primary flex items-center gap-2 text-sm py-2 px-4 disabled:opacity-60"
+                  >
+                    <Save className="w-4 h-4" />
+                    {messageSaving ? 'Sparar...' : 'Spara meddelande'}
+                  </button>
+                </div>
+              </div>
+
               {/* Recent bookings table */}
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <div className="flex items-center justify-between p-5 border-b border-gray-100">
                   <h2 className="font-bold text-gray-900">Senaste bokningar</h2>
-                  <button onClick={exportCSV} className="flex items-center gap-2 text-sm text-swedish-blue hover:underline">
+                  <button onClick={exportCsv} className="flex items-center gap-2 text-sm text-swedish-blue hover:underline">
                     <Download className="w-4 h-4" />
                     {t('export_csv')}
                   </button>
@@ -234,6 +352,7 @@ export default function AdminPage() {
                       <tr>
                         <th className="text-left py-3 px-5">ID</th>
                         <th className="text-left py-3 px-5">Elev</th>
+                        <th className="text-left py-3 px-5">Personnummer</th>
                         <th className="text-left py-3 px-5">Kurs</th>
                         <th className="text-left py-3 px-5">Datum</th>
                         <th className="text-left py-3 px-5">Status</th>
@@ -244,7 +363,8 @@ export default function AdminPage() {
                       {bookings.slice(0, 10).map((b) => (
                         <tr key={b.id} className="hover:bg-gray-50">
                           <td className="py-3 px-5 text-gray-500">#{b.id}</td>
-                          <td className="py-3 px-5 font-medium">{(b as Booking & { user?: { name: string } }).user?.name || '–'}</td>
+                          <td className="py-3 px-5 font-medium">{getStudentName(b)}</td>
+                          <td className="py-3 px-5 text-gray-500 font-mono text-xs">{b.personnummer || '–'}</td>
                           <td className="py-3 px-5">
                             {locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}
                           </td>
@@ -293,6 +413,7 @@ export default function AdminPage() {
                       <th className="text-left py-3 px-5">Kurs</th>
                       <th className="text-left py-3 px-5">Typ</th>
                       <th className="text-left py-3 px-5">Fordon</th>
+                      <th className="text-left py-3 px-5">Behörighet</th>
                       <th className="text-left py-3 px-5">Pris</th>
                       <th className="text-left py-3 px-5">Åtgärder</th>
                     </tr>
@@ -310,6 +431,7 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="py-3 px-5 text-gray-500">{c.vehicle === 'Car' ? '🚗 Bil' : '🏍️ Motorcykel'}</td>
+                        <td className="py-3 px-5 font-mono font-semibold text-swedish-blue">{c.behorighet}</td>
                         <td className="py-3 px-5 font-semibold">{c.price.toLocaleString('sv-SE')} kr</td>
                         <td className="py-3 px-5">
                           <div className="flex gap-2">
@@ -347,34 +469,63 @@ export default function AdminPage() {
               </div>
               <div className="space-y-3">
                 {sessions.map((s) => (
-                  <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={clsx(
-                        'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                        s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
-                      )}>
-                        {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
-                        <div className="flex gap-4 text-xs text-gray-500 mt-1">
-                          <span>📅 {new Date(s.startTime).toLocaleDateString('sv-SE')}</span>
-                          <span>🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span>📍 {s.school?.name}</span>
-                          <span>👤 {s.seatsAvailable}/{s.seatLimit}</span>
+                  <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className={clsx(
+                          'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
+                          s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+                        )}>
+                          {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
+                            <span className={clsx(
+                              'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
+                              s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                            )}>
+                              {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                              {s.visibility === 'public' ? 'Offentlig' : 'Skolkonto'}
+                            </span>
+                          </div>
+                          <div className="flex gap-4 text-xs text-gray-500 mt-1">
+                            <span>📅 {new Date(s.startTime).toLocaleDateString('sv-SE')}</span>
+                            <span>🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>📍 {s.school?.name}</span>
+                            <span>👤 {s.seatsAvailable}/{s.seatLimit} platser kvar</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50">
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSession(s.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex gap-2 flex-wrap justify-end">
+                        <button
+                          onClick={() => handleViewStudents(s.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-blue-50 transition"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Visa elever
+                        </button>
+                        <button
+                          onClick={() => handleToggleVisibility(s)}
+                          className={clsx(
+                            'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition',
+                            s.visibility === 'public'
+                              ? 'text-orange-600 border-orange-300 hover:bg-orange-50'
+                              : 'text-green-600 border-green-300 hover:bg-green-50'
+                          )}
+                        >
+                          {s.visibility === 'public' ? <><Lock className="w-3.5 h-3.5" /> Gör skolkonto</> : <><Globe className="w-3.5 h-3.5" /> Gör offentlig</>}
+                        </button>
+                        <button className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSession(s.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -387,7 +538,7 @@ export default function AdminPage() {
             <div>
               <div className="flex justify-between items-center mb-5">
                 <h2 className="font-bold text-gray-900">Alla bokningar ({bookings.length})</h2>
-                <button onClick={exportCSV} className="flex items-center gap-2 btn-outline text-sm py-2">
+                <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
                   <Download className="w-4 h-4" />
                   {t('export_csv')}
                 </button>
@@ -398,9 +549,10 @@ export default function AdminPage() {
                     <tr>
                       <th className="text-left py-3 px-5">Bokning</th>
                       <th className="text-left py-3 px-5">Elev</th>
+                      <th className="text-left py-3 px-5">Personnummer</th>
+                      <th className="text-left py-3 px-5">E-post</th>
                       <th className="text-left py-3 px-5">Kurs</th>
                       <th className="text-left py-3 px-5">Datum</th>
-                      <th className="text-left py-3 px-5">Bokad</th>
                       <th className="text-left py-3 px-5">Status</th>
                     </tr>
                   </thead>
@@ -408,15 +560,17 @@ export default function AdminPage() {
                     {bookings.map((b) => (
                       <tr key={b.id} className="hover:bg-gray-50">
                         <td className="py-3 px-5 text-gray-500">#{b.id}</td>
-                        <td className="py-3 px-5 font-medium">{(b as Booking & { user?: { name: string } }).user?.name || '–'}</td>
+                        <td className="py-3 px-5 font-medium">{getStudentName(b)}</td>
+                        <td className="py-3 px-5 text-gray-500 font-mono text-xs">{b.personnummer || '–'}</td>
+                        <td className="py-3 px-5 text-gray-500 text-xs">{b.guestEmail || (b.user as { email?: string } | null | undefined)?.email || '–'}</td>
                         <td className="py-3 px-5">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</td>
                         <td className="py-3 px-5 text-gray-500">{b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–'}</td>
-                        <td className="py-3 px-5 text-gray-500">{new Date(b.bookingTime).toLocaleDateString('sv-SE')}</td>
                         <td className="py-3 px-5">
                           <span className={clsx(
                             'px-2.5 py-1 rounded-full text-xs font-semibold',
                             b.status === 'Paid' ? 'bg-green-100 text-green-700' :
                             b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
+                            b.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
                             'bg-yellow-100 text-yellow-700'
                           )}>
                             {b.status}
@@ -431,6 +585,97 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+
+      {/* Session Students Modal */}
+      {(studentsData || studentsLoading) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-lg">
+                  {studentsData ? `Elever – ${locale === 'sv' ? studentsData.session.course.titleSv : studentsData.session.course.titleEn}` : 'Laddar...'}
+                </h3>
+                {studentsData && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE')} · {studentsData.session.school.name}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {studentsData && studentsData.students.length > 0 && (
+                  <button
+                    onClick={() => exportXml(studentsData)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-blue-700 transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    Exportera XML
+                  </button>
+                )}
+                <button
+                  onClick={() => { setStudentsData(null); setStudentsLoading(false); }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {studentsLoading && (
+              <div className="flex-1 flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+
+            {studentsData && (
+              <div className="overflow-auto flex-1">
+                {studentsData.students.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                    <p>Inga bokningar för detta pass ännu.</p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+                      <tr>
+                        <th className="text-left py-3 px-4">#</th>
+                        <th className="text-left py-3 px-4">Namn</th>
+                        <th className="text-left py-3 px-4">Personnummer</th>
+                        <th className="text-left py-3 px-4">Telefon</th>
+                        <th className="text-left py-3 px-4">E-post</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {studentsData.students.map((s, i) => (
+                        <tr key={s.bookingId} className="hover:bg-gray-50">
+                          <td className="py-2.5 px-4 text-gray-400">{i + 1}</td>
+                          <td className="py-2.5 px-4 font-medium">{s.name}</td>
+                          <td className="py-2.5 px-4 font-mono text-xs text-gray-600">{s.personnummer}</td>
+                          <td className="py-2.5 px-4 text-gray-500">{s.phone}</td>
+                          <td className="py-2.5 px-4 text-gray-500 text-xs">{s.email}</td>
+                          <td className="py-2.5 px-4">
+                            <span className={clsx(
+                              'px-2 py-0.5 rounded-full text-xs font-semibold',
+                              s.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                              s.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
+                              'bg-yellow-100 text-yellow-700'
+                            )}>
+                              {s.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <p className="text-xs text-gray-400 mt-4 text-right">
+                  Totalt: {studentsData.students.length} elev{studentsData.students.length !== 1 ? 'er' : ''}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Course Modal */}
       {showAddCourse && (
@@ -455,7 +700,7 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning</label>
                 <input type="text" className="input-field" value={newCourse.description} onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
                   <select className="input-field" value={newCourse.type} onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })}>
@@ -468,6 +713,16 @@ export default function AdminPage() {
                   <select className="input-field" value={newCourse.vehicle} onChange={(e) => setNewCourse({ ...newCourse, vehicle: e.target.value })}>
                     <option value="Car">Bil</option>
                     <option value="Motorcycle">Motorcykel</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Behörighet</label>
+                  <select className="input-field" value={newCourse.behorighet} onChange={(e) => setNewCourse({ ...newCourse, behorighet: e.target.value })}>
+                    <option value="B">B</option>
+                    <option value="A">A</option>
+                    <option value="AM">AM</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
                   </select>
                 </div>
               </div>
@@ -518,9 +773,18 @@ export default function AdminPage() {
                   <input type="datetime-local" className="input-field" value={newSession.endTime} onChange={(e) => setNewSession({ ...newSession, endTime: e.target.value })} required />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Platsgräns</label>
-                <input type="number" className="input-field" placeholder="20" min="1" value={newSession.seatLimit} onChange={(e) => setNewSession({ ...newSession, seatLimit: e.target.value })} required />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Platsgräns</label>
+                  <input type="number" className="input-field" placeholder="20" min="1" value={newSession.seatLimit} onChange={(e) => setNewSession({ ...newSession, seatLimit: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Synlighet</label>
+                  <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value })}>
+                    <option value="public">Offentlig</option>
+                    <option value="school">Skolkonto</option>
+                  </select>
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">

@@ -11,6 +11,15 @@ async function main() {
   await prisma.course.deleteMany();
   await prisma.school.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.settings.deleteMany();
+
+  // Settings
+  await prisma.settings.create({
+    data: {
+      key: 'receipt_message',
+      value: 'Ta med körkort och giltig ID-handling. Parkering finns framför byggnaden. Vid frågor, kontakta oss på info@uppsalahalkbana.se.',
+    },
+  });
 
   // Schools
   const school1 = await prisma.school.create({
@@ -37,6 +46,7 @@ async function main() {
       description: 'Teoretisk utbildning om alkohol, droger och trötthet i trafiken.',
       type: 'Risk1',
       vehicle: 'Car',
+      behorighet: 'B',
       price: 1500,
     },
   });
@@ -48,6 +58,7 @@ async function main() {
       description: 'Praktisk körning på halkbana – lär dig hantera bilen i svåra vägförhållanden.',
       type: 'Risk2',
       vehicle: 'Car',
+      behorighet: 'B',
       price: 2500,
     },
   });
@@ -59,6 +70,7 @@ async function main() {
       description: 'Teoretisk riskutbildning för motorcykelförare.',
       type: 'Risk1',
       vehicle: 'Motorcycle',
+      behorighet: 'A',
       price: 1500,
     },
   });
@@ -70,11 +82,12 @@ async function main() {
       description: 'Praktisk körning på halkbana för motorcykelförare.',
       type: 'Risk2',
       vehicle: 'Motorcycle',
+      behorighet: 'A',
       price: 2800,
     },
   });
 
-  // Sessions (dates from mid-April 2026 onward)
+  // Sessions (public + school-only mix)
   await prisma.session.createMany({
     data: [
       {
@@ -84,6 +97,7 @@ async function main() {
         endTime: new Date('2026-04-10T12:00:00'),
         seatLimit: 20,
         seatsAvailable: 8,
+        visibility: 'public',
       },
       {
         courseId: risk2Car.id,
@@ -92,6 +106,7 @@ async function main() {
         endTime: new Date('2026-04-12T16:00:00'),
         seatLimit: 15,
         seatsAvailable: 3,
+        visibility: 'public',
       },
       {
         courseId: risk1Moto.id,
@@ -100,6 +115,7 @@ async function main() {
         endTime: new Date('2026-04-15T17:00:00'),
         seatLimit: 12,
         seatsAvailable: 0,
+        visibility: 'public',
       },
       {
         courseId: risk2Moto.id,
@@ -108,6 +124,7 @@ async function main() {
         endTime: new Date('2026-04-18T14:00:00'),
         seatLimit: 10,
         seatsAvailable: 6,
+        visibility: 'public',
       },
       {
         courseId: risk1Car.id,
@@ -116,6 +133,7 @@ async function main() {
         endTime: new Date('2026-04-22T12:00:00'),
         seatLimit: 20,
         seatsAvailable: 15,
+        visibility: 'school',
       },
       {
         courseId: risk2Car.id,
@@ -124,19 +142,19 @@ async function main() {
         endTime: new Date('2026-04-25T16:00:00'),
         seatLimit: 15,
         seatsAvailable: 11,
+        visibility: 'public',
       },
     ],
   });
 
   // Users
-  const hashedStudentPwd = await bcrypt.hash('password123', 10);
-  const hashedAdminPwd = await bcrypt.hash('password123', 10);
+  const hashedPwd = await bcrypt.hash('password123', 10);
 
-  const student = await prisma.user.create({
+  await prisma.user.create({
     data: {
       name: 'Anna Svensson',
       email: 'student@test.se',
-      password: hashedStudentPwd,
+      password: hashedPwd,
       phone: '070-123 45 67',
       role: 'student',
       languagePref: 'sv',
@@ -147,33 +165,23 @@ async function main() {
     data: {
       name: 'Admin',
       email: 'admin@test.se',
-      password: hashedAdminPwd,
+      password: hashedPwd,
       phone: '070-000 00 00',
       role: 'admin',
       languagePref: 'sv',
     },
   });
 
-  // Sample bookings for student
-  const sessions = await prisma.session.findMany({ take: 2 });
-  for (const session of sessions) {
-    const booking = await prisma.booking.create({
-      data: {
-        sessionId: session.id,
-        userId: student.id,
-        status: 'Paid',
-      },
-    });
-    await prisma.payment.create({
-      data: {
-        bookingId: booking.id,
-        amount: 0, // will be set from course price in real flow
-        provider: 'Stripe',
-        status: 'Succeeded',
-        transactionId: `txn_seed_${booking.id}`,
-      },
-    });
-  }
+  await prisma.user.create({
+    data: {
+      name: 'Uppsala Trafikskola AB',
+      email: 'school@test.se',
+      password: hashedPwd,
+      phone: '018-100 200',
+      role: 'school',
+      languagePref: 'sv',
+    },
+  });
 
   console.log('Seed complete.');
 }

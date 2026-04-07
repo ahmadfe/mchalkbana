@@ -1,25 +1,29 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, CreditCard, Smartphone, AlertTriangle, Lock, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, CreditCard, Smartphone, AlertTriangle, Lock, ArrowLeft, User } from 'lucide-react';
 import clsx from 'clsx';
-import { useAuth } from '@/context/AuthContext';
 
 type PaymentMethod = 'card' | 'swish' | 'apple_pay';
 type CheckoutStep = 'payment' | 'processing' | 'success' | 'failed';
 
+interface GuestInfo {
+  name: string;
+  personnummer: string;
+  phone: string;
+  email: string;
+}
+
 function CheckoutContent() {
-  const t = useTranslations('checkout');
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoading: authLoading } = useAuth();
   const sessionId = parseInt(searchParams.get('session') || '1');
 
   const [session, setSession] = useState<Session | null>(null);
@@ -27,6 +31,8 @@ function CheckoutContent() {
   const [method, setMethod] = useState<PaymentMethod>('card');
   const [step, setStep] = useState<CheckoutStep>('payment');
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvv: '' });
+  const [guest, setGuest] = useState<GuestInfo>({ name: '', personnummer: '', phone: '', email: '' });
+  const [guestErrors, setGuestErrors] = useState<Partial<GuestInfo>>({});
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,12 +40,6 @@ function CheckoutContent() {
       .then((r) => r.json())
       .then((data) => setSession(data.session));
   }, [sessionId]);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push(`/${locale}/login`);
-    }
-  }, [user, authLoading, locale, router]);
 
   if (!session) {
     return (
@@ -61,16 +61,35 @@ function CheckoutContent() {
   });
   const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const validateGuest = (): boolean => {
+    const errs: Partial<GuestInfo> = {};
+    if (!guest.name.trim()) errs.name = 'Namn krävs';
+    if (!guest.personnummer.trim()) errs.personnummer = 'Personnummer krävs';
+    else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, ''))) {
+      errs.personnummer = 'Ange personnummer i format YYYYMMDD-XXXX';
+    }
+    if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
+    setGuestErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateGuest()) return;
     setError('');
     setStep('processing');
 
-    // Step 1: Create booking
+    // Step 1: Create booking (guest flow)
     const bookRes = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId }),
+      body: JSON.stringify({
+        sessionId,
+        guestName: guest.name,
+        personnummer: guest.personnummer,
+        guestPhone: guest.phone,
+        guestEmail: guest.email,
+      }),
     });
 
     if (!bookRes.ok) {
@@ -88,7 +107,9 @@ function CheckoutContent() {
     const payRes = await fetch(`/api/bookings/${newBookingId}/pay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ provider: method === 'card' ? 'Stripe' : method === 'swish' ? 'Swish' : 'ApplePay' }),
+      body: JSON.stringify({
+        provider: method === 'card' ? 'Stripe' : method === 'swish' ? 'Swish' : 'ApplePay',
+      }),
     });
 
     if (payRes.ok) {
@@ -99,9 +120,9 @@ function CheckoutContent() {
   };
 
   const methods: { id: PaymentMethod; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: 'card', label: t('card'), icon: <CreditCard className="w-5 h-5" />, desc: 'Visa, Mastercard, Amex' },
-    { id: 'swish', label: t('swish'), icon: <Smartphone className="w-5 h-5" />, desc: 'Swish – populärt i Sverige' },
-    { id: 'apple_pay', label: t('apple_pay'), icon: <span className="text-lg"></span>, desc: 'Snabb betalning med Apple Pay' },
+    { id: 'card', label: 'Betalkort', icon: <CreditCard className="w-5 h-5" />, desc: 'Visa, Mastercard, Amex' },
+    { id: 'swish', label: 'Swish', icon: <Smartphone className="w-5 h-5" />, desc: 'Swish – populärt i Sverige' },
+    { id: 'apple_pay', label: 'Apple Pay', icon: <span className="text-lg"></span>, desc: 'Snabb betalning med Apple Pay' },
   ];
 
   if (step === 'processing') {
@@ -111,7 +132,7 @@ function CheckoutContent() {
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-20 h-20 border-4 border-swedish-blue border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">{t('processing')}</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Behandlar betalning...</h2>
             <p className="text-gray-500 text-sm">Ansluter till betalning...</p>
           </div>
         </main>
@@ -129,12 +150,22 @@ function CheckoutContent() {
             <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-12 h-12 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('success_title')}</h1>
-            <p className="text-gray-500 mb-2">{t('success_msg', { email: user?.email || '' })}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Bokning bekräftad!</h1>
+            <p className="text-gray-500 mb-2">
+              En bekräftelse har skickats till <strong>{guest.email}</strong>
+            </p>
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 text-left mt-6">
               <h3 className="font-semibold text-gray-900 mb-3">Bokningsdetaljer</h3>
               <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Namn:</span>
+                  <span className="font-medium">{guest.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Personnummer:</span>
+                  <span className="font-medium">{guest.personnummer}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Kurs:</span>
                   <span className="font-medium">{title}</span>
@@ -158,20 +189,15 @@ function CheckoutContent() {
                   </div>
                 )}
                 <div className="flex justify-between border-t border-gray-100 pt-2 mt-2">
-                  <span className="font-semibold">Totalt:</span>
+                  <span className="font-semibold">Totalt betalt:</span>
                   <span className="font-bold text-swedish-blue">{course.price.toLocaleString('sv-SE')} kr</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Link href={`/${locale}/dashboard`} className="flex-1 btn-primary py-3 text-center">
-                Mina bokningar
-              </Link>
-              <Link href={`/${locale}/courses`} className="flex-1 btn-outline py-3 text-center">
-                Fler kurser
-              </Link>
-            </div>
+            <Link href={`/${locale}/courses`} className="btn-primary inline-block px-8 py-3">
+              Tillbaka till kurser
+            </Link>
           </div>
         </main>
         <Footer />
@@ -188,11 +214,11 @@ function CheckoutContent() {
             <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <AlertTriangle className="w-12 h-12 text-red-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('failed_title')}</h1>
-            <p className="text-gray-500 mb-2">{error || t('failed_msg')}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Betalning misslyckades</h1>
+            <p className="text-gray-500 mb-2">{error || 'Något gick fel. Försök igen.'}</p>
             <div className="flex gap-3 justify-center mt-6">
               <button onClick={() => setStep('payment')} className="btn-primary px-8 py-3">
-                {t('retry')}
+                Försök igen
               </button>
               <Link href={`/${locale}/courses`} className="btn-outline px-8 py-3">
                 Tillbaka
@@ -216,14 +242,70 @@ function CheckoutContent() {
             Tillbaka till kurser
           </Link>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-8">{t('title')}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-8">Slutför bokning</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            {/* Left: Payment form */}
+            {/* Left: Guest info + payment form */}
             <form onSubmit={handlePay} className="lg:col-span-3 space-y-6">
+
+              {/* Guest info */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="w-4 h-4 text-swedish-blue" />
+                  <h2 className="font-semibold text-gray-900">Dina uppgifter</h2>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn *</label>
+                  <input
+                    type="text"
+                    value={guest.name}
+                    onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                    placeholder="Anna Svensson"
+                    className={clsx('input-field', guestErrors.name && 'border-red-400')}
+                  />
+                  {guestErrors.name && <p className="text-xs text-red-600 mt-1">{guestErrors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Personnummer *</label>
+                  <input
+                    type="text"
+                    value={guest.personnummer}
+                    onChange={(e) => setGuest({ ...guest, personnummer: e.target.value })}
+                    placeholder="YYYYMMDD-XXXX"
+                    className={clsx('input-field font-mono', guestErrors.personnummer && 'border-red-400')}
+                  />
+                  {guestErrors.personnummer && <p className="text-xs text-red-600 mt-1">{guestErrors.personnummer}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefonnummer</label>
+                  <input
+                    type="tel"
+                    value={guest.phone}
+                    onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                    placeholder="070-123 45 67"
+                    className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress * <span className="text-gray-400 font-normal">(kvitto skickas hit)</span></label>
+                  <input
+                    type="email"
+                    value={guest.email}
+                    onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                    placeholder="anna@exempel.se"
+                    className={clsx('input-field', guestErrors.email && 'border-red-400')}
+                  />
+                  {guestErrors.email && <p className="text-xs text-red-600 mt-1">{guestErrors.email}</p>}
+                </div>
+              </div>
+
               {/* Payment method selector */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <h2 className="font-semibold text-gray-900 mb-4">{t('pay_with')}</h2>
+                <h2 className="font-semibold text-gray-900 mb-4">Betalningsmetod</h2>
                 <div className="space-y-2">
                   {methods.map((m) => (
                     <label
@@ -345,14 +427,14 @@ function CheckoutContent() {
                 className="w-full bg-swedish-blue text-white font-bold text-lg py-4 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2"
               >
                 <Lock className="w-5 h-5" />
-                {t('pay_btn', { amount: course.price.toLocaleString('sv-SE') })}
+                Betala {course.price.toLocaleString('sv-SE')} kr
               </button>
             </form>
 
             {/* Right: Booking summary */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl border border-gray-100 p-5 sticky top-24">
-                <h2 className="font-semibold text-gray-900 mb-4">{t('summary')}</h2>
+                <h2 className="font-semibold text-gray-900 mb-4">Bokningssammanfattning</h2>
 
                 <div className={clsx(
                   'w-full h-1.5 rounded-full mb-5',
@@ -361,11 +443,11 @@ function CheckoutContent() {
 
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">{t('course')}:</span>
+                    <span className="text-gray-500">Kurs:</span>
                     <span className="font-medium text-right">{title}</span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">{t('date')}:</span>
+                    <span className="text-gray-500">Datum:</span>
                     <span className="font-medium text-right">{dateStr}</span>
                   </div>
                   <div className="flex justify-between gap-3">
@@ -373,8 +455,12 @@ function CheckoutContent() {
                     <span className="font-medium">{timeStr}</span>
                   </div>
                   <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">{t('location')}:</span>
+                    <span className="text-gray-500">Plats:</span>
                     <span className="font-medium text-right">{session.school?.name}</span>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span className="text-gray-500">Platser kvar:</span>
+                    <span className="font-medium">{session.seatsAvailable}</span>
                   </div>
                 </div>
 
@@ -388,7 +474,7 @@ function CheckoutContent() {
                     <span>Inkl.</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-100">
-                    <span>{t('total')}:</span>
+                    <span>Totalt:</span>
                     <span className="text-swedish-blue">{course.price.toLocaleString('sv-SE')} kr</span>
                   </div>
                 </div>

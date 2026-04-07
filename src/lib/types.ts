@@ -26,6 +26,7 @@ export interface Course {
   description: string;
   type: CourseType;
   vehicle: VehicleType;
+  behorighet: string;
   price: number;
 }
 
@@ -39,15 +40,21 @@ export interface Session {
   endTime: string;
   seatLimit: number;
   seatsAvailable: number;
+  visibility: string;
 }
 
-export type BookingStatus = 'Pending' | 'Paid' | 'Canceled';
+export type BookingStatus = 'Pending' | 'Paid' | 'Canceled' | 'Confirmed';
 
 export interface Booking {
   id: number;
   sessionId: number;
   session?: Session;
-  userId: number;
+  userId?: number | null;
+  user?: { name: string; email: string } | null;
+  guestName?: string | null;
+  personnummer?: string | null;
+  guestPhone?: string | null;
+  guestEmail?: string | null;
   bookingTime: string;
   status: BookingStatus;
 }

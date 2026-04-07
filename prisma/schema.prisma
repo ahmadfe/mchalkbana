@@ -34,6 +34,7 @@ model Course {
   description String
   type        String
   vehicle     String
+  behorighet  String    @default("B")
   price       Int
   sessions    Session[]
 }
@@ -48,18 +49,23 @@ model Session {
   endTime        DateTime
   seatLimit      Int
   seatsAvailable Int
+  visibility     String    @default("public")
   bookings       Booking[]
 }
 
 model Booking {
-  id          Int      @id @default(autoincrement())
-  sessionId   Int
-  session     Session  @relation(fields: [sessionId], references: [id])
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  bookingTime DateTime @default(now())
-  status      String   @default("Pending")
-  payment     Payment?
+  id           Int      @id @default(autoincrement())
+  sessionId    Int
+  session      Session  @relation(fields: [sessionId], references: [id])
+  userId       Int?
+  user         User?    @relation(fields: [userId], references: [id])
+  guestName    String?
+  personnummer String?
+  guestPhone   String?
+  guestEmail   String?
+  bookingTime  DateTime @default(now())
+  status       String   @default("Pending")
+  payment      Payment?
 }
 
 model Payment {
@@ -71,4 +77,10 @@ model Payment {
   status        String   @default("Pending")
   transactionId String?
   createdAt     DateTime @default(now())
+}
+
+model Settings {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
 }

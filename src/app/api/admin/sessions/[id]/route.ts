@@ -14,6 +14,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...(data.endTime ? { endTime: new Date(data.endTime) } : {}),
       ...(data.seatLimit ? { seatLimit: parseInt(data.seatLimit) } : {}),
       ...(data.seatsAvailable !== undefined ? { seatsAvailable: parseInt(data.seatsAvailable) } : {}),
+      ...(data.visibility ? { visibility: data.visibility } : {}),
     },
     include: { course: true, school: true },
   });
