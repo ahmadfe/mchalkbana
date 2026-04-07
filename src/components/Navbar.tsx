@@ -38,15 +38,22 @@ export default function Navbar() {
             <Link href={base} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
               {t('home')}
             </Link>
-            <Link href={`${base}/courses`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
-              {t('courses')}
-            </Link>
+            {user?.role !== 'school' && (
+              <Link href={`${base}/courses`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
+                {t('courses')}
+              </Link>
+            )}
             {user?.role === 'admin' && (
               <Link href={`${base}/admin`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
                 {t('admin')}
               </Link>
             )}
-            {user && (
+            {user?.role === 'school' && (
+              <Link href={`${base}/school`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
+                Mitt konto
+              </Link>
+            )}
+            {user && user.role !== 'school' && user.role !== 'admin' && (
               <Link href={`${base}/dashboard`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
                 {t('dashboard')}
               </Link>
@@ -93,15 +100,22 @@ export default function Navbar() {
           <Link href={base} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
             {t('home')}
           </Link>
-          <Link href={`${base}/courses`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
-            {t('courses')}
-          </Link>
+          {user?.role !== 'school' && (
+            <Link href={`${base}/courses`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
+              {t('courses')}
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link href={`${base}/admin`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
               {t('admin')}
             </Link>
           )}
-          {user && (
+          {user?.role === 'school' && (
+            <Link href={`${base}/school`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
+              Mitt konto
+            </Link>
+          )}
+          {user && user.role !== 'school' && user.role !== 'admin' && (
             <Link href={`${base}/dashboard`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
               {t('dashboard')}
             </Link>

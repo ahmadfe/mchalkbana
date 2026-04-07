@@ -6,7 +6,10 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2 } from 'lucide-react';
+import {
+  Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2,
+  ChevronDown, ChevronUp, BarChart2, BookOpen,
+} from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
@@ -36,7 +39,7 @@ export default function SchoolPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [bookings, setBookings] = useState<SchoolBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'sessions' | 'students'>('sessions');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   // Add student modal
   const [activeSession, setActiveSession] = useState<Session | null>(null);
@@ -67,6 +70,13 @@ export default function SchoolPage() {
     }
     if (!authLoading && user) loadData();
   }, [user, authLoading, locale, router, loadData]);
+
+  const toggleExpand = (id: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const openModal = (session: Session) => {
     setActiveSession(session);
@@ -111,26 +121,33 @@ export default function SchoolPage() {
     setSaving(false);
     setSaveSuccess(true);
     await loadData();
+    // Keep the session expanded after adding
+    if (activeSession) setExpanded((prev) => new Set(prev).add(activeSession.id));
     setTimeout(() => {
       setActiveSession(null);
       setSaveSuccess(false);
-    }, 1500);
+    }, 1200);
   };
 
   const handleDeleteStudent = async (bookingId: number) => {
     await fetch(`/api/school/bookings/${bookingId}`, { method: 'DELETE' });
-    setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-    // Also reload to refresh seat counts
-    loadData();
+    await loadData();
   };
 
-  // Group bookings by session
-  const bookingsBySession = bookings.reduce<Record<number, { session: SchoolBooking['session']; students: SchoolBooking[] }>>((acc, b) => {
+  // Group bookings by session id
+  const bookingsBySession = bookings.reduce<Record<number, SchoolBooking[]>>((acc, b) => {
     const sid = b.session.id;
-    if (!acc[sid]) acc[sid] = { session: b.session, students: [] };
-    acc[sid].students.push(b);
+    if (!acc[sid]) acc[sid] = [];
+    acc[sid].push(b);
     return acc;
   }, {});
+
+  // Stats
+  const now = new Date();
+  const studentsThisMonth = bookings.filter((b) => {
+    const d = new Date(b.bookingTime);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).length;
 
   if (authLoading || loading) {
     return (
@@ -149,10 +166,10 @@ export default function SchoolPage() {
       <Navbar />
 
       <main className="flex-1 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
           {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-swedish-blue flex items-center justify-center">
               <Building2 className="w-5 h-5 text-swedish-yellow" />
             </div>
@@ -162,141 +179,215 @@ export default function SchoolPage() {
             </div>
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 text-sm text-amber-800">
+          {/* Invoice notice */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
             Bokningar faktureras den 26:e varje månad. Ingen betalning krävs vid bokning.
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-6 w-fit">
-            {[
-              { id: 'sessions' as const, label: 'Tillgängliga pass', icon: <Calendar className="w-4 h-4" /> },
-              { id: 'students' as const, label: `Mina elever (${bookings.length})`, icon: <Users className="w-4 h-4" /> },
-            ].map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={clsx(
-                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition',
-                  tab === t.id ? 'bg-swedish-blue text-white' : 'text-gray-600 hover:bg-gray-50'
-                )}
-              >
-                {t.icon}{t.label}
-              </button>
-            ))}
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-swedish-blue" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
+                <p className="text-xs text-gray-500">Tillgängliga pass</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <Users className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+                <p className="text-xs text-gray-500">Totalt bokade elever</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <BarChart2 className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{studentsThisMonth}</p>
+                <p className="text-xs text-gray-500">Bokade denna månad</p>
+              </div>
+            </div>
           </div>
 
-          {/* Sessions tab */}
-          {tab === 'sessions' && (
-            <div className="space-y-3">
-              {sessions.length === 0 ? (
-                <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
-                  <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium">Inga tillgängliga pass</p>
-                  <p className="text-sm mt-1">Kontakta administratören för att tilldela pass till er skola.</p>
-                </div>
-              ) : sessions.map((s) => {
-                const title = locale === 'sv' ? s.course?.titleSv : s.course?.titleEn;
-                const start = new Date(s.startTime);
-                const end = new Date(s.endTime);
-                const full = s.seatsAvailable === 0;
-                return (
-                  <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className={clsx(
-                        'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                        s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
-                      )}>
-                        {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900">{title}</p>
-                        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
-                          <span>📅 {start.toLocaleDateString('sv-SE')}</span>
-                          <span>🕐 {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span>📍 {s.school?.name}</span>
-                          <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
-                            👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
-                          </span>
+          {/* Sessions */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Tillgängliga pass
+            </h2>
+
+            {sessions.length === 0 ? (
+              <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+                <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                <p className="font-medium">Inga tillgängliga pass</p>
+                <p className="text-sm mt-1">Kontakta administratören för att tilldela pass till er skola.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sessions.map((s) => {
+                  const title = locale === 'sv' ? s.course?.titleSv : s.course?.titleEn;
+                  const start = new Date(s.startTime);
+                  const end = new Date(s.endTime);
+                  const full = s.seatsAvailable === 0;
+                  const isOpen = expanded.has(s.id);
+                  const sessionStudents = bookingsBySession[s.id] || [];
+
+                  return (
+                    <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                      {/* Session row */}
+                      <div className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className={clsx(
+                            'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
+                            s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+                          )}>
+                            {s.course?.type === 'Risk1' ? 'R1' : 'R2'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-900">{title}</p>
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
+                              <span>📅 {start.toLocaleDateString('sv-SE')}</span>
+                              <span>🕐 {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>📍 {s.school?.name}</span>
+                              <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
+                                👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
+                              </span>
+                              {sessionStudents.length > 0 && (
+                                <span className="text-blue-600 font-medium">{sessionStudents.length} elev{sessionStudents.length !== 1 ? 'er' : ''} bokade</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            disabled={full}
+                            onClick={() => openModal(s)}
+                            className={clsx(
+                              'px-3 py-2 text-sm font-semibold rounded-xl transition flex items-center gap-1.5',
+                              full
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-swedish-blue text-white hover:bg-blue-700'
+                            )}
+                          >
+                            <Plus className="w-4 h-4" />
+                            {full ? 'Fullbokat' : 'Lägg till'}
+                          </button>
+                          <button
+                            onClick={() => toggleExpand(s.id)}
+                            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition"
+                            title={isOpen ? 'Stäng' : 'Visa elever'}
+                          >
+                            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
-                    </div>
-                    <button
-                      disabled={full}
-                      onClick={() => openModal(s)}
-                      className={clsx(
-                        'shrink-0 px-4 py-2 text-sm font-semibold rounded-xl transition flex items-center gap-2',
-                        full
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-swedish-blue text-white hover:bg-blue-700'
-                      )}
-                    >
-                      <Plus className="w-4 h-4" />
-                      {full ? 'Fullbokat' : 'Lägg till elever'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
-          {/* Students tab */}
-          {tab === 'students' && (
-            <div className="space-y-4">
-              {Object.keys(bookingsBySession).length === 0 ? (
-                <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
-                  <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium">Inga elever bokade ännu</p>
-                  <p className="text-sm mt-1">Gå till Tillgängliga pass och lägg till elever.</p>
-                </div>
-              ) : Object.values(bookingsBySession).map(({ session: s, students: booked }) => (
-                <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                  <div className="bg-gray-50 px-5 py-3 flex items-center justify-between border-b border-gray-100">
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        📅 {new Date(s.startTime).toLocaleDateString('sv-SE')} · 🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · 📍 {s.school?.name}
-                      </p>
+                      {/* Expanded student list */}
+                      {isOpen && (
+                        <div className="border-t border-gray-100">
+                          {sessionStudents.length === 0 ? (
+                            <div className="px-5 py-6 text-center text-sm text-gray-400">
+                              Inga elever bokade på detta pass ännu.
+                            </div>
+                          ) : (
+                            <table className="w-full text-sm">
+                              <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+                                <tr>
+                                  <th className="text-left py-2.5 px-5">Namn</th>
+                                  <th className="text-left py-2.5 px-5">Personnummer</th>
+                                  <th className="text-left py-2.5 px-5 hidden sm:table-cell">Telefon</th>
+                                  <th className="text-left py-2.5 px-5 hidden sm:table-cell">E-post</th>
+                                  <th className="py-2.5 px-5"></th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-50">
+                                {sessionStudents.map((b) => (
+                                  <tr key={b.id} className="hover:bg-gray-50">
+                                    <td className="py-3 px-5 font-medium">{b.guestName || '–'}</td>
+                                    <td className="py-3 px-5 font-mono text-xs text-gray-600">{b.personnummer || '–'}</td>
+                                    <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestPhone || '–'}</td>
+                                    <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestEmail || '–'}</td>
+                                    <td className="py-3 px-5 text-right">
+                                      <button
+                                        onClick={() => handleDeleteStudent(b.id)}
+                                        className="text-gray-300 hover:text-red-500 transition"
+                                        title="Ta bort elev"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2.5 py-1 rounded-full">
-                      {booked.length} elev{booked.length !== 1 ? 'er' : ''}
-                    </span>
-                  </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Monthly report */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <BarChart2 className="w-4 h-4" />
+              Rapport – elever per månad
+            </h2>
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {bookings.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-gray-400">Inga bokningar ännu.</div>
+              ) : (() => {
+                // Build month buckets
+                const buckets: Record<string, number> = {};
+                bookings.forEach((b) => {
+                  const d = new Date(b.bookingTime);
+                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  buckets[key] = (buckets[key] || 0) + 1;
+                });
+                const sorted = Object.entries(buckets).sort((a, b) => b[0].localeCompare(a[0]));
+                const max = Math.max(...sorted.map(([, v]) => v));
+                return (
                   <table className="w-full text-sm">
-                    <thead className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-50">
+                    <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
                       <tr>
-                        <th className="text-left py-2.5 px-5">Namn</th>
-                        <th className="text-left py-2.5 px-5">Personnummer</th>
-                        <th className="text-left py-2.5 px-5">Telefon</th>
-                        <th className="text-left py-2.5 px-5">E-post</th>
-                        <th className="py-2.5 px-5"></th>
+                        <th className="text-left py-2.5 px-5">Månad</th>
+                        <th className="text-left py-2.5 px-5">Elever</th>
+                        <th className="py-2.5 px-5 w-48"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {booked.map((b) => (
-                        <tr key={b.id} className="hover:bg-gray-50">
-                          <td className="py-3 px-5 font-medium">{b.guestName || '–'}</td>
-                          <td className="py-3 px-5 font-mono text-xs text-gray-600">{b.personnummer || '–'}</td>
-                          <td className="py-3 px-5 text-gray-500 text-xs">{b.guestPhone || '–'}</td>
-                          <td className="py-3 px-5 text-gray-500 text-xs">{b.guestEmail || '–'}</td>
-                          <td className="py-3 px-5 text-right">
-                            <button
-                              onClick={() => handleDeleteStudent(b.id)}
-                              className="text-gray-300 hover:text-red-500 transition"
-                              title="Ta bort elev"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {sorted.map(([month, count]) => {
+                        const [year, mon] = month.split('-');
+                        const label = new Date(Number(year), Number(mon) - 1, 1).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
+                        const pct = Math.round((count / max) * 100);
+                        return (
+                          <tr key={month} className="hover:bg-gray-50">
+                            <td className="py-3 px-5 font-medium capitalize">{label}</td>
+                            <td className="py-3 px-5 font-bold text-swedish-blue">{count}</td>
+                            <td className="py-3 px-5">
+                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-swedish-blue rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
-                </div>
-              ))}
+                );
+              })()}
             </div>
-          )}
+          </div>
+
         </div>
       </main>
 
@@ -361,7 +452,7 @@ export default function SchoolPage() {
                   ))}
                   <button
                     onClick={addStudentRow}
-                    disabled={students.length >= activeSession.seatsAvailable}
+                    disabled={students.length >= (activeSession.seatsAvailable || 0)}
                     className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-swedish-blue hover:text-swedish-blue transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />Lägg till fler elever
