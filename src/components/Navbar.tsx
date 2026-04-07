@@ -67,20 +67,12 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <>
-                <Link
-                  href={`${base}/login`}
-                  className="text-sm font-medium hover:text-swedish-yellow transition-colors"
-                >
-                  {t('login')}
-                </Link>
-                <Link
-                  href={`${base}/register`}
-                  className="bg-swedish-yellow text-swedish-blue text-sm font-bold px-4 py-1.5 rounded-lg hover:bg-yellow-300 transition"
-                >
-                  {t('register')}
-                </Link>
-              </>
+              <Link
+                href={`${base}/login`}
+                className="text-xs text-blue-200 hover:text-white transition-colors border border-white/20 px-3 py-1.5 rounded-lg"
+              >
+                {t('school_login')}
+              </Link>
             )}
           </div>
 
@@ -121,18 +113,13 @@ export default function Navbar() {
                 {t('logout')}
               </button>
             ) : (
-              <>
-                <Link href={`${base}/login`} className="text-sm hover:text-swedish-yellow" onClick={() => setOpen(false)}>
-                  {t('login')}
-                </Link>
-                <Link
-                  href={`${base}/register`}
-                  className="bg-swedish-yellow text-swedish-blue text-sm font-bold px-3 py-1 rounded-lg"
-                  onClick={() => setOpen(false)}
-                >
-                  {t('register')}
-                </Link>
-              </>
+              <Link
+                href={`${base}/login`}
+                className="text-xs text-blue-200 hover:text-white border border-white/20 px-3 py-1.5 rounded-lg"
+                onClick={() => setOpen(false)}
+              >
+                {t('school_login')}
+              </Link>
             )}
           </div>
         </div>
