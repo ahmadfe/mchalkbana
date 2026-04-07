@@ -81,30 +81,38 @@ export default function AdminPage() {
   const [studentsData, setStudentsData] = useState<SessionStudentsData | null>(null);
   const [studentsLoading, setStudentsLoading] = useState(false);
 
+  const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
       fetch('/api/admin/bookings'),
       fetch('/api/admin/settings?key=receipt_message'),
+      fetch('/api/admin/schools'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
       bookingsRes.json(),
       msgRes.json(),
+      schoolsRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
     setSessions(sessionsData.sessions || []);
     setBookings(bookingsData.bookings || []);
     setReceiptMessage(msgData.value || '');
+    const loadedSchools = schoolsData.schools || [];
+    setSchools(loadedSchools);
+    if (loadedSchools.length > 0) {
+      setNewSession((prev) => ({ ...prev, schoolId: String(loadedSchools[0].id) }));
+    }
     setLoading(false);
   }, []);
 
@@ -171,7 +179,7 @@ export default function AdminPage() {
       const data = await res.json();
       setSessions((prev) => [...prev, data.session]);
       setShowAddSession(false);
-      setNewSession({ courseId: '', schoolId: '1', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
+      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -760,6 +768,15 @@ export default function AdminPage() {
                   <option value="">Välj kurs...</option>
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>{locale === 'sv' ? c.titleSv : c.titleEn}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Halkbana</label>
+                <select className="input-field" value={newSession.schoolId} onChange={(e) => setNewSession({ ...newSession, schoolId: e.target.value })} required>
+                  <option value="">Välj halkbana...</option>
+                  {schools.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </div>
