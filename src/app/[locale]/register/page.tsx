@@ -102,7 +102,7 @@ export default function RegisterPage() {
       <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       <input
         type={type}
-        value={(form as Record<string, string>)[key] ?? ''}
+        value={(form as unknown as Record<string, string>)[key] ?? ''}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
         placeholder={placeholder}
         className={clsx('input-field', errors[key] && 'border-red-400 focus:ring-red-400')}
