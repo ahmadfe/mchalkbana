@@ -87,3 +87,9 @@ model Settings {
   key   String @unique
   value String
 }
+
+model CourseGroup {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+}

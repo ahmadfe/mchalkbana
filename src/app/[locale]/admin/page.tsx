@@ -25,11 +25,12 @@ import {
   FileText,
   School,
   EyeOff,
+  Tag,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'groups';
 
 interface AdminStats {
   totalBookings: number;
@@ -96,12 +97,19 @@ export default function AdminPage() {
   const [schoolAccountError, setSchoolAccountError] = useState('');
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
+
+  // Course groups
+  const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [groupSaving, setGroupSaving] = useState(false);
+  const [groupError, setGroupError] = useState('');
+
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
@@ -109,8 +117,9 @@ export default function AdminPage() {
       fetch('/api/admin/settings?key=receipt_message'),
       fetch('/api/admin/schools'),
       fetch('/api/admin/school-accounts'),
+      fetch('/api/admin/course-groups'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
@@ -118,6 +127,7 @@ export default function AdminPage() {
       msgRes.json(),
       schoolsRes.json(),
       schoolAccountsRes.json(),
+      groupsRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
@@ -130,6 +140,7 @@ export default function AdminPage() {
       setNewSession((prev) => ({ ...prev, schoolId: String(loadedSchools[0].id) }));
     }
     setSchoolAccounts(schoolAccountsData.accounts || []);
+    setCourseGroups(groupsData.groups || []);
     setLoading(false);
   }, []);
 
@@ -139,12 +150,39 @@ export default function AdminPage() {
     if (user?.role === 'admin') loadData();
   }, [user, authLoading, locale, router, loadData]);
 
+  const handleAddGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGroupError('');
+    if (!newGroupName.trim()) { setGroupError('Namn krävs'); return; }
+    setGroupSaving(true);
+    const res = await fetch('/api/admin/course-groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newGroupName.trim() }),
+    });
+    const data = await res.json();
+    setGroupSaving(false);
+    if (!res.ok) { setGroupError(data.error || 'Något gick fel'); return; }
+    setCourseGroups((prev) => [...prev, data.group]);
+    setNewGroupName('');
+  };
+
+  const handleDeleteGroup = async (id: number) => {
+    await fetch('/api/admin/course-groups', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    setCourseGroups((prev) => prev.filter((g) => g.id !== id));
+  };
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: t('overview'), icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'courses', label: t('manage_courses'), icon: <BookOpen className="w-4 h-4" /> },
     { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
+    { id: 'groups', label: 'Kursgrupper', icon: <Tag className="w-4 h-4" /> },
   ];
 
   const handleDeleteCourse = async (id: number) => {
@@ -771,6 +809,83 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* Course Groups */}
+          {tab === 'groups' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Create form */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <Tag className="w-5 h-5 text-swedish-blue" />
+                  <h2 className="font-bold text-gray-900">Lägg till kursgrupp</h2>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">
+                  Definiera vilka kurspaket du erbjuder, t.ex. "Risk 1 + 2 kombo" eller "Enbart Risk 1".
+                </p>
+                {groupError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+                    {groupError}
+                  </div>
+                )}
+                <form className="space-y-4" onSubmit={handleAddGroup}>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Gruppnamn</label>
+                    <input
+                      type="text"
+                      className="input-field"
+                      placeholder="t.ex. Risk 1 + 2 kombo"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={groupSaving}
+                    className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {groupSaving ? (
+                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</>
+                    ) : (
+                      <><Plus className="w-4 h-4" />Lägg till grupp</>
+                    )}
+                  </button>
+                </form>
+              </div>
+
+              {/* Existing groups */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Kursgrupper ({courseGroups.length})</h2>
+                {courseGroups.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <Tag className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                    <p className="text-sm">Inga kursgrupper än. Lägg till en grupp till vänster.</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {courseGroups.map((g) => (
+                      <li key={g.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                            <Tag className="w-4 h-4 text-swedish-blue" />
+                          </div>
+                          <p className="font-medium text-gray-900 text-sm">{g.name}</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteGroup(g.id)}
+                          className="text-gray-400 hover:text-red-500 transition p-1"
+                          title="Ta bort grupp"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
