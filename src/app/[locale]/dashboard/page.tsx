@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -63,11 +63,13 @@ export default function DashboardPage() {
   };
 
   const StatusBadge = ({ status }: { status: Booking['status'] }) => {
-    const config = {
+    const configMap: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
       Paid: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('paid'), cls: 'bg-green-100 text-green-700' },
+      Confirmed: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('paid'), cls: 'bg-blue-100 text-blue-700' },
       Pending: { icon: <AlertCircle className="w-3.5 h-3.5" />, label: t('pending'), cls: 'bg-yellow-100 text-yellow-700' },
       Canceled: { icon: <XCircle className="w-3.5 h-3.5" />, label: t('canceled'), cls: 'bg-red-100 text-red-700' },
-    }[status];
+    };
+    const config = configMap[status] ?? { icon: null, label: status, cls: 'bg-gray-100 text-gray-700' };
     return (
       <span className={clsx('inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full', config.cls)}>
         {config.icon}
