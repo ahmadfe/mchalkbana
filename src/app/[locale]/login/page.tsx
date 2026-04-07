@@ -39,6 +39,8 @@ export default function LoginPage() {
     const meData = await meRes.json();
     if (meData.user?.role === 'admin') {
       router.push(`/${locale}/admin`);
+    } else if (meData.user?.role === 'school') {
+      router.push(`/${locale}/school`);
     } else {
       router.push(`/${locale}/dashboard`);
     }
