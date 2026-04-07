@@ -29,7 +29,7 @@ function buildInvoiceHtml(data: InvoiceEmailData): string {
       <div>
         <h1 style="color:#FCD116;margin:0;font-size:20px;font-weight:700;letter-spacing:-0.3px;">Uppsala Halkbana</h1>
         <p style="color:#93c5fd;margin:4px 0 0;font-size:12px;">Industrigatan 12, 753 30 Uppsala</p>
-        <p style="color:#93c5fd;margin:2px 0 0;font-size:12px;">info@uppsalahalkbana.se · 018-123 45 67</p>
+        <p style="color:#93c5fd;margin:2px 0 0;font-size:12px;">info@ihalka.se · 018-123 45 67</p>
       </div>
       <div style="text-align:right;">
         <p style="color:#fff;margin:0;font-size:18px;font-weight:700;">FAKTURA</p>
@@ -105,7 +105,7 @@ function buildInvoiceHtml(data: InvoiceEmailData): string {
     <!-- Footer -->
     <div style="background:#f9fafb;padding:20px 32px;border-top:1px solid #f3f4f6;">
       <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center;">Uppsala Halkbana · Industrigatan 12, 753 30 Uppsala</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;text-align:center;">info@uppsalahalkbana.se · 018-123 45 67</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;text-align:center;">info@ihalka.se · 018-123 45 67</p>
       <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;text-align:center;">Transaktions-ID: ${data.transactionId}</p>
     </div>
   </div>
@@ -130,7 +130,7 @@ export async function sendReceiptEmail(data: InvoiceEmailData): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.recipientEmail],
         subject: `Faktura ${invoiceNumber} – Uppsala Halkbana`,
         html: buildInvoiceHtml(data),
