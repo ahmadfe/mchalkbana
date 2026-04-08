@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { Pencil, Plus, X, Save, Trash2, ImagePlus, Video } from 'lucide-react';
 import clsx from 'clsx';
@@ -47,6 +47,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const openEdit = (card: InfoCard) => {
     setEditCard(card);
@@ -63,6 +64,16 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const closeModal = () => {
     setEditCard(null);
     setShowAdd(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({ ...prev, imageUrl: reader.result as string, videoUrl: '' }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async () => {
@@ -344,24 +355,33 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
 
-                {/* Image URL */}
+                {/* Image upload */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                    <ImagePlus className="w-3.5 h-3.5 inline mr-1" />
-                    Bild-URL
-                  </label>
-                  <input
-                    type="url"
-                    className="input-field text-sm"
-                    placeholder="https://example.com/image.jpg"
-                    value={form.imageUrl}
-                    onChange={(e) => setForm({ ...form, imageUrl: e.target.value, videoUrl: e.target.value ? '' : form.videoUrl })}
-                  />
-                  {form.imageUrl && !form.videoUrl && (
-                    <div className="mt-2 rounded-xl overflow-hidden" style={{ height: '140px' }}>
-                      <img src={form.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                    </div>
-                  )}
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
+                  <div
+                    onClick={() => fileRef.current?.click()}
+                    className={clsx(
+                      'relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group',
+                      form.imageUrl && !form.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white'
+                    )}
+                    style={{ height: '150px' }}
+                  >
+                    {form.imageUrl && !form.videoUrl ? (
+                      <>
+                        <img src={form.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        <ImagePlus className="w-7 h-7" />
+                        <span className="text-sm">Klicka för att välja bild</span>
+                        <span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
+                      </div>
+                    )}
+                  </div>
+                  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFileChange} />
                 </div>
 
                 {/* Divider */}

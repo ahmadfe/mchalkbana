@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -153,6 +153,17 @@ export default function AdminPage() {
   const [cardSaving, setCardSaving] = useState(false);
   const emptyCardForm = { badge: '', title: '', description: '', price: '', imageUrl: '', videoUrl: '', primaryButtonText: 'Läs mer', primaryButtonLink: '/courses', secondaryButtonText: '', secondaryButtonLink: '', sortOrder: 0, visible: true };
   const [cardForm, setCardForm] = useState(emptyCardForm);
+  const cardFileRef = useRef<HTMLInputElement>(null);
+
+  const handleCardFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCardForm((prev) => ({ ...prev, imageUrl: reader.result as string, videoUrl: '' }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Edit booking
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
@@ -1478,13 +1489,26 @@ export default function AdminPage() {
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Bild-URL</label>
-                  <input type="url" className="input-field text-sm" placeholder="https://example.com/image.jpg" value={cardForm.imageUrl} onChange={(e) => setCardForm({ ...cardForm, imageUrl: e.target.value, videoUrl: e.target.value ? '' : cardForm.videoUrl })} />
-                  {cardForm.imageUrl && !cardForm.videoUrl && (
-                    <div className="mt-2 rounded-xl overflow-hidden" style={{ height: '130px' }}>
-                      <img src={cardForm.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-                    </div>
-                  )}
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
+                  <div
+                    onClick={() => cardFileRef.current?.click()}
+                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', cardForm.imageUrl && !cardForm.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white')}
+                    style={{ height: '140px' }}
+                  >
+                    {cardForm.imageUrl && !cardForm.videoUrl ? (
+                      <>
+                        <img src={cardForm.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        <ImagePlus className="w-7 h-7" /><span className="text-sm">Klicka för att välja bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
+                      </div>
+                    )}
+                  </div>
+                  <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
                 </div>
                 <div className="flex items-center gap-3 text-gray-400">
                   <div className="flex-1 h-px bg-gray-200" /><span className="text-xs font-medium">ELLER</span><div className="flex-1 h-px bg-gray-200" />
