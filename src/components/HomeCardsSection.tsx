@@ -149,13 +149,13 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
           )}
         </div>
 
-        {/* Cards — hero-grid layout */}
-        <div className="space-y-10">
-          {visibleCards.map((card, idx) => (
+        {/* Cards — ihalka-style grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleCards.map((card) => (
             <div
               key={card.id}
               className={clsx(
-                'bg-white rounded-[28px] overflow-hidden shadow-sm group relative',
+                'bg-white rounded-[28px] overflow-hidden shadow-sm group relative flex flex-col hover:-translate-y-1 transition-transform duration-200',
                 !card.visible && isAdmin && 'opacity-60',
               )}
               style={{ border: '1px solid #ece5d8' }}
@@ -185,81 +185,74 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                 </div>
               )}
 
-              {/* Hero grid: alternate image side per card */}
-              <div className={clsx(
-                'flex flex-col md:flex-row',
-                idx % 2 !== 0 && 'md:flex-row-reverse'
-              )}>
-                {/* Content */}
-                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center">
-                  {card.badge && (
-                    <div className="inline-flex items-center gap-2 text-swedish-blue bg-blue-50 text-sm font-semibold px-3 py-1.5 rounded-full mb-5 self-start">
-                      <span className="w-1.5 h-1.5 rounded-full bg-swedish-blue" />
-                      {card.badge}
-                    </div>
-                  )}
-                  <h3 className="font-extrabold text-gray-900 text-2xl md:text-3xl leading-tight mb-4">{card.title}</h3>
-                  <p className="text-gray-500 text-base leading-relaxed mb-5">{card.description}</p>
-                  {card.price && (
-                    <p className="font-bold text-2xl mb-6" style={{ color: '#c25d1a' }}>{card.price}</p>
-                  )}
-                  <div className="flex flex-wrap gap-3">
-                    {card.primaryButtonText && (
-                      <Link
-                        href={card.primaryButtonLink}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-swedish-blue text-white font-semibold rounded-xl hover:bg-blue-700 transition text-sm"
-                      >
-                        {card.primaryButtonText}
-                      </Link>
-                    )}
-                    {card.secondaryButtonText && (
-                      <Link
-                        href={card.secondaryButtonLink}
-                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-swedish-blue text-swedish-blue font-semibold rounded-xl hover:bg-blue-50 transition text-sm"
-                      >
-                        {card.secondaryButtonText}
-                      </Link>
-                    )}
+              {/* Image / Video at top */}
+              <div className="w-full bg-gray-100 relative overflow-hidden" style={{ height: '220px' }}>
+                {card.videoUrl ? (
+                  <video
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="w-full h-full object-cover absolute inset-0"
+                  >
+                    <source src={card.videoUrl} type="video/mp4" />
+                  </video>
+                ) : card.imageUrl ? (
+                  <img
+                    src={card.imageUrl}
+                    alt={card.title}
+                    className="w-full h-full object-cover absolute inset-0"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                    <ImagePlus className="w-12 h-12" />
                   </div>
-                </div>
+                )}
+              </div>
 
-                {/* Media */}
-                <div className="w-full md:w-[45%] shrink-0 bg-gray-100 min-h-[260px] md:min-h-[340px] relative overflow-hidden">
-                  {card.videoUrl ? (
-                    <video
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover absolute inset-0"
+              {/* Content below image */}
+              <div className="flex flex-col flex-1 p-6">
+                {card.badge && (
+                  <span className="text-xs font-semibold text-swedish-blue uppercase tracking-wide mb-2">{card.badge}</span>
+                )}
+                <h3 className="font-bold text-gray-900 text-xl leading-snug mb-2">{card.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed mb-4 flex-1">{card.description}</p>
+                {card.price && (
+                  <p className="font-bold text-lg mb-3" style={{ color: '#c25d1a' }}>{card.price}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {card.primaryButtonText && (
+                    <Link
+                      href={card.primaryButtonLink}
+                      className="text-sm font-semibold hover:underline flex items-center gap-1"
+                      style={{ color: '#c25d1a' }}
                     >
-                      <source src={card.videoUrl} type="video/mp4" />
-                    </video>
-                  ) : card.imageUrl ? (
-                    <img
-                      src={card.imageUrl}
-                      alt={card.title}
-                      className="w-full h-full object-cover absolute inset-0"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                      <ImagePlus className="w-12 h-12" />
-                    </div>
+                      {card.primaryButtonText} →
+                    </Link>
+                  )}
+                  {card.secondaryButtonText && (
+                    <Link
+                      href={card.secondaryButtonLink}
+                      className="text-sm font-semibold text-swedish-blue hover:underline flex items-center gap-1"
+                    >
+                      {card.secondaryButtonText} →
+                    </Link>
                   )}
                 </div>
               </div>
             </div>
           ))}
 
-          {isAdmin && cards.length === 0 && (
-            <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-16 text-center text-gray-400">
-              <p className="text-sm mb-3">Inga kort ännu.</p>
-              <button onClick={openAdd} className="text-swedish-blue text-sm font-medium hover:underline">
-                + Lägg till ditt första kort
-              </button>
-            </div>
-          )}
         </div>
+
+        {isAdmin && cards.length === 0 && (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-16 text-center text-gray-400">
+            <p className="text-sm mb-3">Inga kort ännu.</p>
+            <button onClick={openAdd} className="text-swedish-blue text-sm font-medium hover:underline">
+              + Lägg till ditt första kort
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add / Edit Modal */}
