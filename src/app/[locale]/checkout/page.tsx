@@ -1,45 +1,72 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocale } from 'next-intl';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, CreditCard, Smartphone, AlertTriangle, Lock, ArrowLeft, User } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock } from 'lucide-react';
 import clsx from 'clsx';
 
-type PaymentMethod = 'card' | 'swish' | 'apple_pay';
-type CheckoutStep = 'payment' | 'processing' | 'success' | 'failed';
+type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
 interface GuestInfo {
   name: string;
   personnummer: string;
-  phone: string;
+  phone: string;      // contact phone
   email: string;
+  swishPhone: string; // Swish phone number
 }
 
 function CheckoutContent() {
   const locale = useLocale();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = parseInt(searchParams.get('session') || '1');
+  const sessionId = parseInt(searchParams.get('session') || '0');
 
   const [session, setSession] = useState<Session | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
-  const [method, setMethod] = useState<PaymentMethod>('card');
-  const [step, setStep] = useState<CheckoutStep>('payment');
-  const [card, setCard] = useState({ number: '', name: '', expiry: '', cvv: '' });
-  const [guest, setGuest] = useState<GuestInfo>({ name: '', personnummer: '', phone: '', email: '' });
+  const [step, setStep] = useState<CheckoutStep>('form');
+  const [guest, setGuest] = useState<GuestInfo>({
+    name: '', personnummer: '', phone: '', email: '', swishPhone: '',
+  });
   const [guestErrors, setGuestErrors] = useState<Partial<GuestInfo>>({});
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch(`/api/sessions/${sessionId}`)
       .then((r) => r.json())
-      .then((data) => setSession(data.session));
+      .then((d) => setSession(d.session));
   }, [sessionId]);
+
+  // Poll booking status while waiting
+  useEffect(() => {
+    if (step !== 'waiting' || !bookingId) return;
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/bookings/${bookingId}/status`);
+        const data = await res.json();
+        if (data.status === 'Paid') {
+          clearInterval(pollRef.current!);
+          setStep('success');
+        } else if (data.status === 'Canceled') {
+          clearInterval(pollRef.current!);
+          setError('Betalning avvisades eller tog för lång tid. Försök igen.');
+          setStep('failed');
+        }
+      } catch {
+        // ignore transient errors, keep polling
+      }
+    }, 2000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [step, bookingId]);
 
   if (!session) {
     return (
@@ -61,25 +88,27 @@ function CheckoutContent() {
   });
   const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const validateGuest = (): boolean => {
+  const validate = (): boolean => {
     const errs: Partial<GuestInfo> = {};
     if (!guest.name.trim()) errs.name = 'Namn krävs';
     if (!guest.personnummer.trim()) errs.personnummer = 'Personnummer krävs';
-    else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, ''))) {
-      errs.personnummer = 'Ange personnummer i format YYYYMMDD-XXXX';
-    }
+    else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, '')))
+      errs.personnummer = 'Format: YYYYMMDD-XXXX';
     if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
+    if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
+    else if (!/^(\+?46|0)[0-9\s\-]{7,12}$/.test(guest.swishPhone.trim()))
+      errs.swishPhone = 'Ange ett giltigt mobilnummer';
     setGuestErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateGuest()) return;
+    if (!validate()) return;
+    setSubmitting(true);
     setError('');
-    setStep('processing');
 
-    // Step 1: Create booking (guest flow)
+    // 1. Create booking
     const bookRes = await fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,53 +116,80 @@ function CheckoutContent() {
         sessionId,
         guestName: guest.name,
         personnummer: guest.personnummer,
-        guestPhone: guest.phone,
+        guestPhone: guest.phone || null,
         guestEmail: guest.email,
       }),
     });
 
     if (!bookRes.ok) {
-      const data = await bookRes.json();
-      setError(data.error || 'Bokning misslyckades');
-      setStep('failed');
+      const d = await bookRes.json();
+      setError(d.error ?? 'Bokning misslyckades');
+      setSubmitting(false);
       return;
     }
 
-    const bookData = await bookRes.json();
-    const newBookingId = bookData.booking.id;
-    setBookingId(newBookingId);
+    const { booking } = await bookRes.json();
+    setBookingId(booking.id);
 
-    // Step 2: Process payment
-    const payRes = await fetch(`/api/bookings/${newBookingId}/pay`, {
+    // 2. Create Swish payment request
+    const swishRes = await fetch('/api/swish/create-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider: method === 'card' ? 'Stripe' : method === 'swish' ? 'Swish' : 'ApplePay',
-      }),
+      body: JSON.stringify({ bookingId: booking.id, payerPhone: guest.swishPhone }),
     });
 
-    if (payRes.ok) {
-      setStep('success');
-    } else {
-      setStep('failed');
+    if (!swishRes.ok) {
+      const d = await swishRes.json();
+      setError(d.error ?? 'Swish-betalning misslyckades');
+      setSubmitting(false);
+      return;
     }
+
+    // 3. Enter waiting state — polling starts via useEffect
+    setSubmitting(false);
+    setStep('waiting');
   };
 
-  const methods: { id: PaymentMethod; label: string; icon: React.ReactNode; desc: string }[] = [
-    { id: 'card', label: 'Betalkort', icon: <CreditCard className="w-5 h-5" />, desc: 'Visa, Mastercard, Amex' },
-    { id: 'swish', label: 'Swish', icon: <Smartphone className="w-5 h-5" />, desc: 'Swish – populärt i Sverige' },
-    { id: 'apple_pay', label: 'Apple Pay', icon: <span className="text-lg"></span>, desc: 'Snabb betalning med Apple Pay' },
-  ];
-
-  if (step === 'processing') {
+  // ── Waiting state ──────────────────────────────────────────────────────────
+  if (step === 'waiting') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-20 h-20 border-4 border-swedish-blue border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Behandlar betalning...</h2>
-            <p className="text-gray-500 text-sm">Ansluter till betalning...</p>
+        <main className="flex-1 flex items-center justify-center py-12 px-4">
+          <div className="w-full max-w-md text-center">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C]">
+              <Smartphone className="w-12 h-12 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Väntar på Swish</h1>
+            <p className="text-gray-500 mb-1">En betalningsförfrågan har skickats till</p>
+            <p className="font-semibold text-gray-800 mb-6">{guest.swishPhone}</p>
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 text-left">
+              <ol className="space-y-3 text-sm text-gray-600">
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  Öppna Swish-appen på din mobil
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  Godkänn betalningen på <strong>{course.price.toLocaleString('sv-SE')} kr</strong>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                  Bekräftelse skickas automatiskt till {guest.email}
+                </li>
+              </ol>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6">
+              <Clock className="w-4 h-4 animate-pulse" />
+              <span>Väntar på godkännande...</span>
+              <div className="w-4 h-4 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Betalningsförfrågan upphör automatiskt efter 3 minuter om den inte godkänns.
+            </p>
           </div>
         </main>
         <Footer />
@@ -141,6 +197,7 @@ function CheckoutContent() {
     );
   }
 
+  // ── Success state ──────────────────────────────────────────────────────────
   if (step === 'success') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
@@ -152,7 +209,7 @@ function CheckoutContent() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Bokning bekräftad!</h1>
             <p className="text-gray-500 mb-2">
-              En bekräftelse har skickats till <strong>{guest.email}</strong>
+              Kvitto skickat till <strong>{guest.email}</strong>
             </p>
 
             <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 text-left mt-6">
@@ -205,6 +262,7 @@ function CheckoutContent() {
     );
   }
 
+  // ── Failed state ───────────────────────────────────────────────────────────
   if (step === 'failed') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
@@ -215,9 +273,9 @@ function CheckoutContent() {
               <AlertTriangle className="w-12 h-12 text-red-600" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Betalning misslyckades</h1>
-            <p className="text-gray-500 mb-2">{error || 'Något gick fel. Försök igen.'}</p>
-            <div className="flex gap-3 justify-center mt-6">
-              <button onClick={() => setStep('payment')} className="btn-primary px-8 py-3">
+            <p className="text-gray-500 mb-6">{error || 'Något gick fel. Försök igen.'}</p>
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => { setStep('form'); setError(''); }} className="btn-primary px-8 py-3">
                 Försök igen
               </button>
               <Link href={`/${locale}/courses`} className="btn-outline px-8 py-3">
@@ -231,6 +289,7 @@ function CheckoutContent() {
     );
   }
 
+  // ── Form state ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
@@ -245,10 +304,10 @@ function CheckoutContent() {
           <h1 className="text-2xl font-bold text-gray-900 mb-8">Slutför bokning</h1>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            {/* Left: Guest info + payment form */}
+            {/* Left: form */}
             <form onSubmit={handlePay} className="lg:col-span-3 space-y-6">
 
-              {/* Guest info */}
+              {/* Personal details */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <User className="w-4 h-4 text-swedish-blue" />
@@ -280,7 +339,7 @@ function CheckoutContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefonnummer</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefonnummer <span className="text-gray-400 font-normal">(valfritt)</span></label>
                   <input
                     type="tel"
                     value={guest.phone}
@@ -291,7 +350,9 @@ function CheckoutContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress * <span className="text-gray-400 font-normal">(kvitto skickas hit)</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    E-postadress * <span className="text-gray-400 font-normal">(kvitto skickas hit)</span>
+                  </label>
                   <input
                     type="email"
                     value={guest.email}
@@ -303,143 +364,65 @@ function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Payment method selector */}
+              {/* Swish */}
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <h2 className="font-semibold text-gray-900 mb-4">Betalningsmetod</h2>
-                <div className="space-y-2">
-                  {methods.map((m) => (
-                    <label
-                      key={m.id}
-                      className={clsx(
-                        'flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition',
-                        method === m.id ? 'border-swedish-blue bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="method"
-                        value={m.id}
-                        checked={method === m.id}
-                        onChange={() => setMethod(m.id)}
-                        className="sr-only"
-                      />
-                      <div className={clsx(
-                        'w-10 h-10 rounded-lg flex items-center justify-center',
-                        method === m.id ? 'bg-swedish-blue text-white' : 'bg-gray-100 text-gray-500'
-                      )}>
-                        {m.icon}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{m.label}</p>
-                        <p className="text-xs text-gray-500">{m.desc}</p>
-                      </div>
-                      <div className={clsx(
-                        'ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center',
-                        method === m.id ? 'border-swedish-blue' : 'border-gray-300'
-                      )}>
-                        {method === m.id && <div className="w-2.5 h-2.5 bg-swedish-blue rounded-full" />}
-                      </div>
-                    </label>
-                  ))}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C] flex items-center justify-center">
+                    <Smartphone className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-gray-900">Betala med Swish</h2>
+                    <p className="text-xs text-gray-400">En betalningsförfrågan skickas till din Swish-app</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Swish-nummer *</label>
+                  <input
+                    type="tel"
+                    value={guest.swishPhone}
+                    onChange={(e) => setGuest({ ...guest, swishPhone: e.target.value })}
+                    placeholder="070-123 45 67"
+                    className={clsx('input-field', guestErrors.swishPhone && 'border-red-400')}
+                  />
+                  {guestErrors.swishPhone
+                    ? <p className="text-xs text-red-600 mt-1">{guestErrors.swishPhone}</p>
+                    : <p className="text-xs text-gray-400 mt-1">Ange det mobilnummer kopplat till ditt Swish-konto</p>
+                  }
                 </div>
               </div>
 
-              {/* Card details */}
-              {method === 'card' && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
-                  <h2 className="font-semibold text-gray-900">Kortuppgifter</h2>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Kortnummer</label>
-                    <input
-                      type="text"
-                      value={card.number}
-                      onChange={(e) => setCard({ ...card, number: e.target.value })}
-                      className="input-field font-mono"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn på kort</label>
-                    <input
-                      type="text"
-                      value={card.name}
-                      onChange={(e) => setCard({ ...card, name: e.target.value })}
-                      className="input-field"
-                      placeholder="ANNA SVENSSON"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Utgångsdatum</label>
-                      <input
-                        type="text"
-                        value={card.expiry}
-                        onChange={(e) => setCard({ ...card, expiry: e.target.value })}
-                        className="input-field"
-                        placeholder="MM/ÅÅ"
-                        maxLength={5}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">CVV</label>
-                      <input
-                        type="text"
-                        value={card.cvv}
-                        onChange={(e) => setCard({ ...card, cvv: e.target.value })}
-                        className="input-field"
-                        placeholder="123"
-                        maxLength={4}
-                      />
-                    </div>
-                  </div>
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
+                  {error}
                 </div>
               )}
 
-              {method === 'swish' && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Smartphone className="w-10 h-10 text-white" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Betala med Swish</h3>
-                  <p className="text-gray-500 text-sm">Klicka på &quot;Betala&quot; så öppnas Swish-appen automatiskt.</p>
-                </div>
-              )}
-
-              {method === 'apple_pay' && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-                  <div className="w-20 h-20 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white text-3xl"></span>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Betala med Apple Pay</h3>
-                  <p className="text-gray-500 text-sm">Klicka på &quot;Betala&quot; för att autentisera med Face ID.</p>
-                </div>
-              )}
-
-              {/* Security notice */}
               <div className="flex items-center gap-3 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
                 <Lock className="w-4 h-4 shrink-0" />
-                <p>Din betalning är krypterad och hanteras säkert. Vi lagrar aldrig kortuppgifter.</p>
+                <p>Betalningen sker säkert via Swish. Vi lagrar aldrig bankuppgifter.</p>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-swedish-blue text-white font-bold text-lg py-4 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                disabled={submitting}
+                className="w-full bg-swedish-blue text-white font-bold text-lg py-4 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                <Lock className="w-5 h-5" />
-                Betala {course.price.toLocaleString('sv-SE')} kr
+                {submitting ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Smartphone className="w-5 h-5" />
+                )}
+                {submitting ? 'Skickar...' : `Betala ${course.price.toLocaleString('sv-SE')} kr med Swish`}
               </button>
             </form>
 
-            {/* Right: Booking summary */}
+            {/* Right: summary */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl border border-gray-100 p-5 sticky top-24">
                 <h2 className="font-semibold text-gray-900 mb-4">Bokningssammanfattning</h2>
 
-                <div className={clsx(
-                  'w-full h-1.5 rounded-full mb-5',
-                  course.type === 'Risk1' ? 'bg-swedish-blue' : 'bg-orange-500'
-                )} />
+                <div className="w-full h-1.5 rounded-full mb-5 bg-swedish-blue" />
 
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-3">
@@ -466,12 +449,12 @@ function CheckoutContent() {
 
                 <div className="border-t border-gray-100 mt-5 pt-4">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-500">Kursavgift</span>
-                    <span>{course.price.toLocaleString('sv-SE')} kr</span>
+                    <span className="text-gray-500">Kursavgift (exkl. moms)</span>
+                    <span>{Math.round(course.price / 1.25).toLocaleString('sv-SE')} kr</span>
                   </div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500">Moms (25%)</span>
-                    <span>Inkl.</span>
+                    <span>{(course.price - Math.round(course.price / 1.25)).toLocaleString('sv-SE')} kr</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-100">
                     <span>Totalt:</span>
@@ -481,8 +464,8 @@ function CheckoutContent() {
 
                 <div className="mt-5 p-3 bg-gray-50 rounded-xl text-center">
                   <p className="text-xs text-gray-400">Säker betalning via</p>
-                  <p className="font-bold text-gray-700 text-sm">Stripe</p>
-                  <p className="text-xs text-gray-400 mt-1">PCI-DSS Level 1 certifierad</p>
+                  <p className="font-bold text-gray-700 text-sm">Swish</p>
+                  <p className="text-xs text-gray-400 mt-1">Sveriges säkraste betaltjänst</p>
                 </div>
               </div>
             </div>
