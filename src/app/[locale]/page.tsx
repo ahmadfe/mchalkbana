@@ -8,6 +8,7 @@ import HomeCardsSection from '@/components/HomeCardsSection';
 import { Shield, Calendar, CreditCard } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
+import type { Session } from '@/lib/types';
 
 export async function generateMetadata() {
   const t = await getTranslations('home');
@@ -137,7 +138,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {upcomingSessions.map((session) => (
-                <SessionCard key={session.id} session={session} isLoggedIn={false} />
+                <SessionCard key={session.id} session={session as unknown as Session} isLoggedIn={false} />
               ))}
             </div>
 
