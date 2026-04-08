@@ -33,7 +33,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'groups' | 'payments';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments';
 
 interface PaymentRecord {
   id: number;
@@ -126,6 +126,16 @@ export default function AdminPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
   const [refunding, setRefunding] = useState(false);
+
+  // Edit booking
+  const [editBooking, setEditBooking] = useState<Booking | null>(null);
+  const [editForm, setEditForm] = useState({ guestName: '', personnummer: '', guestPhone: '', guestEmail: '', status: '' });
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Session assign school
+  const [assigningSchoolSession, setAssigningSchoolSession] = useState<number | null>(null);
+  const [assignSchoolId, setAssignSchoolId] = useState('');
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -237,7 +247,6 @@ export default function AdminPage() {
     { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
-    { id: 'groups', label: 'Kursgrupper', icon: <Tag className="w-4 h-4" /> },
     { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
   ];
 
@@ -337,6 +346,49 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const openEditBooking = (b: Booking) => {
+    setEditBooking(b);
+    setEditForm({
+      guestName: b.guestName ?? (b.user as { name?: string } | null | undefined)?.name ?? '',
+      personnummer: b.personnummer ?? '',
+      guestPhone: b.guestPhone ?? '',
+      guestEmail: b.guestEmail ?? (b.user as { email?: string } | null | undefined)?.email ?? '',
+      status: b.status,
+    });
+  };
+
+  const handleEditBookingSave = async () => {
+    if (!editBooking) return;
+    setEditSaving(true);
+    const res = await fetch(`/api/admin/bookings/${editBooking.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    setEditSaving(false);
+    if (res.ok) {
+      const { booking: updated } = await res.json();
+      setBookings((prev) => prev.map((b) => b.id === updated.id ? updated : b));
+      setEditBooking(null);
+    }
+  };
+
+  const handleAssignSchool = async (sessionId: number) => {
+    const schoolUserId = assignSchoolId;
+    const visibility = schoolUserId ? 'school' : 'public';
+    const res = await fetch(`/api/admin/sessions/${sessionId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibility, assignedSchoolUserId: schoolUserId || null }),
+    });
+    if (res.ok) {
+      const { session: updated } = await res.json();
+      setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, ...updated } : s));
+    }
+    setAssigningSchoolSession(null);
+    setAssignSchoolId('');
   };
 
   const handleConfirmRefund = async () => {
@@ -527,95 +579,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Test email */}
-              <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle2 className="w-4 h-4 text-swedish-blue" />
-                  <h2 className="font-bold text-gray-900">Testa e-postutskick</h2>
-                </div>
-                <p className="text-sm text-gray-500 mb-3">Skicka ett testmail för att verifiera att Resend och domänen är korrekt konfigurerade.</p>
-                {testEmailStatus === 'ok' && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3 mb-3">
-                    ✓ Testmail skickat! Kolla inkorgen för <strong>{testEmailTo}</strong>.
-                  </div>
-                )}
-                {testEmailStatus === 'error' && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-3">
-                    <strong>Fel:</strong> {testEmailError}
-                  </div>
-                )}
-                <form onSubmit={handleSendTestEmail} className="flex gap-3">
-                  <input
-                    type="email"
-                    required
-                    className="input-field flex-1"
-                    placeholder="din@email.se"
-                    value={testEmailTo}
-                    onChange={(e) => { setTestEmailTo(e.target.value); setTestEmailStatus('idle'); }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={testEmailStatus === 'sending'}
-                    className="btn-primary px-5 py-2 text-sm whitespace-nowrap disabled:opacity-60"
-                  >
-                    {testEmailStatus === 'sending' ? 'Skickar...' : 'Skicka test'}
-                  </button>
-                </form>
-              </div>
-
-              {/* Recent bookings table */}
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                  <h2 className="font-bold text-gray-900">Senaste bokningar</h2>
-                  <button onClick={exportCsv} className="flex items-center gap-2 text-sm text-swedish-blue hover:underline">
-                    <Download className="w-4 h-4" />
-                    {t('export_csv')}
-                  </button>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                      <tr>
-                        <th className="text-left py-3 px-5">ID</th>
-                        <th className="text-left py-3 px-5">Elev</th>
-                        <th className="text-left py-3 px-5">Personnummer</th>
-                        <th className="text-left py-3 px-5">Kurs</th>
-                        <th className="text-left py-3 px-5">Datum</th>
-                        <th className="text-left py-3 px-5">Status</th>
-                        <th className="text-left py-3 px-5">Belopp</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {bookings.slice(0, 10).map((b) => (
-                        <tr key={b.id} className="hover:bg-gray-50">
-                          <td className="py-3 px-5 text-gray-500">#{b.id}</td>
-                          <td className="py-3 px-5 font-medium">{getStudentName(b)}</td>
-                          <td className="py-3 px-5 text-gray-500 font-mono text-xs">{b.personnummer || '–'}</td>
-                          <td className="py-3 px-5">
-                            {locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}
-                          </td>
-                          <td className="py-3 px-5 text-gray-500">
-                            {b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–'}
-                          </td>
-                          <td className="py-3 px-5">
-                            <span className={clsx(
-                              'px-2.5 py-1 rounded-full text-xs font-semibold',
-                              b.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                              b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                              'bg-yellow-100 text-yellow-700'
-                            )}>
-                              {b.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-5 font-semibold">
-                            {b.session?.course?.price?.toLocaleString('sv-SE')} kr
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
             </div>
           )}
 
@@ -688,8 +651,23 @@ export default function AdminPage() {
           {/* Sessions */}
           {tab === 'sessions' && (
             <div>
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="font-bold text-gray-900">Pass ({sessions.length})</h2>
+              <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-gray-900">Pass ({sessions.length})</h2>
+                  <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                    {(['all', 'public', 'school'] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setSessionFilter(f)}
+                        className={clsx('px-3 py-1 text-xs rounded-md font-medium transition',
+                          sessionFilter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                        )}
+                      >
+                        {f === 'all' ? 'Alla' : f === 'public' ? 'Offentliga' : 'Skolkonto'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowAddSession(true)}
                   className="btn-primary flex items-center gap-2 text-sm py-2"
@@ -699,9 +677,11 @@ export default function AdminPage() {
                 </button>
               </div>
               <div className="space-y-3">
-                {sessions.map((s) => (
+                {sessions
+                  .filter((s) => sessionFilter === 'all' || s.visibility === sessionFilter)
+                  .map((s) => (
                   <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
                       <div className="flex items-center gap-4">
                         <div className={clsx(
                           'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
@@ -713,17 +693,17 @@ export default function AdminPage() {
                           {s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'AM' ? 'AM' : s.course?.type?.slice(0, 2) || '?'}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-medium text-gray-900">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
                             <span className={clsx(
                               'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
                               s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                             )}>
                               {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                              {s.visibility === 'public' ? 'Offentlig' : 'Skolkonto'}
+                              {s.visibility === 'public' ? 'Offentlig' : (s.assignedSchoolUser?.name ?? 'Skolkonto')}
                             </span>
                           </div>
-                          <div className="flex gap-4 text-xs text-gray-500 mt-1">
+                          <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                             <span>📅 {new Date(s.startTime).toLocaleDateString('sv-SE')}</span>
                             <span>🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             <span>📍 {s.school?.name}</span>
@@ -731,7 +711,7 @@ export default function AdminPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2 flex-wrap justify-end">
+                      <div className="flex gap-2 flex-wrap justify-end items-center">
                         <button
                           onClick={() => handleViewStudents(s.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-blue-50 transition"
@@ -739,20 +719,40 @@ export default function AdminPage() {
                           <Eye className="w-3.5 h-3.5" />
                           Visa elever
                         </button>
-                        <button
-                          onClick={() => handleToggleVisibility(s)}
-                          className={clsx(
-                            'flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition',
-                            s.visibility === 'public'
-                              ? 'text-orange-600 border-orange-300 hover:bg-orange-50'
-                              : 'text-green-600 border-green-300 hover:bg-green-50'
-                          )}
-                        >
-                          {s.visibility === 'public' ? <><Lock className="w-3.5 h-3.5" /> Gör skolkonto</> : <><Globe className="w-3.5 h-3.5" /> Gör offentlig</>}
-                        </button>
-                        <button className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50">
-                          <Pencil className="w-4 h-4" />
-                        </button>
+
+                        {/* Assign school */}
+                        {assigningSchoolSession === s.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={assignSchoolId}
+                              onChange={(e) => setAssignSchoolId(e.target.value)}
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
+                              autoFocus
+                            >
+                              <option value="">— Offentlig —</option>
+                              {schoolAccounts.map((acc) => (
+                                <option key={acc.id} value={String(acc.id)}>{acc.name}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleAssignSchool(s.id)}
+                              className="px-2.5 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-blue-700"
+                            >Spara</button>
+                            <button
+                              onClick={() => { setAssigningSchoolSession(null); setAssignSchoolId(''); }}
+                              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"
+                            ><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setAssigningSchoolSession(s.id); setAssignSchoolId(s.assignedSchoolUserId ? String(s.assignedSchoolUserId) : ''); }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition text-orange-600 border-orange-300 hover:bg-orange-50"
+                          >
+                            <School className="w-3.5 h-3.5" />
+                            {s.assignedSchoolUser ? `Skola: ${s.assignedSchoolUser.name}` : 'Tilldela skola'}
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleDeleteSession(s.id)}
                           className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
@@ -768,55 +768,94 @@ export default function AdminPage() {
           )}
 
           {/* Bookings */}
-          {tab === 'bookings' && (
-            <div>
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="font-bold text-gray-900">Alla bokningar ({bookings.length})</h2>
-                <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
-                  <Download className="w-4 h-4" />
-                  {t('export_csv')}
-                </button>
+          {tab === 'bookings' && (() => {
+            const groups: Record<string, Booking[]> = {};
+            [...bookings].sort((a, b) => new Date(b.bookingTime).getTime() - new Date(a.bookingTime).getTime()).forEach((b) => {
+              const key = new Date(b.bookingTime).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
+              if (!groups[key]) groups[key] = [];
+              groups[key].push(b);
+            });
+            const monthKeys = Object.keys(groups);
+            return (
+              <div>
+                <div className="flex justify-between items-center mb-5">
+                  <h2 className="font-bold text-gray-900">Alla bokningar ({bookings.length})</h2>
+                  <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
+                    <Download className="w-4 h-4" />
+                    {t('export_csv')}
+                  </button>
+                </div>
+                {monthKeys.map((month) => (
+                  <div key={month} className="mb-8">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide capitalize">{month}</h3>
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-xs text-gray-400">{groups[month].length} bokningar</span>
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                          <tr>
+                            <th className="text-left py-3 px-4">ID</th>
+                            <th className="text-left py-3 px-4">Namn</th>
+                            <th className="text-left py-3 px-4">Personnummer</th>
+                            <th className="text-left py-3 px-4">Telefon</th>
+                            <th className="text-left py-3 px-4">E-post</th>
+                            <th className="text-left py-3 px-4">Kurs & Pass</th>
+                            <th className="text-left py-3 px-4">Status</th>
+                            <th className="py-3 px-4" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {groups[month].map((b) => {
+                            const name = getStudentName(b);
+                            const phone = b.guestPhone ?? '–';
+                            const email = b.guestEmail ?? (b.user as { email?: string } | null | undefined)?.email ?? '–';
+                            const courseTitle = locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn;
+                            const sessionDate = b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–';
+                            const sessionTime = b.session ? new Date(b.session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                            const schoolName = b.session?.school?.name ?? '';
+                            return (
+                              <tr key={b.id} className="hover:bg-gray-50">
+                                <td className="py-3 px-4 text-gray-400 text-xs">#{b.id}</td>
+                                <td className="py-3 px-4 font-medium">{name}</td>
+                                <td className="py-3 px-4 text-gray-500 font-mono text-xs">{b.personnummer || '–'}</td>
+                                <td className="py-3 px-4 text-gray-500 text-xs">{phone}</td>
+                                <td className="py-3 px-4 text-gray-500 text-xs">{email}</td>
+                                <td className="py-3 px-4">
+                                  <p className="font-medium text-xs">{courseTitle}</p>
+                                  <p className="text-xs text-gray-400">{sessionDate} {sessionTime} · {schoolName}</p>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className={clsx(
+                                    'px-2.5 py-1 rounded-full text-xs font-semibold',
+                                    b.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                                    b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
+                                    b.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-yellow-100 text-yellow-700'
+                                  )}>{b.status}</span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="flex gap-1 justify-end">
+                                    <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50" title="Redigera">
+                                      <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button onClick={() => handleDeleteStudent(b.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Ta bort">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                    <tr>
-                      <th className="text-left py-3 px-5">Bokning</th>
-                      <th className="text-left py-3 px-5">Elev</th>
-                      <th className="text-left py-3 px-5">Personnummer</th>
-                      <th className="text-left py-3 px-5">E-post</th>
-                      <th className="text-left py-3 px-5">Kurs</th>
-                      <th className="text-left py-3 px-5">Datum</th>
-                      <th className="text-left py-3 px-5">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {bookings.map((b) => (
-                      <tr key={b.id} className="hover:bg-gray-50">
-                        <td className="py-3 px-5 text-gray-500">#{b.id}</td>
-                        <td className="py-3 px-5 font-medium">{getStudentName(b)}</td>
-                        <td className="py-3 px-5 text-gray-500 font-mono text-xs">{b.personnummer || '–'}</td>
-                        <td className="py-3 px-5 text-gray-500 text-xs">{b.guestEmail || (b.user as { email?: string } | null | undefined)?.email || '–'}</td>
-                        <td className="py-3 px-5">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</td>
-                        <td className="py-3 px-5 text-gray-500">{b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–'}</td>
-                        <td className="py-3 px-5">
-                          <span className={clsx(
-                            'px-2.5 py-1 rounded-full text-xs font-semibold',
-                            b.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                            b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                            b.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          )}>
-                            {b.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* School Accounts */}
           {tab === 'schools' && (
@@ -910,82 +949,6 @@ export default function AdminPage() {
                           onClick={() => handleDeleteSchoolAccount(acc.id)}
                           className="text-gray-400 hover:text-red-500 transition p-1"
                           title="Ta bort konto"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Course Groups */}
-          {tab === 'groups' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Create form */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <Tag className="w-5 h-5 text-swedish-blue" />
-                  <h2 className="font-bold text-gray-900">Lägg till kursgrupp</h2>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  Definiera vilka kurspaket du erbjuder, t.ex. "Risk 1 + 2 kombo" eller "Enbart Risk 1".
-                </p>
-                {groupError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
-                    {groupError}
-                  </div>
-                )}
-                <form className="space-y-4" onSubmit={handleAddGroup}>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Gruppnamn</label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      placeholder="t.ex. Risk 1 + 2 kombo"
-                      value={newGroupName}
-                      onChange={(e) => setNewGroupName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={groupSaving}
-                    className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {groupSaving ? (
-                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</>
-                    ) : (
-                      <><Plus className="w-4 h-4" />Lägg till grupp</>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              {/* Existing groups */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Kursgrupper ({courseGroups.length})</h2>
-                {courseGroups.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Tag className="w-10 h-10 mx-auto mb-3 text-gray-200" />
-                    <p className="text-sm">Inga kursgrupper än. Lägg till en grupp till vänster.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-2">
-                    {courseGroups.map((g) => (
-                      <li key={g.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                            <Tag className="w-4 h-4 text-swedish-blue" />
-                          </div>
-                          <p className="font-medium text-gray-900 text-sm">{g.name}</p>
-                        </div>
-                        <button
-                          onClick={() => handleDeleteGroup(g.id)}
-                          className="text-gray-400 hover:text-red-500 transition p-1"
-                          title="Ta bort grupp"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1097,6 +1060,56 @@ export default function AdminPage() {
 
         </div>
       </main>
+
+      {/* Edit Booking Modal */}
+      {editBooking && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">Redigera bokning #{editBooking.id}</h3>
+              <button onClick={() => setEditBooking(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+                <input type="text" className="input-field" value={editForm.guestName} onChange={(e) => setEditForm({ ...editForm, guestName: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Personnummer</label>
+                <input type="text" className="input-field font-mono" value={editForm.personnummer} onChange={(e) => setEditForm({ ...editForm, personnummer: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefon</label>
+                <input type="tel" className="input-field" value={editForm.guestPhone} onChange={(e) => setEditForm({ ...editForm, guestPhone: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">E-post</label>
+                <input type="email" className="input-field" value={editForm.guestEmail} onChange={(e) => setEditForm({ ...editForm, guestEmail: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                <select className="input-field" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                  <option value="Pending">Pending</option>
+                  <option value="Confirmed">Confirmed</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Canceled">Canceled</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setEditBooking(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+              <button
+                onClick={handleEditBookingSave}
+                disabled={editSaving}
+                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {editSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {editSaving ? 'Sparar...' : 'Spara ändringar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Refund Confirm Modal */}
       {refundTarget && (

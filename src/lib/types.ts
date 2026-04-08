@@ -41,6 +41,8 @@ export interface Session {
   seatLimit: number;
   seatsAvailable: number;
   visibility: string;
+  assignedSchoolUserId?: number | null;
+  assignedSchoolUser?: { id: number; name: string } | null;
 }
 
 export type BookingStatus = 'Pending' | 'Paid' | 'Canceled' | 'Confirmed';

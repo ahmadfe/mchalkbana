@@ -2,6 +2,30 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const authUser = await getAuthUserFromRequest(request);
+  if (!authUser || authUser.role !== 'admin') {
+    return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  }
+
+  const bookingId = parseInt(params.id);
+  const { guestName, personnummer, guestPhone, guestEmail, status } = await request.json();
+
+  const updated = await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      ...(guestName !== undefined ? { guestName } : {}),
+      ...(personnummer !== undefined ? { personnummer } : {}),
+      ...(guestPhone !== undefined ? { guestPhone: guestPhone || null } : {}),
+      ...(guestEmail !== undefined ? { guestEmail } : {}),
+      ...(status !== undefined ? { status } : {}),
+    },
+    include: { session: { include: { course: true, school: true } }, user: { select: { name: true, email: true } } },
+  });
+
+  return NextResponse.json({ booking: updated });
+}
+
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'admin') {

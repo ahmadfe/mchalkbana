@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const sessions = await prisma.session.findMany({
-    include: { course: true, school: true },
+    include: { course: true, school: true, assignedSchoolUser: { select: { id: true, name: true } } },
     orderBy: { startTime: 'asc' },
   });
   return NextResponse.json({ sessions });

@@ -39,3 +39,5 @@ yarn-error.log*
 # local db
 prisma/prisma/
 node_modules
+
+.vercel

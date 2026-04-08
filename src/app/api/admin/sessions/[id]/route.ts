@@ -19,7 +19,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         ? { assignedSchoolUserId: parseInt(data.assignedSchoolUserId) }
         : data.visibility === 'public' ? { assignedSchoolUserId: null } : {}),
     },
-    include: { course: true, school: true },
+    include: { course: true, school: true, assignedSchoolUser: { select: { id: true, name: true } } },
   });
   return NextResponse.json({ session });
 }
