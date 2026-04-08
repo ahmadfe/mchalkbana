@@ -15,6 +15,7 @@ export const mockCourses: Course[] = [
     vehicle: 'Car',
     behorighet: 'B',
     price: 1500,
+    location: 'Uppsala',
   },
   {
     id: 2,
@@ -25,6 +26,7 @@ export const mockCourses: Course[] = [
     vehicle: 'Car',
     behorighet: 'B',
     price: 2500,
+    location: 'Uppsala',
   },
   {
     id: 3,
@@ -35,6 +37,7 @@ export const mockCourses: Course[] = [
     vehicle: 'Motorcycle',
     behorighet: 'A',
     price: 1500,
+    location: 'Uppsala',
   },
   {
     id: 4,
@@ -45,6 +48,7 @@ export const mockCourses: Course[] = [
     vehicle: 'Motorcycle',
     behorighet: 'A',
     price: 2800,
+    location: 'Uppsala',
   },
 ];
 
