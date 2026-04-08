@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Pencil, Plus, X, Save, Trash2, ImagePlus, Video } from 'lucide-react';
+import { Pencil, Plus, X, Save, Trash2, ImagePlus, Video, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
 interface InfoCard {
