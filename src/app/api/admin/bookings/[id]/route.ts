@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { sendBookingConfirmationEmail } from '@/lib/email';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
@@ -70,7 +71,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Namn och personnummer krävs' }, { status: 400 });
   }
 
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { course: true, school: true },
+  });
   if (!session) return NextResponse.json({ error: 'Pass hittades inte' }, { status: 404 });
   if (session.seatsAvailable <= 0) return NextResponse.json({ error: 'Inga platser kvar' }, { status: 400 });
 
@@ -91,6 +95,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
     return b;
   });
+
+  // Send confirmation email if email provided
+  if (guestEmail) {
+    const courseDate = new Date(session.startTime).toLocaleDateString('sv-SE');
+    const courseTime = `${new Date(session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${new Date(session.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+    await sendBookingConfirmationEmail({
+      recipientEmail: guestEmail,
+      recipientName: guestName,
+      bookingId: booking.id,
+      courseName: session.course.titleSv,
+      courseDate,
+      courseTime,
+      location: session.course.location || session.school.name,
+      personnummer,
+      phone: guestPhone || null,
+    });
+  }
 
   return NextResponse.json({ booking }, { status: 201 });
 }

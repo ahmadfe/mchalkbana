@@ -114,6 +114,8 @@ export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
 
   const [tab, setTab] = useState<Tab>('overview');
+  const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [showAddSession, setShowAddSession] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -881,8 +883,9 @@ export default function AdminPage() {
 
           {/* Bookings */}
           {tab === 'bookings' && (() => {
+            const filtered = bookingStatusFilter === 'all' ? bookings : bookings.filter(b => b.status === bookingStatusFilter);
             const groups: Record<string, Booking[]> = {};
-            [...bookings].sort((a, b) => new Date(b.bookingTime).getTime() - new Date(a.bookingTime).getTime()).forEach((b) => {
+            [...filtered].sort((a, b) => new Date(b.bookingTime).getTime() - new Date(a.bookingTime).getTime()).forEach((b) => {
               const key = new Date(b.bookingTime).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
               if (!groups[key]) groups[key] = [];
               groups[key].push(b);
@@ -891,7 +894,20 @@ export default function AdminPage() {
             return (
               <div>
                 <div className="flex justify-between items-center mb-5">
-                  <h2 className="font-bold text-gray-900">Alla bokningar ({bookings.length})</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="font-bold text-gray-900">Alla bokningar ({filtered.length})</h2>
+                    <select
+                      value={bookingStatusFilter}
+                      onChange={(e) => setBookingStatusFilter(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      <option value="all">Alla statusar</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Canceled">Canceled</option>
+                    </select>
+                  </div>
                   <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
                     <Download className="w-4 h-4" />
                     {t('export_csv')}
@@ -1074,9 +1090,10 @@ export default function AdminPage() {
 
           {/* Payments */}
           {tab === 'payments' && (() => {
+            const filteredPayments = paymentStatusFilter === 'all' ? payments : payments.filter(p => p.status === paymentStatusFilter);
             // Group payments by month
             const groups: Record<string, PaymentRecord[]> = {};
-            payments.forEach((p) => {
+            filteredPayments.forEach((p) => {
               const key = new Date(p.createdAt).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
               if (!groups[key]) groups[key] = [];
               groups[key].push(p);
@@ -1086,7 +1103,18 @@ export default function AdminPage() {
             return (
               <div>
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="font-bold text-gray-900">Betalningar ({payments.length})</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="font-bold text-gray-900">Betalningar ({filteredPayments.length})</h2>
+                    <select
+                      value={paymentStatusFilter}
+                      onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      <option value="all">Alla statusar</option>
+                      <option value="Succeeded">Betald</option>
+                      <option value="Refunded">Återbetald</option>
+                    </select>
+                  </div>
                   <div className="text-sm text-gray-500">
                     Totalt intjänat: <span className="font-semibold text-gray-900">
                       {payments.filter(p => p.status === 'Succeeded').reduce((s, p) => s + p.amount, 0).toLocaleString('sv-SE')} kr
