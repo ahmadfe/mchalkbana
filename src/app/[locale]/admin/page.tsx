@@ -522,7 +522,7 @@ export default function AdminPage() {
     const res = await fetch(`/api/admin/bookings/${studentsData.session.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(addStudentForm),
+      body: JSON.stringify({ guestName: addStudentForm.name, personnummer: addStudentForm.personnummer, guestPhone: addStudentForm.phone, guestEmail: addStudentForm.email }),
     });
     const data = await res.json();
     setAddStudentSaving(false);
