@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -29,6 +29,8 @@ import {
   CreditCard,
   RotateCcw,
   AlertTriangle,
+  ImagePlus,
+  Loader2,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +42,7 @@ interface InfoCardRecord {
   title: string;
   description: string;
   price: string;
-  imageKeyword: string;
+  imageUrl: string;
   buttonText: string;
   buttonLink: string;
   sortOrder: number;
@@ -144,7 +146,10 @@ export default function AdminPage() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [editCard, setEditCard] = useState<InfoCardRecord | null>(null);
   const [cardSaving, setCardSaving] = useState(false);
-  const emptyCardForm = { title: '', description: '', price: '', imageKeyword: 'driving', buttonText: 'Läs mer', buttonLink: '/courses', sortOrder: 0, visible: true };
+  const [cardUploading, setCardUploading] = useState(false);
+  const [cardPreviewUrl, setCardPreviewUrl] = useState('');
+  const cardFileRef = useRef<HTMLInputElement>(null);
+  const emptyCardForm = { title: '', description: '', price: '', imageUrl: '', buttonText: 'Läs mer', buttonLink: '/courses', sortOrder: 0, visible: true };
   const [cardForm, setCardForm] = useState(emptyCardForm);
 
   // Edit booking
@@ -316,12 +321,32 @@ export default function AdminPage() {
       title: card.title,
       description: card.description,
       price: card.price,
-      imageKeyword: card.imageKeyword,
+      imageUrl: card.imageUrl,
       buttonText: card.buttonText,
       buttonLink: card.buttonLink,
       sortOrder: card.sortOrder,
       visible: card.visible,
     });
+    setCardPreviewUrl(card.imageUrl);
+    setShowAddCard(false);
+  };
+
+  const handleCardFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCardPreviewUrl(URL.createObjectURL(file));
+    setCardUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    setCardUploading(false);
+    if (res.ok) {
+      setCardForm((prev) => ({ ...prev, imageUrl: data.url }));
+    } else {
+      alert(data.error || 'Uppladdning misslyckades');
+      setCardPreviewUrl(cardForm.imageUrl);
+    }
   };
 
   const handleDeleteCourse = async (id: number) => {
@@ -1138,7 +1163,7 @@ export default function AdminPage() {
               <div className="flex justify-between items-center mb-5">
                 <h2 className="font-bold text-gray-900">Informationskort ({infoCards.length})</h2>
                 <button
-                  onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); }}
+                  onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); setCardPreviewUrl(''); }}
                   className="btn-primary flex items-center gap-2 text-sm py-2"
                 >
                   <Plus className="w-4 h-4" />
@@ -1150,11 +1175,13 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 {infoCards.map((card) => (
                   <div key={card.id} className={clsx('bg-white rounded-2xl border overflow-hidden shadow-sm', !card.visible && 'opacity-50')}>
-                    <img
-                      src={`https://picsum.photos/seed/${encodeURIComponent(card.imageKeyword)}/600/300`}
-                      alt={card.title}
-                      className="w-full h-44 object-cover"
-                    />
+                    {card.imageUrl ? (
+                      <img src={card.imageUrl} alt={card.title} className="w-full h-44 object-cover" />
+                    ) : (
+                      <div className="w-full h-44 bg-gray-100 flex items-center justify-center text-gray-300">
+                        <ImagePlus className="w-10 h-10" />
+                      </div>
+                    )}
                     <div className="p-5">
                       <h3 className="font-bold text-gray-900 text-lg mb-1">{card.title}</h3>
                       {card.price && <p className="text-orange-600 font-semibold text-sm mb-2">Från {card.price}</p>}
@@ -1436,16 +1463,39 @@ export default function AdminPage() {
               <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* Image preview */}
-            {cardForm.imageKeyword && (
-              <div className="mb-4 rounded-xl overflow-hidden h-36">
-                <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(cardForm.imageKeyword)}/600/300`}
-                  alt="Förhandsgranskning"
-                  className="w-full h-full object-cover"
-                />
+            {/* Image upload */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bild</label>
+              <div
+                onClick={() => cardFileRef.current?.click()}
+                className={clsx(
+                  'relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group',
+                  cardPreviewUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-gray-50'
+                )}
+                style={{ height: '160px' }}
+              >
+                {cardPreviewUrl ? (
+                  <>
+                    <img src={cardPreviewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                    {cardUploading ? <Loader2 className="w-7 h-7 animate-spin text-swedish-blue" /> : (
+                      <><ImagePlus className="w-7 h-7" /><span className="text-sm font-medium">Klicka för att ladda upp bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span></>
+                    )}
+                  </div>
+                )}
+                {cardUploading && cardPreviewUrl && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Loader2 className="w-7 h-7 text-white animate-spin" />
+                  </div>
+                )}
               </div>
-            )}
+              <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -1459,11 +1509,6 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (visas under titeln)</label>
                 <input type="text" className="input-field" placeholder="2 500 kr" value={cardForm.price} onChange={(e) => setCardForm({ ...cardForm, price: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bildsökord (för auto-genererad bild)</label>
-                <input type="text" className="input-field" placeholder="t.ex. driving, car, winter" value={cardForm.imageKeyword} onChange={(e) => setCardForm({ ...cardForm, imageKeyword: e.target.value })} />
-                <p className="text-xs text-gray-400 mt-1">Skriv ett ord på engelska. Bilden genereras automatiskt baserat på sökordet.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1496,7 +1541,7 @@ export default function AdminPage() {
               <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
               <button
                 onClick={handleSaveCard}
-                disabled={cardSaving || !cardForm.title || !cardForm.description}
+                disabled={cardSaving || cardUploading || !cardForm.title || !cardForm.description}
                 className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {cardSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}

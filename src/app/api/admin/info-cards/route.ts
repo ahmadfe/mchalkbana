@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   if (!auth || auth.role !== 'admin') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
   const body = await request.json();
-  const { title, description, price, imageKeyword, buttonText, buttonLink, sortOrder, visible } = body;
+  const { title, description, price, imageUrl, buttonText, buttonLink, sortOrder, visible } = body;
 
   if (!title || !description) {
     return NextResponse.json({ error: 'Titel och beskrivning krävs' }, { status: 400 });
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       title,
       description,
       price: price ?? '',
-      imageKeyword: imageKeyword ?? 'driving',
+      imageUrl: imageUrl ?? '',
       buttonText: buttonText ?? 'Läs mer',
       buttonLink: buttonLink ?? '/courses',
       sortOrder: sortOrder ?? 0,

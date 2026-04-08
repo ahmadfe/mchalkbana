@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Pencil, Plus, X, Save, Trash2 } from 'lucide-react';
+import { Pencil, Plus, X, Save, Trash2, ImagePlus, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 
 interface InfoCard {
@@ -10,7 +10,7 @@ interface InfoCard {
   title: string;
   description: string;
   price: string;
-  imageKeyword: string;
+  imageUrl: string;
   buttonText: string;
   buttonLink: string;
   sortOrder: number;
@@ -26,7 +26,7 @@ const emptyForm = {
   title: '',
   description: '',
   price: '',
-  imageKeyword: 'driving',
+  imageUrl: '',
   buttonText: 'Läs mer',
   buttonLink: '/courses',
   sortOrder: 0,
@@ -39,6 +39,9 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const openEdit = (card: InfoCard) => {
     setEditCard(card);
@@ -46,24 +49,50 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
       title: card.title,
       description: card.description,
       price: card.price,
-      imageKeyword: card.imageKeyword,
+      imageUrl: card.imageUrl,
       buttonText: card.buttonText,
       buttonLink: card.buttonLink,
       sortOrder: card.sortOrder,
       visible: card.visible,
     });
+    setPreviewUrl(card.imageUrl);
     setShowAdd(false);
   };
 
   const openAdd = () => {
     setEditCard(null);
     setForm(emptyForm);
+    setPreviewUrl('');
     setShowAdd(true);
   };
 
   const closeModal = () => {
     setEditCard(null);
     setShowAdd(false);
+    setPreviewUrl('');
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    setPreviewUrl(URL.createObjectURL(file));
+    setUploading(true);
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    setUploading(false);
+
+    if (res.ok) {
+      setForm((prev) => ({ ...prev, imageUrl: data.url }));
+    } else {
+      alert(data.error || 'Uppladdning misslyckades');
+      setPreviewUrl(form.imageUrl);
+    }
   };
 
   const handleSave = async () => {
@@ -80,6 +109,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
         const { card } = await res.json();
         setCards((prev) => prev.map((c) => c.id === card.id ? card : c));
         setEditCard(null);
+        setPreviewUrl('');
       }
     } else {
       const res = await fetch('/api/admin/info-cards', {
@@ -92,6 +122,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
         setCards((prev) => [...prev, card]);
         setShowAdd(false);
         setForm(emptyForm);
+        setPreviewUrl('');
       }
     }
     setSaving(false);
@@ -101,7 +132,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
     if (!confirm('Ta bort detta kort?')) return;
     await fetch(`/api/admin/info-cards/${id}`, { method: 'DELETE' });
     setCards((prev) => prev.filter((c) => c.id !== id));
-    setEditCard(null);
+    closeModal();
   };
 
   const visibleCards = isAdmin ? cards : cards.filter((c) => c.visible);
@@ -110,8 +141,8 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   return (
     <section className="py-16" style={{ background: '#fefcf5' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-end justify-between mb-12">
-          <div className="text-center flex-1">
+        <div className="flex items-center justify-between mb-12">
+          <div className="flex-1 text-center">
             <h2 className="section-title">Våra utbildningar</h2>
             <p className="section-subtitle">Lagstadgade kurser för körkort</p>
           </div>
@@ -137,13 +168,20 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               style={{ border: '1px solid #ece5d8' }}
             >
               {/* Image */}
-              <div className="relative overflow-hidden" style={{ height: '210px' }}>
-                <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(card.imageKeyword)}/800/400`}
-                  alt={card.title}
-                  className="w-full h-full object-cover"
-                />
-                {/* Admin edit overlay on image */}
+              <div className="relative overflow-hidden bg-gray-100" style={{ height: '210px' }}>
+                {card.imageUrl ? (
+                  <img
+                    src={card.imageUrl}
+                    alt={card.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <ImagePlus className="w-12 h-12" />
+                  </div>
+                )}
+
+                {/* Admin edit overlay */}
                 {isAdmin && (
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                     <button
@@ -162,7 +200,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                     </button>
                   </div>
                 )}
-                {/* Hidden badge for admin */}
+
                 {isAdmin && !card.visible && (
                   <div className="absolute top-2 right-2 bg-gray-800 text-white text-xs font-medium px-2 py-0.5 rounded-full">
                     Dold
@@ -188,7 +226,6 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
             </div>
           ))}
 
-          {/* Admin empty state */}
           {isAdmin && cards.length === 0 && (
             <div className="col-span-3 bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center text-gray-400">
               <p className="text-sm mb-3">Inga kort ännu.</p>
@@ -200,7 +237,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
         </div>
       </div>
 
-      {/* Edit / Add Modal */}
+      {/* Add / Edit Modal */}
       {(editCard || showAdd) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -209,16 +246,54 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* Live image preview */}
-            {form.imageKeyword && (
-              <div className="mb-4 rounded-xl overflow-hidden h-36">
-                <img
-                  src={`https://picsum.photos/seed/${encodeURIComponent(form.imageKeyword)}/600/300`}
-                  alt="Förhandsgranskning"
-                  className="w-full h-full object-cover"
-                />
+            {/* Image upload area */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bild</label>
+              <div
+                onClick={() => fileRef.current?.click()}
+                className={clsx(
+                  'relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group',
+                  previewUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-gray-50'
+                )}
+                style={{ height: '180px' }}
+              >
+                {previewUrl ? (
+                  <>
+                    <img src={previewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <span className="text-white text-sm font-semibold flex items-center gap-2">
+                        <ImagePlus className="w-4 h-4" />
+                        Byt bild
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                    {uploading ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-swedish-blue" />
+                    ) : (
+                      <>
+                        <ImagePlus className="w-8 h-8" />
+                        <span className="text-sm font-medium">Klicka för att ladda upp bild</span>
+                        <span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                {uploading && previewUrl && (
+                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                )}
               </div>
-            )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -250,17 +325,6 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bildsökord (engelska)</label>
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="t.ex. driving, car, winter, road"
-                  value={form.imageKeyword}
-                  onChange={(e) => setForm({ ...form, imageKeyword: e.target.value })}
-                />
-                <p className="text-xs text-gray-400 mt-1">Bilden uppdateras automatiskt baserat på sökordet.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -327,11 +391,11 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !form.title || !form.description}
+                disabled={saving || uploading || !form.title || !form.description}
                 className="flex-1 bg-swedish-blue text-white py-2.5 rounded-xl hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition"
               >
                 {saving ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Save className="w-4 h-4" />
                 )}

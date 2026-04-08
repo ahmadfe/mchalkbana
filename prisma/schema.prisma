@@ -99,7 +99,7 @@ model InfoCard {
   title       String
   description String
   price       String
-  imageKeyword String  @default("driving")
+  imageUrl    String   @default("")
   buttonText  String   @default("Läs mer")
   buttonLink  String   @default("/courses")
   sortOrder   Int      @default(0)
