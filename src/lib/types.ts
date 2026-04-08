@@ -28,6 +28,7 @@ export interface Course {
   vehicle: VehicleType;
   behorighet: string;
   price: number;
+  location: string;
 }
 
 export interface Session {
