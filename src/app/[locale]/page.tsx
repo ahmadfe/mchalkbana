@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
 import { mockSessions } from '@/lib/mockData';
 import { Shield, Calendar, CreditCard, CheckCircle2 } from 'lucide-react';
+import { prisma } from '@/lib/db';
 
 export async function generateMetadata() {
   const t = await getTranslations('home');
@@ -16,6 +17,10 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const { locale } = await params;
   const t = await getTranslations('home');
   const upcomingSessions = mockSessions.filter(s => s.seatsAvailable > 0).slice(0, 3);
+  const infoCards = await prisma.infoCard.findMany({
+    where: { visible: true },
+    orderBy: { sortOrder: 'asc' },
+  });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -201,6 +206,48 @@ export default async function HomePage({ params }: { params: { locale: string } 
           </div>
         </div>
       </section>
+
+      {/* Info Cards */}
+      {infoCards.length > 0 && (
+        <section className="py-16" style={{ background: '#fefcf5' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="section-title">Utbildningar &amp; Tjänster</h2>
+              <p className="section-subtitle">Välj den utbildning som passar dig</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {infoCards.map((card) => (
+                <div
+                  key={card.id}
+                  className="bg-white rounded-[28px] overflow-hidden shadow-sm hover:-translate-y-1.5 hover:shadow-lg transition-all duration-300"
+                  style={{ border: '1px solid #ece5d8' }}
+                >
+                  <img
+                    src={`https://picsum.photos/seed/${encodeURIComponent(card.imageKeyword)}/800/400`}
+                    alt={card.title}
+                    className="w-full object-cover"
+                    style={{ height: '210px' }}
+                  />
+                  <div className="p-6">
+                    <h3 className="font-bold text-gray-900 mb-2" style={{ fontSize: '1.35rem' }}>{card.title}</h3>
+                    {card.price && (
+                      <p className="font-semibold mb-3" style={{ color: '#c25d1a' }}>Från {card.price}</p>
+                    )}
+                    <p className="text-gray-500 text-sm leading-relaxed mb-5">{card.description}</p>
+                    <Link
+                      href={card.buttonLink}
+                      className="inline-flex items-center gap-1.5 font-semibold text-sm transition-colors hover:underline"
+                      style={{ color: '#c25d1a' }}
+                    >
+                      {card.buttonText} →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-16 bg-gradient-to-r from-swedish-blue to-blue-700 text-white">

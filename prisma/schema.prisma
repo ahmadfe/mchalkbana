@@ -93,3 +93,16 @@ model CourseGroup {
   name      String
   createdAt DateTime @default(now())
 }
+
+model InfoCard {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  price       String
+  imageKeyword String  @default("driving")
+  buttonText  String   @default("Läs mer")
+  buttonLink  String   @default("/courses")
+  sortOrder   Int      @default(0)
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}

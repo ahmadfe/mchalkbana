@@ -33,7 +33,19 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards';
+
+interface InfoCardRecord {
+  id: number;
+  title: string;
+  description: string;
+  price: string;
+  imageKeyword: string;
+  buttonText: string;
+  buttonLink: string;
+  sortOrder: number;
+  visible: boolean;
+}
 
 interface PaymentRecord {
   id: number;
@@ -127,6 +139,14 @@ export default function AdminPage() {
   const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
   const [refunding, setRefunding] = useState(false);
 
+  // Info Cards
+  const [infoCards, setInfoCards] = useState<InfoCardRecord[]>([]);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [editCard, setEditCard] = useState<InfoCardRecord | null>(null);
+  const [cardSaving, setCardSaving] = useState(false);
+  const emptyCardForm = { title: '', description: '', price: '', imageKeyword: 'driving', buttonText: 'Läs mer', buttonLink: '/courses', sortOrder: 0, visible: true };
+  const [cardForm, setCardForm] = useState(emptyCardForm);
+
   // Edit booking
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
   const [editForm, setEditForm] = useState({ guestName: '', personnummer: '', guestPhone: '', guestEmail: '', status: '' });
@@ -153,7 +173,7 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes, paymentsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes, paymentsRes, cardsRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
@@ -163,8 +183,9 @@ export default function AdminPage() {
       fetch('/api/admin/school-accounts'),
       fetch('/api/admin/course-groups'),
       fetch('/api/admin/payments'),
+      fetch('/api/admin/info-cards'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData, paymentsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData, paymentsData, cardsData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
@@ -174,6 +195,7 @@ export default function AdminPage() {
       schoolAccountsRes.json(),
       groupsRes.json(),
       paymentsRes.json(),
+      cardsRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
@@ -188,6 +210,7 @@ export default function AdminPage() {
     setSchoolAccounts(schoolAccountsData.accounts || []);
     setCourseGroups(groupsData.groups || []);
     setPayments(paymentsData.payments || []);
+    setInfoCards(cardsData.cards || []);
     setLoading(false);
   }, []);
 
@@ -248,7 +271,58 @@ export default function AdminPage() {
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
     { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
+    { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
   ];
+
+  const handleSaveCard = async () => {
+    setCardSaving(true);
+    if (editCard) {
+      const res = await fetch(`/api/admin/info-cards/${editCard.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardForm),
+      });
+      if (res.ok) {
+        const { card } = await res.json();
+        setInfoCards((prev) => prev.map((c) => c.id === card.id ? card : c));
+        setEditCard(null);
+      }
+    } else {
+      const res = await fetch('/api/admin/info-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardForm),
+      });
+      if (res.ok) {
+        const { card } = await res.json();
+        setInfoCards((prev) => [...prev, card]);
+        setShowAddCard(false);
+        setCardForm(emptyCardForm);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    }
+    setCardSaving(false);
+  };
+
+  const handleDeleteCard = async (id: number) => {
+    await fetch(`/api/admin/info-cards/${id}`, { method: 'DELETE' });
+    setInfoCards((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const openEditCard = (card: InfoCardRecord) => {
+    setEditCard(card);
+    setCardForm({
+      title: card.title,
+      description: card.description,
+      price: card.price,
+      imageKeyword: card.imageKeyword,
+      buttonText: card.buttonText,
+      buttonLink: card.buttonLink,
+      sortOrder: card.sortOrder,
+      visible: card.visible,
+    });
+  };
 
   const handleDeleteCourse = async (id: number) => {
     await fetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
@@ -1058,6 +1132,68 @@ export default function AdminPage() {
             );
           })()}
 
+          {/* Info Cards */}
+          {tab === 'cards' && (
+            <div>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="font-bold text-gray-900">Informationskort ({infoCards.length})</h2>
+                <button
+                  onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); }}
+                  className="btn-primary flex items-center gap-2 text-sm py-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Lägg till kort
+                </button>
+              </div>
+
+              {/* Card preview grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                {infoCards.map((card) => (
+                  <div key={card.id} className={clsx('bg-white rounded-2xl border overflow-hidden shadow-sm', !card.visible && 'opacity-50')}>
+                    <img
+                      src={`https://picsum.photos/seed/${encodeURIComponent(card.imageKeyword)}/600/300`}
+                      alt={card.title}
+                      className="w-full h-44 object-cover"
+                    />
+                    <div className="p-5">
+                      <h3 className="font-bold text-gray-900 text-lg mb-1">{card.title}</h3>
+                      {card.price && <p className="text-orange-600 font-semibold text-sm mb-2">Från {card.price}</p>}
+                      <p className="text-gray-500 text-sm leading-relaxed line-clamp-2">{card.description}</p>
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEditCard(card)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-blue-50 transition"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Redigera
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCard(card.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Ta bort
+                          </button>
+                        </div>
+                        <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+                          {card.visible ? 'Synlig' : 'Dold'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {infoCards.length === 0 && (
+                  <div className="col-span-3 bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
+                    <Tag className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                    <p className="text-sm">Inga informationskort ännu. Klicka på "Lägg till kort" för att börja.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
 
@@ -1287,6 +1423,86 @@ export default function AdminPage() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Info Card Modal */}
+      {(showAddCard || editCard) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Lägg till kort'}</h3>
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Image preview */}
+            {cardForm.imageKeyword && (
+              <div className="mb-4 rounded-xl overflow-hidden h-36">
+                <img
+                  src={`https://picsum.photos/seed/${encodeURIComponent(cardForm.imageKeyword)}/600/300`}
+                  alt="Förhandsgranskning"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel *</label>
+                <input type="text" className="input-field" placeholder="Risk 2 – Halkbanekörning" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning *</label>
+                <textarea rows={3} className="input-field resize-none" placeholder="Praktisk körning på halkbana..." value={cardForm.description} onChange={(e) => setCardForm({ ...cardForm, description: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (visas under titeln)</label>
+                <input type="text" className="input-field" placeholder="2 500 kr" value={cardForm.price} onChange={(e) => setCardForm({ ...cardForm, price: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Bildsökord (för auto-genererad bild)</label>
+                <input type="text" className="input-field" placeholder="t.ex. driving, car, winter" value={cardForm.imageKeyword} onChange={(e) => setCardForm({ ...cardForm, imageKeyword: e.target.value })} />
+                <p className="text-xs text-gray-400 mt-1">Skriv ett ord på engelska. Bilden genereras automatiskt baserat på sökordet.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Knapptext</label>
+                  <input type="text" className="input-field" placeholder="Läs mer" value={cardForm.buttonText} onChange={(e) => setCardForm({ ...cardForm, buttonText: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Knapp-länk</label>
+                  <input type="text" className="input-field" placeholder="/courses" value={cardForm.buttonLink} onChange={(e) => setCardForm({ ...cardForm, buttonLink: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Sorteringsordning</label>
+                  <input type="number" className="input-field w-24" value={cardForm.sortOrder} onChange={(e) => setCardForm({ ...cardForm, sortOrder: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-sm font-medium text-gray-700">Synlig på sidan</label>
+                  <button
+                    type="button"
+                    onClick={() => setCardForm({ ...cardForm, visible: !cardForm.visible })}
+                    className={clsx('relative inline-flex h-6 w-11 rounded-full transition-colors', cardForm.visible ? 'bg-swedish-blue' : 'bg-gray-300')}
+                  >
+                    <span className={clsx('inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-1', cardForm.visible ? 'translate-x-6' : 'translate-x-1')} />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+              <button
+                onClick={handleSaveCard}
+                disabled={cardSaving || !cardForm.title || !cardForm.description}
+                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {cardSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {cardSaving ? 'Sparar...' : editCard ? 'Spara ändringar' : 'Skapa kort'}
+              </button>
+            </div>
           </div>
         </div>
       )}
