@@ -43,6 +43,12 @@ export default function Navbar() {
                 {t('courses')}
               </Link>
             )}
+            <Link href={`${base}/about`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
+              Om oss
+            </Link>
+            <Link href={`${base}/contact`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
+              Kontakta oss
+            </Link>
             {user?.role === 'admin' && (
               <Link href={`${base}/admin`} className="hover:text-swedish-yellow transition-colors text-sm font-medium">
                 {t('admin')}
@@ -105,6 +111,12 @@ export default function Navbar() {
               {t('courses')}
             </Link>
           )}
+          <Link href={`${base}/about`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
+            Om oss
+          </Link>
+          <Link href={`${base}/contact`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
+            Kontakta oss
+          </Link>
           {user?.role === 'admin' && (
             <Link href={`${base}/admin`} className="block py-2 hover:text-swedish-yellow" onClick={() => setOpen(false)}>
               {t('admin')}
