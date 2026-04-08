@@ -1148,7 +1148,7 @@ export default function AdminPage() {
               <div className="flex justify-between items-center mb-5">
                 <h2 className="font-bold text-gray-900">Informationskort ({infoCards.length})</h2>
                 <button
-                  onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); setCardPreviewUrl(''); }}
+                  onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); }}
                   className="btn-primary flex items-center gap-2 text-sm py-2"
                 >
                   <Plus className="w-4 h-4" />
@@ -1440,7 +1440,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
               <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Nytt kort'}</h3>
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); setCardPreviewUrl(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
