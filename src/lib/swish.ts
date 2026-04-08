@@ -19,6 +19,12 @@ function getSwishAgent() {
   });
 }
 
+function getSwishHost(): string {
+  return process.env.SWISH_ENV === 'production'
+    ? 'cpc.getswish.net'
+    : 'mss.cpc.getswish.net';
+}
+
 function swishRequest<T>(
   method: string,
   path: string,
@@ -30,7 +36,7 @@ function swishRequest<T>(
 
     const req = https.request(
       {
-        hostname: 'cpc.getswish.net',
+        hostname: getSwishHost(),
         path: `/swish-cpcapi/api/v2${path}`,
         method,
         agent,
