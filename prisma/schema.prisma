@@ -95,14 +95,18 @@ model CourseGroup {
 }
 
 model InfoCard {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  price       String
-  imageUrl    String   @default("")
-  buttonText  String   @default("Läs mer")
-  buttonLink  String   @default("/courses")
-  sortOrder   Int      @default(0)
-  visible     Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  badge              String   @default("")
+  title              String
+  description        String
+  price              String   @default("")
+  imageUrl           String   @default("")
+  videoUrl           String   @default("")
+  primaryButtonText  String   @default("Läs mer")
+  primaryButtonLink  String   @default("/courses")
+  secondaryButtonText String  @default("")
+  secondaryButtonLink String  @default("")
+  sortOrder          Int      @default(0)
+  visible            Boolean  @default(true)
+  createdAt          DateTime @default(now())
 }

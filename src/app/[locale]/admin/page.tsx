@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   ImagePlus,
   Loader2,
+  Video,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -39,12 +40,16 @@ type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payme
 
 interface InfoCardRecord {
   id: number;
+  badge: string;
   title: string;
   description: string;
   price: string;
   imageUrl: string;
-  buttonText: string;
-  buttonLink: string;
+  videoUrl: string;
+  primaryButtonText: string;
+  primaryButtonLink: string;
+  secondaryButtonText: string;
+  secondaryButtonLink: string;
   sortOrder: number;
   visible: boolean;
 }
@@ -149,7 +154,7 @@ export default function AdminPage() {
   const [cardUploading, setCardUploading] = useState(false);
   const [cardPreviewUrl, setCardPreviewUrl] = useState('');
   const cardFileRef = useRef<HTMLInputElement>(null);
-  const emptyCardForm = { title: '', description: '', price: '', imageUrl: '', buttonText: 'Läs mer', buttonLink: '/courses', sortOrder: 0, visible: true };
+  const emptyCardForm = { badge: '', title: '', description: '', price: '', imageUrl: '', videoUrl: '', primaryButtonText: 'Läs mer', primaryButtonLink: '/courses', secondaryButtonText: '', secondaryButtonLink: '', sortOrder: 0, visible: true };
   const [cardForm, setCardForm] = useState(emptyCardForm);
 
   // Edit booking
@@ -317,16 +322,7 @@ export default function AdminPage() {
 
   const openEditCard = (card: InfoCardRecord) => {
     setEditCard(card);
-    setCardForm({
-      title: card.title,
-      description: card.description,
-      price: card.price,
-      imageUrl: card.imageUrl,
-      buttonText: card.buttonText,
-      buttonLink: card.buttonLink,
-      sortOrder: card.sortOrder,
-      visible: card.visible,
-    });
+    setCardForm({ ...card });
     setCardPreviewUrl(card.imageUrl);
     setShowAddCard(false);
   };
@@ -1171,48 +1167,43 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              {/* Card preview grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+              {/* Card list */}
+              <div className="space-y-4 mb-6">
                 {infoCards.map((card) => (
-                  <div key={card.id} className={clsx('bg-white rounded-2xl border overflow-hidden shadow-sm', !card.visible && 'opacity-50')}>
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt={card.title} className="w-full h-44 object-cover" />
-                    ) : (
-                      <div className="w-full h-44 bg-gray-100 flex items-center justify-center text-gray-300">
-                        <ImagePlus className="w-10 h-10" />
-                      </div>
-                    )}
-                    <div className="p-5">
-                      <h3 className="font-bold text-gray-900 text-lg mb-1">{card.title}</h3>
-                      {card.price && <p className="text-orange-600 font-semibold text-sm mb-2">Från {card.price}</p>}
-                      <p className="text-gray-500 text-sm leading-relaxed line-clamp-2">{card.description}</p>
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openEditCard(card)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-blue-50 transition"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            Redigera
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCard(card.id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Ta bort
-                          </button>
+                  <div key={card.id} className={clsx('bg-white rounded-2xl border border-gray-100 overflow-hidden flex shadow-sm', !card.visible && 'opacity-50')}>
+                    {/* Thumbnail */}
+                    <div className="w-32 shrink-0 bg-gray-100 relative">
+                      {card.videoUrl ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white text-xs font-medium gap-1"><Video className="w-4 h-4" />Video</div>
+                      ) : card.imageUrl ? (
+                        <img src={card.imageUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-gray-300"><ImagePlus className="w-8 h-8" /></div>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 p-4 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          {card.badge && <span className="text-xs text-swedish-blue font-medium">{card.badge}</span>}
+                          <h3 className="font-bold text-gray-900 text-sm truncate">{card.title}</h3>
+                          <p className="text-gray-500 text-xs line-clamp-1 mt-0.5">{card.description}</p>
+                          {card.price && <p className="text-orange-600 text-xs font-semibold mt-1">{card.price}</p>}
                         </div>
-                        <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
-                          {card.visible ? 'Synlig' : 'Dold'}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+                            {card.visible ? 'Synlig' : 'Dold'}
+                          </span>
+                          <button onClick={() => openEditCard(card)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
 
                 {infoCards.length === 0 && (
-                  <div className="col-span-3 bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
+                  <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
                     <Tag className="w-10 h-10 mx-auto mb-3 text-gray-200" />
                     <p className="text-sm">Inga informationskort ännu. Klicka på "Lägg till kort" för att börja.</p>
                   </div>
@@ -1457,94 +1448,112 @@ export default function AdminPage() {
       {/* Add/Edit Info Card Modal */}
       {(showAddCard || editCard) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Lägg till kort'}</h3>
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+              <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Nytt kort'}</h3>
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); setCardPreviewUrl(''); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* Image upload */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Bild</label>
-              <div
-                onClick={() => cardFileRef.current?.click()}
-                className={clsx(
-                  'relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group',
-                  cardPreviewUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-gray-50'
-                )}
-                style={{ height: '160px' }}
-              >
-                {cardPreviewUrl ? (
-                  <>
-                    <img src={cardPreviewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                    {cardUploading ? <Loader2 className="w-7 h-7 animate-spin text-swedish-blue" /> : (
-                      <><ImagePlus className="w-7 h-7" /><span className="text-sm font-medium">Klicka för att ladda upp bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span></>
-                    )}
-                  </div>
-                )}
-                {cardUploading && cardPreviewUrl && (
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                    <Loader2 className="w-7 h-7 text-white animate-spin" />
-                  </div>
-                )}
-              </div>
-              <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
-            </div>
-
-            <div className="space-y-4">
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+              {/* Badge */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel *</label>
-                <input type="text" className="input-field" placeholder="Risk 2 – Halkbanekörning" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} />
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Badge-text <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <input type="text" className="input-field" placeholder="t.ex. Sveriges ledande riskutbildning" value={cardForm.badge} onChange={(e) => setCardForm({ ...cardForm, badge: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Rubrik *</label>
+                <input type="text" className="input-field" placeholder="Riskutbildning för körkort A & B" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning *</label>
-                <textarea rows={3} className="input-field resize-none" placeholder="Praktisk körning på halkbana..." value={cardForm.description} onChange={(e) => setCardForm({ ...cardForm, description: e.target.value })} />
+                <textarea rows={3} className="input-field resize-none" placeholder="Teori och praktik på vår moderna halkbana..." value={cardForm.description} onChange={(e) => setCardForm({ ...cardForm, description: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (visas under titeln)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris <span className="text-gray-400 font-normal">(valfri)</span></label>
                 <input type="text" className="input-field" placeholder="2 500 kr" value={cardForm.price} onChange={(e) => setCardForm({ ...cardForm, price: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Knapptext</label>
-                  <input type="text" className="input-field" placeholder="Läs mer" value={cardForm.buttonText} onChange={(e) => setCardForm({ ...cardForm, buttonText: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Knapp-länk</label>
-                  <input type="text" className="input-field" placeholder="/courses" value={cardForm.buttonLink} onChange={(e) => setCardForm({ ...cardForm, buttonLink: e.target.value })} />
+
+              {/* Buttons */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-gray-700">Knappar</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Primär knapptext</label>
+                    <input type="text" className="input-field text-sm" placeholder="Våra kurser" value={cardForm.primaryButtonText} onChange={(e) => setCardForm({ ...cardForm, primaryButtonText: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Primär länk</label>
+                    <input type="text" className="input-field text-sm" placeholder="/courses" value={cardForm.primaryButtonLink} onChange={(e) => setCardForm({ ...cardForm, primaryButtonLink: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Sekundär knapptext <span className="text-gray-400">(valfri)</span></label>
+                    <input type="text" className="input-field text-sm" placeholder="Boka riskutbildning" value={cardForm.secondaryButtonText} onChange={(e) => setCardForm({ ...cardForm, secondaryButtonText: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Sekundär länk</label>
+                    <input type="text" className="input-field text-sm" placeholder="/courses" value={cardForm.secondaryButtonLink} onChange={(e) => setCardForm({ ...cardForm, secondaryButtonLink: e.target.value })} />
+                  </div>
                 </div>
               </div>
+
+              {/* Media */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
+                  <div
+                    onClick={() => cardFileRef.current?.click()}
+                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', cardPreviewUrl && !cardForm.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white')}
+                    style={{ height: '140px' }}
+                  >
+                    {cardPreviewUrl && !cardForm.videoUrl ? (
+                      <>
+                        <img src={cardPreviewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        {cardUploading ? <Loader2 className="w-7 h-7 animate-spin text-swedish-blue" /> : <><ImagePlus className="w-7 h-7" /><span className="text-sm">Klicka för att välja bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span></>}
+                      </div>
+                    )}
+                    {cardUploading && cardPreviewUrl && <div className="absolute inset-0 bg-black/30 flex items-center justify-center"><Loader2 className="w-7 h-7 text-white animate-spin" /></div>}
+                  </div>
+                  <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
+                </div>
+                <div className="flex items-center gap-3 text-gray-400">
+                  <div className="flex-1 h-px bg-gray-200" /><span className="text-xs font-medium">ELLER</span><div className="flex-1 h-px bg-gray-200" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Video-URL (MP4)</label>
+                  <input type="url" className="input-field text-sm" placeholder="https://example.com/video.mp4" value={cardForm.videoUrl} onChange={(e) => { setCardForm({ ...cardForm, videoUrl: e.target.value, imageUrl: e.target.value ? '' : cardForm.imageUrl }); if (e.target.value) setCardPreviewUrl(''); }} />
+                  <p className="text-xs text-gray-400 mt-1">Video används istället för bild om den anges.</p>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Sorteringsordning</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Sortering</label>
                   <input type="number" className="input-field w-24" value={cardForm.sortOrder} onChange={(e) => setCardForm({ ...cardForm, sortOrder: parseInt(e.target.value) || 0 })} />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-700">Synlig på sidan</label>
-                  <button
-                    type="button"
-                    onClick={() => setCardForm({ ...cardForm, visible: !cardForm.visible })}
-                    className={clsx('relative inline-flex h-6 w-11 rounded-full transition-colors', cardForm.visible ? 'bg-swedish-blue' : 'bg-gray-300')}
-                  >
+                  <label className="text-sm font-medium text-gray-700">Synlig</label>
+                  <button type="button" onClick={() => setCardForm({ ...cardForm, visible: !cardForm.visible })} className={clsx('relative inline-flex h-6 w-11 rounded-full transition-colors', cardForm.visible ? 'bg-swedish-blue' : 'bg-gray-300')}>
                     <span className={clsx('inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-1', cardForm.visible ? 'translate-x-6' : 'translate-x-1')} />
                   </button>
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+
+            <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); setCardPreviewUrl(''); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
               <button
                 onClick={handleSaveCard}
                 disabled={cardSaving || cardUploading || !cardForm.title || !cardForm.description}
                 className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {cardSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                {cardSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {cardSaving ? 'Sparar...' : editCard ? 'Spara ändringar' : 'Skapa kort'}
               </button>
             </div>

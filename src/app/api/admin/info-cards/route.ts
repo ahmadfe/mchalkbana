@@ -15,7 +15,13 @@ export async function POST(request: Request) {
   if (!auth || auth.role !== 'admin') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
   const body = await request.json();
-  const { title, description, price, imageUrl, buttonText, buttonLink, sortOrder, visible } = body;
+  const {
+    badge, title, description, price,
+    imageUrl, videoUrl,
+    primaryButtonText, primaryButtonLink,
+    secondaryButtonText, secondaryButtonLink,
+    sortOrder, visible,
+  } = body;
 
   if (!title || !description) {
     return NextResponse.json({ error: 'Titel och beskrivning krävs' }, { status: 400 });
@@ -23,12 +29,16 @@ export async function POST(request: Request) {
 
   const card = await prisma.infoCard.create({
     data: {
+      badge: badge ?? '',
       title,
       description,
       price: price ?? '',
       imageUrl: imageUrl ?? '',
-      buttonText: buttonText ?? 'Läs mer',
-      buttonLink: buttonLink ?? '/courses',
+      videoUrl: videoUrl ?? '',
+      primaryButtonText: primaryButtonText ?? 'Läs mer',
+      primaryButtonLink: primaryButtonLink ?? '/courses',
+      secondaryButtonText: secondaryButtonText ?? '',
+      secondaryButtonLink: secondaryButtonLink ?? '',
       sortOrder: sortOrder ?? 0,
       visible: visible ?? true,
     },
