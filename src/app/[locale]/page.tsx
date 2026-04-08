@@ -1,5 +1,4 @@
-import { useTranslations } from 'next-intl';
-import { getTranslations, getLocale } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -20,7 +19,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const t = await getTranslations('home');
 
   const now = new Date();
-  const [infoCards, authUser, upcomingSessions] = await Promise.all([
+  const [infoCards, authUser, upcomingSessions, heroSettings] = await Promise.all([
     prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }),
     getAuthUser(),
     prisma.session.findMany({
@@ -31,22 +30,42 @@ export default async function HomePage({ params }: { params: { locale: string } 
       },
       orderBy: { startTime: 'asc' },
       take: 3,
-      include: {
-        course: true,
-        school: true,
-      },
+      include: { course: true, school: true },
     }),
+    prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }),
   ]);
 
   const isAdmin = authUser?.role === 'admin';
+  const heroVideoUrl = heroSettings.find((s) => s.key === 'heroVideoUrl')?.value ?? '';
+  const heroImageUrl = heroSettings.find((s) => s.key === 'heroImageUrl')?.value ?? '';
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-swedish-blue via-blue-800 to-blue-900 text-white py-20 md:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gradient-to-br from-swedish-blue via-blue-800 to-blue-900 text-white py-20 md:py-32 overflow-hidden">
+        {/* Background media */}
+        {heroVideoUrl ? (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-25"
+          >
+            <source src={heroVideoUrl} type="video/mp4" />
+          </video>
+        ) : heroImageUrl ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-25"
+            style={{ backgroundImage: `url(${heroImageUrl})` }}
+          />
+        ) : null}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-swedish-blue/90 via-blue-800/85 to-blue-900/90" />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <div className="flex items-center gap-3 mb-6">
               <div className="h-1 w-8 bg-swedish-yellow rounded-full" />
@@ -68,9 +87,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
             <div className="flex flex-wrap gap-4">
               <Link href={`/${locale}/courses`} className="btn-secondary text-base">
                 {t('book_now')}
-              </Link>
-              <Link href={`/${locale}/register`} className="btn-outline border-white text-white hover:bg-white hover:text-swedish-blue text-base">
-                {t('learn_more')}
               </Link>
             </div>
           </div>
@@ -128,10 +144,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
                 <h2 className="section-title">{t('upcoming_sessions')}</h2>
                 <p className="section-subtitle">Boka din plats innan de tar slut</p>
               </div>
-              <Link
-                href={`/${locale}/courses`}
-                className="hidden md:inline-flex btn-outline text-sm"
-              >
+              <Link href={`/${locale}/courses`} className="hidden md:inline-flex btn-outline text-sm">
                 {t('view_all')} →
               </Link>
             </div>
@@ -143,31 +156,11 @@ export default async function HomePage({ params }: { params: { locale: string } 
             </div>
 
             <div className="text-center mt-8 md:hidden">
-              <Link href={`/${locale}/courses`} className="btn-outline">
-                {t('view_all')}
-              </Link>
+              <Link href={`/${locale}/courses`} className="btn-outline">{t('view_all')}</Link>
             </div>
           </div>
         </section>
       )}
-
-      {/* CTA */}
-      <section className="py-16 bg-gradient-to-r from-swedish-blue to-blue-700 text-white">
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-extrabold mb-4">Redo att boka din riskutbildning?</h2>
-          <p className="text-blue-100 text-lg mb-8">
-            Skapa ett konto och boka din Risk 1 eller Risk 2-kurs på bara några minuter.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href={`/${locale}/register`} className="btn-secondary text-base px-8">
-              Skapa konto gratis
-            </Link>
-            <Link href={`/${locale}/courses`} className="border-2 border-white text-white font-semibold px-8 py-2.5 rounded-xl hover:bg-white hover:text-swedish-blue transition text-base">
-              Se alla kurser
-            </Link>
-          </div>
-        </div>
-      </section>
 
       <Footer />
     </div>

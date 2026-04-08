@@ -1,6 +1,6 @@
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
-import { GraduationCap, MapPin, Mail, Phone } from 'lucide-react';
+import { GraduationCap, MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   const t = useTranslations('footer');
@@ -10,7 +10,8 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 pt-12 pb-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -36,18 +37,53 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Quick links */}
           <div>
             <h3 className="font-semibold text-white mb-4">Snabblänkar</h3>
             <ul className="space-y-2 text-sm">
+              <li><Link href={`${base}/about`} className="hover:text-swedish-yellow transition-colors">Om oss</Link></li>
+              <li><Link href={`${base}/contact`} className="hover:text-swedish-yellow transition-colors">Kontakta oss</Link></li>
+              <li><Link href={`${base}/courses`} className="hover:text-swedish-yellow transition-colors">Kurser</Link></li>
+              <li><Link href={`${base}/login`} className="hover:text-swedish-yellow transition-colors text-gray-500">För trafikskolor</Link></li>
+            </ul>
+          </div>
+
+          {/* External links */}
+          <div>
+            <h3 className="font-semibold text-white mb-4">Officiella länkar</h3>
+            <ul className="space-y-2 text-sm">
               <li>
-                <Link href={base} className="hover:text-swedish-yellow transition-colors">{t('about')}</Link>
+                <a
+                  href="https://fp.trafikverket.se/boka/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-swedish-yellow transition-colors flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Trafikverket – Boka prov
+                </a>
               </li>
               <li>
-                <Link href={`${base}/courses`} className="hover:text-swedish-yellow transition-colors">Kurser</Link>
+                <a
+                  href="https://www.transportstyrelsen.se"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-swedish-yellow transition-colors flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Transportstyrelsen
+                </a>
               </li>
               <li>
-                <Link href={`${base}/login`} className="hover:text-swedish-yellow transition-colors text-gray-500">För trafikskolor</Link>
+                <a
+                  href="https://ntf.se/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-swedish-yellow transition-colors flex items-center gap-1.5"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  NTF
+                </a>
               </li>
             </ul>
           </div>
@@ -56,15 +92,9 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-4">Juridiskt</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="#" className="hover:text-swedish-yellow transition-colors">{t('privacy')}</Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-swedish-yellow transition-colors">{t('cookies')}</Link>
-              </li>
-              <li>
-                <Link href="#" className="hover:text-swedish-yellow transition-colors">{t('terms')}</Link>
-              </li>
+              <li><Link href="#" className="hover:text-swedish-yellow transition-colors">{t('privacy')}</Link></li>
+              <li><Link href="#" className="hover:text-swedish-yellow transition-colors">{t('cookies')}</Link></li>
+              <li><Link href="#" className="hover:text-swedish-yellow transition-colors">{t('terms')}</Link></li>
             </ul>
             <div className="mt-4 p-3 bg-gray-800 rounded-lg text-xs">
               <p className="font-semibold text-white mb-1">GDPR</p>
@@ -76,7 +106,6 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
           <p>© {new Date().getFullYear()} Uppsala Halkbana. {t('rights')}.</p>
           <div className="flex items-center gap-2">
-            {/* Swedish flag colors accent */}
             <div className="w-5 h-3.5 rounded-sm overflow-hidden flex">
               <div className="w-full h-full bg-swedish-blue relative">
                 <div className="absolute inset-0 flex items-center justify-center">

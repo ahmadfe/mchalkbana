@@ -32,11 +32,12 @@ import {
   ImagePlus,
   Loader2,
   Video,
+  MonitorPlay,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards' | 'hero';
 
 interface InfoCardRecord {
   id: number;
@@ -154,6 +155,27 @@ export default function AdminPage() {
   const emptyCardForm = { badge: '', title: '', description: '', price: '', imageUrl: '', videoUrl: '', primaryButtonText: 'Läs mer', primaryButtonLink: '/courses', secondaryButtonText: '', secondaryButtonLink: '', sortOrder: 0, visible: true };
   const [cardForm, setCardForm] = useState(emptyCardForm);
   const cardFileRef = useRef<HTMLInputElement>(null);
+  const [heroForm, setHeroForm] = useState({ heroVideoUrl: '', heroImageUrl: '' });
+  const [heroSaving, setHeroSaving] = useState(false);
+  const heroFileRef = useRef<HTMLInputElement>(null);
+
+  const handleHeroFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setHeroForm((prev) => ({ ...prev, heroImageUrl: reader.result as string, heroVideoUrl: '' }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveHero = async () => {
+    setHeroSaving(true);
+    await Promise.all([
+      fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'heroVideoUrl', value: heroForm.heroVideoUrl }) }),
+      fetch('/api/admin/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'heroImageUrl', value: heroForm.heroImageUrl }) }),
+    ]);
+    setHeroSaving(false);
+    alert('Hero-media sparad!');
+  };
 
   const handleCardFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -191,7 +213,7 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes, paymentsRes, cardsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes, paymentsRes, cardsRes, heroVideoRes, heroImageRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
@@ -202,8 +224,10 @@ export default function AdminPage() {
       fetch('/api/admin/course-groups'),
       fetch('/api/admin/payments'),
       fetch('/api/admin/info-cards'),
+      fetch('/api/admin/settings?key=heroVideoUrl'),
+      fetch('/api/admin/settings?key=heroImageUrl'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData, paymentsData, cardsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData, paymentsData, cardsData, heroVideoData, heroImageData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
@@ -214,12 +238,15 @@ export default function AdminPage() {
       groupsRes.json(),
       paymentsRes.json(),
       cardsRes.json(),
+      heroVideoRes.json(),
+      heroImageRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
     setSessions(sessionsData.sessions || []);
     setBookings(bookingsData.bookings || []);
     setReceiptMessage(msgData.value || '');
+    setHeroForm({ heroVideoUrl: heroVideoData.value || '', heroImageUrl: heroImageData.value || '' });
     const loadedSchools = schoolsData.schools || [];
     setSchools(loadedSchools);
     if (loadedSchools.length > 0) {
@@ -290,6 +317,7 @@ export default function AdminPage() {
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
     { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
+    { id: 'hero', label: 'Hero-media', icon: <MonitorPlay className="w-4 h-4" /> },
   ];
 
   const handleSaveCard = async () => {
@@ -1197,6 +1225,82 @@ export default function AdminPage() {
                     <p className="text-sm">Inga informationskort ännu. Klicka på "Lägg till kort" för att börja.</p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Hero media */}
+          {tab === 'hero' && (
+            <div className="max-w-xl">
+              <h2 className="font-bold text-gray-900 mb-6">Hero-bakgrund</h2>
+              <div className="space-y-6 bg-white rounded-2xl border border-gray-100 p-6">
+
+                {/* Image upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bakgrundsbild</label>
+                  <div
+                    onClick={() => heroFileRef.current?.click()}
+                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', heroForm.heroImageUrl && !heroForm.heroVideoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-gray-50')}
+                    style={{ height: '160px' }}
+                  >
+                    {heroForm.heroImageUrl && !heroForm.heroVideoUrl ? (
+                      <>
+                        <img src={heroForm.heroImageUrl} alt="Hero preview" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                        <ImagePlus className="w-7 h-7" />
+                        <span className="text-sm">Klicka för att välja bild</span>
+                        <span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
+                      </div>
+                    )}
+                  </div>
+                  <input ref={heroFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleHeroFileChange} />
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-3 text-gray-400">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs font-medium">ELLER</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+
+                {/* Video URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <Video className="w-3.5 h-3.5 inline mr-1" />
+                    Bakgrundsvideo-URL (MP4)
+                  </label>
+                  <input
+                    type="url"
+                    className="input-field"
+                    placeholder="https://example.com/background.mp4"
+                    value={heroForm.heroVideoUrl}
+                    onChange={(e) => setHeroForm({ heroVideoUrl: e.target.value, heroImageUrl: e.target.value ? '' : heroForm.heroImageUrl })}
+                  />
+                </div>
+
+                {/* Clear button */}
+                {(heroForm.heroVideoUrl || heroForm.heroImageUrl) && (
+                  <button
+                    onClick={() => setHeroForm({ heroVideoUrl: '', heroImageUrl: '' })}
+                    className="text-sm text-red-500 hover:text-red-700"
+                  >
+                    Ta bort hero-media
+                  </button>
+                )}
+
+                <button
+                  onClick={handleSaveHero}
+                  disabled={heroSaving}
+                  className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {heroSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {heroSaving ? 'Sparar...' : 'Spara hero-media'}
+                </button>
               </div>
             </div>
           )}
