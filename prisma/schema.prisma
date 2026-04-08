@@ -37,6 +37,7 @@ model Course {
   vehicle     String
   behorighet  String    @default("B")
   price       Int
+  location    String    @default("")
   sessions    Session[]
 }
 

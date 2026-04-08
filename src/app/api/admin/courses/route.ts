@@ -17,13 +17,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { titleSv, titleEn, description, type, vehicle, price } = await request.json();
+  const { titleSv, titleEn, description, type, vehicle, price, location } = await request.json();
   if (!titleSv || !type || !vehicle || !price) {
     return NextResponse.json({ error: 'Obligatoriska fält saknas' }, { status: 400 });
   }
 
   const course = await prisma.course.create({
-    data: { titleSv, titleEn: titleEn || titleSv, description: description || '', type, vehicle, price: parseInt(price) },
+    data: { titleSv, titleEn: titleEn || titleSv, description: description || '', type, vehicle, price: parseInt(price), location: location || '' },
   });
   return NextResponse.json({ course }, { status: 201 });
 }

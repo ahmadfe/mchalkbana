@@ -208,7 +208,7 @@ export default function AdminPage() {
   const [testEmailStatus, setTestEmailStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [testEmailError, setTestEmailError] = useState('');
 
-  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
+  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
 
   const loadData = useCallback(async () => {
@@ -395,7 +395,7 @@ export default function AdminPage() {
       const data = await res.json();
       setCourses((prev) => [...prev, data.course]);
       setShowAddCourse(false);
-      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '' });
+      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -818,7 +818,7 @@ export default function AdminPage() {
                           <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                             <span>📅 {new Date(s.startTime).toLocaleDateString('sv-SE')}</span>
                             <span>🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            <span>📍 {s.school?.name}</span>
+                            <span>📍 {s.course?.location || s.school?.name}</span>
                             <span>👤 {s.seatsAvailable}/{s.seatLimit} platser kvar</span>
                           </div>
                         </div>
@@ -1711,6 +1711,10 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (kr)</label>
                 <input type="number" className="input-field" placeholder="1500" value={newCourse.price} onChange={(e) => setNewCourse({ ...newCourse, price: e.target.value })} required />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
+                <input type="text" className="input-field" placeholder="Uppsala Halkbana, Industrigatan 12" value={newCourse.location} onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })} />
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddCourse(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
                   Avbryt
@@ -1741,15 +1745,6 @@ export default function AdminPage() {
                   <option value="">Välj kurs...</option>
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>{locale === 'sv' ? c.titleSv : c.titleEn}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Halkbana</label>
-                <select className="input-field" value={newSession.schoolId} onChange={(e) => setNewSession({ ...newSession, schoolId: e.target.value })} required>
-                  <option value="">Välj halkbana...</option>
-                  {schools.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
               </div>
