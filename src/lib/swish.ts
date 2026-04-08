@@ -19,13 +19,6 @@ function getSwishAgent() {
   });
 }
 
-function getSwishHost(): string {
-  // SWISH_ENV=production → real Swish, anything else → MSS test simulator
-  return process.env.SWISH_ENV === 'production'
-    ? 'cpc.getswish.net'
-    : 'mss.cpc.getswish.net';
-}
-
 function swishRequest<T>(
   method: string,
   path: string,
@@ -37,7 +30,7 @@ function swishRequest<T>(
 
     const req = https.request(
       {
-        hostname: getSwishHost(),
+        hostname: 'cpc.getswish.net',
         path: `/swish-cpcapi/api/v2${path}`,
         method,
         agent,

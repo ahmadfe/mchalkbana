@@ -26,11 +26,35 @@ import {
   School,
   EyeOff,
   Tag,
+  CreditCard,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'groups';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'groups' | 'payments';
+
+interface PaymentRecord {
+  id: number;
+  bookingId: number;
+  amount: number;
+  provider: string;
+  status: string;
+  transactionId: string | null;
+  createdAt: string;
+  booking: {
+    guestName: string | null;
+    guestEmail: string | null;
+    personnummer: string | null;
+    user: { name: string; email: string } | null;
+    session: {
+      startTime: string;
+      course: { titleSv: string };
+      school: { name: string };
+    };
+  };
+}
 
 interface AdminStats {
   totalBookings: number;
@@ -98,6 +122,11 @@ export default function AdminPage() {
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
 
+  // Payments
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
+  const [refunding, setRefunding] = useState(false);
+
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
@@ -114,7 +143,7 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes] = await Promise.all([
+    const [statsRes, coursesRes, sessionsRes, bookingsRes, msgRes, schoolsRes, schoolAccountsRes, groupsRes, paymentsRes] = await Promise.all([
       fetch('/api/admin/stats'),
       fetch('/api/admin/courses'),
       fetch('/api/admin/sessions'),
@@ -123,8 +152,9 @@ export default function AdminPage() {
       fetch('/api/admin/schools'),
       fetch('/api/admin/school-accounts'),
       fetch('/api/admin/course-groups'),
+      fetch('/api/admin/payments'),
     ]);
-    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData] = await Promise.all([
+    const [statsData, coursesData, sessionsData, bookingsData, msgData, schoolsData, schoolAccountsData, groupsData, paymentsData] = await Promise.all([
       statsRes.json(),
       coursesRes.json(),
       sessionsRes.json(),
@@ -133,6 +163,7 @@ export default function AdminPage() {
       schoolsRes.json(),
       schoolAccountsRes.json(),
       groupsRes.json(),
+      paymentsRes.json(),
     ]);
     setStats(statsData);
     setCourses(coursesData.courses || []);
@@ -146,6 +177,7 @@ export default function AdminPage() {
     }
     setSchoolAccounts(schoolAccountsData.accounts || []);
     setCourseGroups(groupsData.groups || []);
+    setPayments(paymentsData.payments || []);
     setLoading(false);
   }, []);
 
@@ -206,6 +238,7 @@ export default function AdminPage() {
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
     { id: 'groups', label: 'Kursgrupper', icon: <Tag className="w-4 h-4" /> },
+    { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
   ];
 
   const handleDeleteCourse = async (id: number) => {
@@ -304,6 +337,17 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleConfirmRefund = async () => {
+    if (!refundTarget) return;
+    setRefunding(true);
+    const res = await fetch(`/api/admin/payments/${refundTarget.id}/refund`, { method: 'POST' });
+    setRefunding(false);
+    if (res.ok) {
+      setPayments((prev) => prev.map((p) => p.id === refundTarget.id ? { ...p, status: 'Refunded' } : p));
+      setRefundTarget(null);
+    }
   };
 
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -953,8 +997,149 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Payments */}
+          {tab === 'payments' && (() => {
+            // Group payments by month
+            const groups: Record<string, PaymentRecord[]> = {};
+            payments.forEach((p) => {
+              const key = new Date(p.createdAt).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
+              if (!groups[key]) groups[key] = [];
+              groups[key].push(p);
+            });
+            const monthKeys = Object.keys(groups);
+
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-bold text-gray-900">Betalningar ({payments.length})</h2>
+                  <div className="text-sm text-gray-500">
+                    Totalt intjänat: <span className="font-semibold text-gray-900">
+                      {payments.filter(p => p.status === 'Succeeded').reduce((s, p) => s + p.amount, 0).toLocaleString('sv-SE')} kr
+                    </span>
+                  </div>
+                </div>
+
+                {monthKeys.length === 0 && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400">
+                    Inga betalningar registrerade ännu.
+                  </div>
+                )}
+
+                {monthKeys.map((month) => (
+                  <div key={month} className="mb-8">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide capitalize">{month}</h3>
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-sm text-gray-500">
+                        {groups[month].filter(p => p.status === 'Succeeded').reduce((s, p) => s + p.amount, 0).toLocaleString('sv-SE')} kr
+                      </span>
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                          <tr>
+                            <th className="text-left py-3 px-4">ID</th>
+                            <th className="text-left py-3 px-4">Kund</th>
+                            <th className="text-left py-3 px-4">Personnummer</th>
+                            <th className="text-left py-3 px-4">Kurs</th>
+                            <th className="text-left py-3 px-4">Datum</th>
+                            <th className="text-left py-3 px-4">Swish-ref</th>
+                            <th className="text-left py-3 px-4">Belopp</th>
+                            <th className="text-left py-3 px-4">Status</th>
+                            <th className="py-3 px-4" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {groups[month].map((p) => {
+                            const name = p.booking.guestName ?? p.booking.user?.name ?? '–';
+                            const courseDate = new Date(p.booking.session.startTime).toLocaleDateString('sv-SE');
+                            return (
+                              <tr key={p.id} className="hover:bg-gray-50">
+                                <td className="py-3 px-4 text-gray-400">#{p.id}</td>
+                                <td className="py-3 px-4 font-medium">{name}</td>
+                                <td className="py-3 px-4 text-gray-500 font-mono text-xs">{p.booking.personnummer ?? '–'}</td>
+                                <td className="py-3 px-4 text-gray-700">{p.booking.session.course.titleSv}</td>
+                                <td className="py-3 px-4 text-gray-500">{courseDate}</td>
+                                <td className="py-3 px-4 text-gray-400 font-mono text-xs truncate max-w-[120px]">{p.transactionId ?? '–'}</td>
+                                <td className="py-3 px-4 font-semibold">{p.amount.toLocaleString('sv-SE')} kr</td>
+                                <td className="py-3 px-4">
+                                  <span className={clsx(
+                                    'px-2.5 py-1 rounded-full text-xs font-semibold',
+                                    p.status === 'Succeeded' ? 'bg-green-100 text-green-700' :
+                                    p.status === 'Refunded' ? 'bg-orange-100 text-orange-700' :
+                                    'bg-gray-100 text-gray-500'
+                                  )}>
+                                    {p.status === 'Succeeded' ? 'Betald' : p.status === 'Refunded' ? 'Återbetald' : p.status}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  {p.status === 'Succeeded' && (
+                                    <button
+                                      onClick={() => setRefundTarget(p)}
+                                      className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 font-medium transition"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      Återbetala
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
         </div>
       </main>
+
+      {/* Refund Confirm Modal */}
+      {refundTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="font-bold text-gray-900">Bekräfta återbetalning</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Är du säker på att du vill återbetala{' '}
+              <strong>{refundTarget.amount.toLocaleString('sv-SE')} kr</strong> till{' '}
+              <strong>{refundTarget.booking.guestName ?? refundTarget.booking.user?.name ?? 'kunden'}</strong>?
+            </p>
+            <p className="text-xs text-gray-400 mb-6">
+              Bokning #{refundTarget.bookingId} kommer att avbokas och platsen återställas. Återbetalningen i Swish måste hanteras manuellt i Swish-appen.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRefundTarget(null)}
+                disabled={refunding}
+                className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleConfirmRefund}
+                disabled={refunding}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl hover:bg-red-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {refunding ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                {refunding ? 'Bearbetar...' : 'Bekräfta återbetalning'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Session Students Modal */}
       {(studentsData || studentsLoading) && (
