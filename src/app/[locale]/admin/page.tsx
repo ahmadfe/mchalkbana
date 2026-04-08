@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -151,9 +151,6 @@ export default function AdminPage() {
   const [showAddCard, setShowAddCard] = useState(false);
   const [editCard, setEditCard] = useState<InfoCardRecord | null>(null);
   const [cardSaving, setCardSaving] = useState(false);
-  const [cardUploading, setCardUploading] = useState(false);
-  const [cardPreviewUrl, setCardPreviewUrl] = useState('');
-  const cardFileRef = useRef<HTMLInputElement>(null);
   const emptyCardForm = { badge: '', title: '', description: '', price: '', imageUrl: '', videoUrl: '', primaryButtonText: 'Läs mer', primaryButtonLink: '/courses', secondaryButtonText: '', secondaryButtonLink: '', sortOrder: 0, visible: true };
   const [cardForm, setCardForm] = useState(emptyCardForm);
 
@@ -323,26 +320,7 @@ export default function AdminPage() {
   const openEditCard = (card: InfoCardRecord) => {
     setEditCard(card);
     setCardForm({ ...card });
-    setCardPreviewUrl(card.imageUrl);
     setShowAddCard(false);
-  };
-
-  const handleCardFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCardPreviewUrl(URL.createObjectURL(file));
-    setCardUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    setCardUploading(false);
-    if (res.ok) {
-      setCardForm((prev) => ({ ...prev, imageUrl: data.url }));
-    } else {
-      alert(data.error || 'Uppladdning misslyckades');
-      setCardPreviewUrl(cardForm.imageUrl);
-    }
   };
 
   const handleDeleteCourse = async (id: number) => {
@@ -1500,34 +1478,20 @@ export default function AdminPage() {
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
-                  <div
-                    onClick={() => cardFileRef.current?.click()}
-                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', cardPreviewUrl && !cardForm.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white')}
-                    style={{ height: '140px' }}
-                  >
-                    {cardPreviewUrl && !cardForm.videoUrl ? (
-                      <>
-                        <img src={cardPreviewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                        {cardUploading ? <Loader2 className="w-7 h-7 animate-spin text-swedish-blue" /> : <><ImagePlus className="w-7 h-7" /><span className="text-sm">Klicka för att välja bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span></>}
-                      </div>
-                    )}
-                    {cardUploading && cardPreviewUrl && <div className="absolute inset-0 bg-black/30 flex items-center justify-center"><Loader2 className="w-7 h-7 text-white animate-spin" /></div>}
-                  </div>
-                  <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Bild-URL</label>
+                  <input type="url" className="input-field text-sm" placeholder="https://example.com/image.jpg" value={cardForm.imageUrl} onChange={(e) => setCardForm({ ...cardForm, imageUrl: e.target.value, videoUrl: e.target.value ? '' : cardForm.videoUrl })} />
+                  {cardForm.imageUrl && !cardForm.videoUrl && (
+                    <div className="mt-2 rounded-xl overflow-hidden" style={{ height: '130px' }}>
+                      <img src={cardForm.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-gray-400">
                   <div className="flex-1 h-px bg-gray-200" /><span className="text-xs font-medium">ELLER</span><div className="flex-1 h-px bg-gray-200" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1.5">Video-URL (MP4)</label>
-                  <input type="url" className="input-field text-sm" placeholder="https://example.com/video.mp4" value={cardForm.videoUrl} onChange={(e) => { setCardForm({ ...cardForm, videoUrl: e.target.value, imageUrl: e.target.value ? '' : cardForm.imageUrl }); if (e.target.value) setCardPreviewUrl(''); }} />
+                  <input type="url" className="input-field text-sm" placeholder="https://example.com/video.mp4" value={cardForm.videoUrl} onChange={(e) => setCardForm({ ...cardForm, videoUrl: e.target.value, imageUrl: e.target.value ? '' : cardForm.imageUrl })} />
                   <p className="text-xs text-gray-400 mt-1">Video används istället för bild om den anges.</p>
                 </div>
               </div>
@@ -1547,10 +1511,10 @@ export default function AdminPage() {
             </div>
 
             <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); setCardPreviewUrl(''); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
               <button
                 onClick={handleSaveCard}
-                disabled={cardSaving || cardUploading || !cardForm.title || !cardForm.description}
+                disabled={cardSaving || !cardForm.title || !cardForm.description}
                 className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {cardSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

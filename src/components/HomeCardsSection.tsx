@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { Pencil, Plus, X, Save, Trash2, ImagePlus, Loader2, Video, ExternalLink } from 'lucide-react';
+import { Pencil, Plus, X, Save, Trash2, ImagePlus, Video } from 'lucide-react';
 import clsx from 'clsx';
 
 interface InfoCard {
@@ -47,46 +47,22 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const openEdit = (card: InfoCard) => {
     setEditCard(card);
     setForm({ ...card });
-    setPreviewUrl(card.imageUrl);
     setShowAdd(false);
   };
 
   const openAdd = () => {
     setEditCard(null);
     setForm(emptyForm);
-    setPreviewUrl('');
     setShowAdd(true);
   };
 
   const closeModal = () => {
     setEditCard(null);
     setShowAdd(false);
-    setPreviewUrl('');
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreviewUrl(URL.createObjectURL(file));
-    setUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/admin/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    setUploading(false);
-    if (res.ok) {
-      setForm((prev) => ({ ...prev, imageUrl: data.url, videoUrl: '' }));
-    } else {
-      alert(data.error || 'Uppladdning misslyckades');
-      setPreviewUrl(form.imageUrl);
-    }
   };
 
   const handleSave = async () => {
@@ -364,49 +340,28 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                 </div>
               </div>
 
-              {/* Media — Image upload OR Video URL */}
+              {/* Media — Image URL OR Video URL */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                 <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
 
-                {/* Image upload */}
+                {/* Image URL */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
-                  <div
-                    onClick={() => fileRef.current?.click()}
-                    className={clsx(
-                      'relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group',
-                      previewUrl && !form.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white'
-                    )}
-                    style={{ height: '150px' }}
-                  >
-                    {previewUrl && !form.videoUrl ? (
-                      <>
-                        <img src={previewUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <span className="text-white text-sm font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" />Byt bild</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-                        {uploading
-                          ? <Loader2 className="w-7 h-7 animate-spin text-swedish-blue" />
-                          : <><ImagePlus className="w-7 h-7" /><span className="text-sm">Klicka för att välja bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span></>
-                        }
-                      </div>
-                    )}
-                    {uploading && previewUrl && (
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <Loader2 className="w-7 h-7 text-white animate-spin" />
-                      </div>
-                    )}
-                  </div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                    <ImagePlus className="w-3.5 h-3.5 inline mr-1" />
+                    Bild-URL
+                  </label>
                   <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={handleFileChange}
+                    type="url"
+                    className="input-field text-sm"
+                    placeholder="https://example.com/image.jpg"
+                    value={form.imageUrl}
+                    onChange={(e) => setForm({ ...form, imageUrl: e.target.value, videoUrl: e.target.value ? '' : form.videoUrl })}
                   />
+                  {form.imageUrl && !form.videoUrl && (
+                    <div className="mt-2 rounded-xl overflow-hidden" style={{ height: '140px' }}>
+                      <img src={form.imageUrl} alt="Förhandsgranskning" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Divider */}
@@ -427,10 +382,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                     className="input-field text-sm"
                     placeholder="https://example.com/video.mp4"
                     value={form.videoUrl}
-                    onChange={(e) => {
-                      setForm({ ...form, videoUrl: e.target.value, imageUrl: e.target.value ? '' : form.imageUrl });
-                      if (e.target.value) setPreviewUrl('');
-                    }}
+                    onChange={(e) => setForm({ ...form, videoUrl: e.target.value, imageUrl: e.target.value ? '' : form.imageUrl })}
                   />
                   <p className="text-xs text-gray-400 mt-1">Om du anger en video-URL används den istället för bilden.</p>
                 </div>
@@ -475,7 +427,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || uploading || !form.title || !form.description}
+                disabled={saving || !form.title || !form.description}
                 className="flex-1 bg-swedish-blue text-white py-2.5 rounded-xl hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
