@@ -5,7 +5,6 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
 import HomeCardsSection from '@/components/HomeCardsSection';
-import { mockSessions } from '@/lib/mockData';
 import { Shield, Calendar, CreditCard } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
@@ -18,11 +17,26 @@ export async function generateMetadata() {
 export default async function HomePage({ params }: { params: { locale: string } }) {
   const { locale } = await params;
   const t = await getTranslations('home');
-  const upcomingSessions = mockSessions.filter(s => s.seatsAvailable > 0).slice(0, 3);
-  const [infoCards, authUser] = await Promise.all([
+
+  const now = new Date();
+  const [infoCards, authUser, upcomingSessions] = await Promise.all([
     prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }),
     getAuthUser(),
+    prisma.session.findMany({
+      where: {
+        startTime: { gte: now },
+        visibility: 'public',
+        seatsAvailable: { gt: 0 },
+      },
+      orderBy: { startTime: 'asc' },
+      take: 3,
+      include: {
+        course: true,
+        school: true,
+      },
+    }),
   ]);
+
   const isAdmin = authUser?.role === 'admin';
 
   return (
@@ -33,7 +47,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
       <section className="bg-gradient-to-br from-swedish-blue via-blue-800 to-blue-900 text-white py-20 md:py-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            {/* Swedish flag accent line */}
             <div className="flex items-center gap-3 mb-6">
               <div className="h-1 w-8 bg-swedish-yellow rounded-full" />
               <span className="text-swedish-yellow text-sm font-semibold uppercase tracking-widest">
@@ -63,24 +76,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
-      {/* Stats bar */}
-      <section className="bg-swedish-yellow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            {[
-              { label: 'Godkända kurser', value: '4' },
-              { label: 'Nöjda elever', value: '2 400+' },
-              { label: 'Platser per pass', value: '20' },
-              { label: 'År i branschen', value: '15+' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <div className="text-3xl font-extrabold text-swedish-blue">{stat.value}</div>
-                <div className="text-sm font-medium text-blue-900 mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Info Cards — editable by admin */}
+      <HomeCardsSection initialCards={infoCards} isAdmin={isAdmin} />
 
       {/* Why us */}
       <section className="py-16 bg-white">
@@ -121,38 +118,37 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
-      {/* Info Cards — editable by admin */}
-      <HomeCardsSection initialCards={infoCards} isAdmin={isAdmin} />
-
-      {/* Upcoming sessions */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-10">
-            <div>
-              <h2 className="section-title">{t('upcoming_sessions')}</h2>
-              <p className="section-subtitle">Boka din plats innan de tar slut</p>
+      {/* Upcoming sessions — real-time from DB */}
+      {upcomingSessions.length > 0 && (
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="section-title">{t('upcoming_sessions')}</h2>
+                <p className="section-subtitle">Boka din plats innan de tar slut</p>
+              </div>
+              <Link
+                href={`/${locale}/courses`}
+                className="hidden md:inline-flex btn-outline text-sm"
+              >
+                {t('view_all')} →
+              </Link>
             </div>
-            <Link
-              href={`/${locale}/courses`}
-              className="hidden md:inline-flex btn-outline text-sm"
-            >
-              {t('view_all')} →
-            </Link>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {upcomingSessions.map((session) => (
-              <SessionCard key={session.id} session={session} isLoggedIn={false} />
-            ))}
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {upcomingSessions.map((session) => (
+                <SessionCard key={session.id} session={session} isLoggedIn={false} />
+              ))}
+            </div>
 
-          <div className="text-center mt-8 md:hidden">
-            <Link href={`/${locale}/courses`} className="btn-outline">
-              {t('view_all')}
-            </Link>
+            <div className="text-center mt-8 md:hidden">
+              <Link href={`/${locale}/courses`} className="btn-outline">
+                {t('view_all')}
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-16 bg-gradient-to-r from-swedish-blue to-blue-700 text-white">
