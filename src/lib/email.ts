@@ -155,6 +155,7 @@ interface BookingConfirmationEmailData {
   courseDate: string;
   courseTime: string;
   location: string;
+  schoolName?: string | null;
   personnummer?: string | null;
   phone?: string | null;
 }
@@ -164,37 +165,49 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
 <!DOCTYPE html>
 <html lang="sv">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:32px auto;">
-    <div style="background:#003DA5;border-radius:12px 12px 0 0;padding:32px;text-align:center;">
-      <h1 style="color:#FCD116;margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Uppsala Halkbana</h1>
-      <p style="color:#93c5fd;margin:0;font-size:13px;">Riskutbildning – Godkänd av Transportstyrelsen</p>
+
+    <!-- Header -->
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
-    <div style="background:#003DA5;padding:16px 32px;text-align:center;">
-      <p style="color:#fff;margin:0;font-size:16px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BOKNING BEKRÄFTAD</p>
+
+    <!-- Status banner -->
+    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BOKNING BEKRÄFTAD</p>
     </div>
+
+    <!-- Body -->
     <div style="background:#fff;padding:32px;">
       <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
       <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Din plats är bokad. Nedan hittar du en sammanfattning av din bokning.</p>
+
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
-        <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;">Bokningsdetaljer</p>
+        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Bokningsdetaljer</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td></tr>
+          ${data.schoolName ? `<tr><td style="color:#6b7280;padding:5px 0;">Trafikskola</td><td style="color:#111827;font-weight:600;text-align:right;">${data.schoolName}</td></tr>` : ''}
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
-          <tr><td style="color:#6b7280;padding:5px 0;">Boknings-ID</td><td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td></tr>
         </table>
       </div>
-      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@ihalka.se" style="color:#003DA5;">info@ihalka.se</a> eller ring 07 07 66 66 61.</p>
+
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#0ABCCE;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
     </div>
-    <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
+
+    <!-- Footer -->
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
       <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 07 07 66 66 61</p>
-      <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
+
   </div>
 </body>
 </html>`;
