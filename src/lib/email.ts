@@ -94,6 +94,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
           </tr>
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
+          ${data.customMessage ? `<tr><td style="color:#dc2626;padding:8px 0 5px;font-weight:700;">OBS!</td><td style="color:#dc2626;font-weight:600;text-align:right;padding:8px 0 5px;">${data.customMessage}</td></tr>` : ''}
         </table>
       </div>
 
@@ -114,12 +115,6 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
           </tr>
         </table>
       </div>
-
-      ${data.customMessage ? `
-      <div style="border-left:4px solid #0ABCCE;padding:12px 16px;background:#f0fbfc;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;color:#0891a0;font-size:14px;">${data.customMessage}</p>
-      </div>
-      ` : ''}
 
       <!-- Google Calendar button -->
       <div style="text-align:center;margin-top:8px;">
