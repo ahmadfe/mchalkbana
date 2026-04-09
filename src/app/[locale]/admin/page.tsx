@@ -1144,6 +1144,7 @@ export default function AdminPage() {
 
           {/* School Accounts */}
           {tab === 'schools' && (
+            <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Create form */}
               <div className="bg-white rounded-xl border border-gray-100 p-6">
@@ -1261,6 +1262,7 @@ export default function AdminPage() {
             </div>
 
             {/* Staff / Admin users */}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
               {/* Create staff */}
               <div className="bg-white rounded-xl border border-gray-100 p-6">
@@ -1338,6 +1340,7 @@ export default function AdminPage() {
                 )}
               </div>
             </div>
+            </>
           )}
 
           {/* Payments */}
