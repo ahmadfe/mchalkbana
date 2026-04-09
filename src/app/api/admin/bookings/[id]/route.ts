@@ -108,7 +108,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
       courseDate,
       courseTime,
       location: session.course.location || session.school.name,
-      schoolName: session.school.name,
       personnummer,
       phone: guestPhone || null,
     });
