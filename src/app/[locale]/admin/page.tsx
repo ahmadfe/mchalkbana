@@ -33,6 +33,7 @@ import {
   Loader2,
   Video,
   MonitorPlay,
+  KeyRound,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -148,6 +149,21 @@ export default function AdminPage() {
   const [schoolAccountError, setSchoolAccountError] = useState('');
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
+
+  // Reset password modal (school)
+  const [resetPwdTarget, setResetPwdTarget] = useState<{ id: number; name: string; type: 'school' | 'staff' } | null>(null);
+  const [resetPwdValue, setResetPwdValue] = useState('');
+  const [showResetPwd, setShowResetPwd] = useState(false);
+  const [resetPwdSaving, setResetPwdSaving] = useState(false);
+  const [resetPwdError, setResetPwdError] = useState('');
+  const [resetPwdDone, setResetPwdDone] = useState(false);
+
+  // Staff (admin users)
+  const [staffList, setStaffList] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
+  const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '' });
+  const [showStaffPwd, setShowStaffPwd] = useState(false);
+  const [staffError, setStaffError] = useState('');
+  const [staffSaving, setStaffSaving] = useState(false);
 
   // School invoice
   const [invoiceSchool, setInvoiceSchool] = useState<{ id: number; name: string; email: string } | null>(null);
@@ -275,6 +291,8 @@ export default function AdminPage() {
     setCourseGroups(groupsData.groups || []);
     setPayments(paymentsData.payments || []);
     setInfoCards(cardsData.cards || []);
+    // Load staff separately (don't block main load)
+    fetch('/api/admin/staff').then(r => r.json()).then(d => setStaffList(d.staff || []));
     setLoading(false);
   }, []);
 
@@ -502,6 +520,58 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const openResetPwd = (id: number, name: string, type: 'school' | 'staff') => {
+    setResetPwdTarget({ id, name, type });
+    setResetPwdValue('');
+    setShowResetPwd(false);
+    setResetPwdError('');
+    setResetPwdDone(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPwdTarget) return;
+    if (resetPwdValue.length < 8) { setResetPwdError('Minst 8 tecken'); return; }
+    setResetPwdSaving(true);
+    setResetPwdError('');
+    const url = resetPwdTarget.type === 'school'
+      ? `/api/admin/school-accounts/${resetPwdTarget.id}`
+      : `/api/admin/staff/${resetPwdTarget.id}`;
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: resetPwdValue }),
+    });
+    const data = await res.json();
+    setResetPwdSaving(false);
+    if (!res.ok) { setResetPwdError(data.error || 'Fel'); return; }
+    setResetPwdDone(true);
+  };
+
+  const handleCreateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStaffSaving(true);
+    setStaffError('');
+    const res = await fetch('/api/admin/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newStaff),
+    });
+    const data = await res.json();
+    setStaffSaving(false);
+    if (!res.ok) { setStaffError(data.error || 'Fel'); return; }
+    setStaffList(prev => [...prev, data.user]);
+    setNewStaff({ name: '', email: '', password: '' });
+  };
+
+  const handleDeleteStaff = async (id: number) => {
+    const res = await fetch('/api/admin/staff', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    if (res.ok) setStaffList(prev => prev.filter(s => s.id !== id));
   };
 
   const openInvoiceModal = async (acc: { id: number; name: string; email: string }, month: string) => {
@@ -1162,6 +1232,13 @@ export default function AdminPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
+                            onClick={() => openResetPwd(acc.id, acc.name, 'school')}
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            title="Återställ lösenord"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />Lösenord
+                          </button>
+                          <button
                             onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
                             className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-blue-50 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Rapport & Faktura"
@@ -1173,6 +1250,85 @@ export default function AdminPage() {
                             className="text-gray-400 hover:text-red-500 transition p-1"
                             title="Ta bort konto"
                           >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {/* Staff / Admin users */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Create staff */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <Lock className="w-5 h-5 text-orange-500" />
+                  <h2 className="font-bold text-gray-900">Skapa adminanvändare</h2>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">Adminanvändare har full behörighet, precis som huvudkontot.</p>
+                {staffError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{staffError}</div>
+                )}
+                <form className="space-y-4" onSubmit={handleCreateStaff}>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+                    <input type="text" className="input-field" placeholder="Receptionist" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress</label>
+                    <input type="email" className="input-field" placeholder="reception@uppsalahalkbana.se" value={newStaff.email} onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Lösenord</label>
+                    <div className="relative">
+                      <input
+                        type={showStaffPwd ? 'text' : 'password'}
+                        className="input-field pr-10"
+                        placeholder="Minst 8 tecken"
+                        value={newStaff.password}
+                        onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
+                        required
+                        minLength={8}
+                      />
+                      <button type="button" onClick={() => setShowStaffPwd(!showStaffPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        {showStaffPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <button type="submit" disabled={staffSaving} className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60">
+                    {staffSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skapar...</> : <><Plus className="w-4 h-4" />Skapa adminanvändare</>}
+                  </button>
+                </form>
+              </div>
+
+              {/* Staff list */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Adminanvändare ({staffList.length})</h2>
+                {staffList.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400">
+                    <Lock className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                    <p className="text-sm">Inga adminanvändare ännu.</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-3">
+                    {staffList.map((s) => (
+                      <li key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-50 hover:bg-orange-100 transition">
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{s.name}</p>
+                          <p className="text-xs text-gray-500">{s.email}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openResetPwd(s.id, s.name, 'staff')}
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            title="Återställ lösenord"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />Lösenord
+                          </button>
+                          <button onClick={() => handleDeleteStaff(s.id)} className="text-gray-400 hover:text-red-500 transition p-1" title="Ta bort">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -1431,6 +1587,60 @@ export default function AdminPage() {
 
         </div>
       </main>
+
+      {/* Reset Password Modal */}
+      {resetPwdTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-lg">Återställ lösenord</h3>
+                <p className="text-sm text-gray-500">{resetPwdTarget.name}</p>
+              </div>
+              <button onClick={() => setResetPwdTarget(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            {resetPwdDone ? (
+              <div className="text-center py-6">
+                <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <p className="font-semibold text-gray-900">Lösenord uppdaterat!</p>
+                {resetPwdTarget.type === 'school' && <p className="text-sm text-gray-500 mt-1">Nytt lösenord har skickats via e-post.</p>}
+                <button onClick={() => setResetPwdTarget(null)} className="mt-4 btn-primary px-6 py-2 text-sm">Stäng</button>
+              </div>
+            ) : (
+              <>
+                {resetPwdError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{resetPwdError}</div>}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nytt lösenord</label>
+                  <div className="relative">
+                    <input
+                      type={showResetPwd ? 'text' : 'password'}
+                      className="input-field pr-10"
+                      placeholder="Minst 8 tecken"
+                      value={resetPwdValue}
+                      onChange={(e) => setResetPwdValue(e.target.value)}
+                      minLength={8}
+                    />
+                    <button type="button" onClick={() => setShowResetPwd(!showResetPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      {showResetPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setResetPwdTarget(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={resetPwdSaving || resetPwdValue.length < 8}
+                    className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {resetPwdSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                    {resetPwdSaving ? 'Sparar...' : 'Spara lösenord'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* School Invoice Modal */}
       {invoiceSchool && (
