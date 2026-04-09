@@ -348,9 +348,6 @@ export async function sendStaffAccountEmail(data: { name: string; email: string;
           <tr><td style="color:#6b7280;padding:5px 0;">Lösenord</td><td style="color:#111827;font-weight:600;text-align:right;font-family:monospace;">${data.password}</td></tr>
         </table>
       </div>
-      <div style="border-left:4px solid #f97316;padding:12px 16px;background:#fff7ed;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;color:#c2410c;font-size:14px;">Byt lösenord efter första inloggningen av säkerhetsskäl.</p>
-      </div>
       <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#f97316;">info@uppsalahalkbana.se</a>.</p>
     </div>
     <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
