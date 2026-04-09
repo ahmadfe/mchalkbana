@@ -137,8 +137,8 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 
     <!-- Footer -->
     <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
-      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Halkbanevägen 12, 754 50 Uppsala</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 018-12 34 56</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 07 07 66 66 61</p>
       <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Transaktions-ID: ${data.transactionId}</p>
       <p style="color:#d1d5db;font-size:11px;margin:4px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
@@ -191,11 +191,11 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
           <tr><td style="color:#6b7280;padding:5px 0;">Boknings-ID</td><td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td></tr>
         </table>
       </div>
-      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@ihalka.se" style="color:#003DA5;">info@ihalka.se</a> eller ring 018-12 34 56.</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@ihalka.se" style="color:#003DA5;">info@ihalka.se</a> eller ring 07 07 66 66 61.</p>
     </div>
     <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
-      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Halkbanevägen 12, 754 50 Uppsala</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 018-12 34 56</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 07 07 66 66 61</p>
       <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
   </div>
@@ -260,7 +260,7 @@ function buildSchoolAccountHtml(data: SchoolAccountEmailData): string {
       <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@ihalka.se" style="color:#003DA5;">info@ihalka.se</a>.</p>
     </div>
     <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
-      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Halkbanevägen 12, 754 50 Uppsala</p>
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
       <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
   </div>

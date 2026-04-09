@@ -57,10 +57,10 @@ export default function ContactPage() {
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Kontaktuppgifter</h2>
               <div className="space-y-5">
                 {[
-                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Halkbanevägen 12, 754 50 Uppsala', color: 'bg-blue-50 text-swedish-blue' },
+                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Norrlövsta 147, 747 91 Alunda', color: 'bg-blue-50 text-swedish-blue' },
                   { icon: <Mail className="w-5 h-5" />, label: 'E-post', value: 'info@uppsalahalkbana.se', color: 'bg-green-50 text-green-700' },
-                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '018-12 34 56', color: 'bg-yellow-50 text-yellow-700' },
-                  { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Måndag–Fredag: 08:00–17:00', color: 'bg-purple-50 text-purple-700' },
+                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '07 07 66 66 61', color: 'bg-yellow-50 text-yellow-700' },
+                  { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Lör–Tor 08:00–17:00', color: 'bg-purple-50 text-purple-700' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${item.color}`}>

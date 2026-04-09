@@ -25,7 +25,7 @@ export default function Footer() {
             <div className="mt-4 space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-swedish-yellow shrink-0" />
-                <span>Halkbanevägen 12, 754 50 Uppsala</span>
+                <span>Norrlövsta 147, 747 91 Alunda</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-swedish-yellow shrink-0" />
@@ -33,7 +33,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-swedish-yellow shrink-0" />
-                <span>018-12 34 56</span>
+                <span>07 07 66 66 61</span>
               </div>
             </div>
           </div>
