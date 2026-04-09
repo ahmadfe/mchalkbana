@@ -39,18 +39,19 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 <!DOCTYPE html>
 <html lang="sv">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:32px auto;">
 
     <!-- Header -->
-    <div style="background:#003DA5;border-radius:12px 12px 0 0;padding:32px;text-align:center;">
-      <h1 style="color:#FCD116;margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-0.5px;">Uppsala Halkbana</h1>
-      <p style="color:#93c5fd;margin:0;font-size:13px;">Riskutbildning – Godkänd av Transportstyrelsen</p>
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
 
     <!-- Status banner -->
-    <div style="background:#16a34a;padding:16px 32px;text-align:center;">
-      <p style="color:#fff;margin:0;font-size:16px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BETALNING BEKRÄFTAD</p>
+    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BETALNING BEKRÄFTAD</p>
     </div>
 
     <!-- Body -->
@@ -73,7 +74,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 
       <!-- Course details card -->
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
-        <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;">Kursdetaljer</p>
+        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Kursdetaljer</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr>
             <td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td>
@@ -93,10 +94,6 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
           </tr>
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
-          <tr>
-            <td style="color:#6b7280;padding:5px 0;">Boknings-ID</td>
-            <td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td>
-          </tr>
         </table>
       </div>
 
@@ -111,23 +108,23 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
             <td style="color:#6b7280;padding:5px 0;">Moms (25%)</td>
             <td style="color:#374151;text-align:right;">${vatAmount.toLocaleString('sv-SE')} kr</td>
           </tr>
-          <tr style="border-top:2px solid #003DA5;">
+          <tr style="border-top:2px solid #0ABCCE;">
             <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">Totalt betalt</td>
-            <td style="color:#003DA5;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
+            <td style="color:#0ABCCE;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
           </tr>
         </table>
       </div>
 
       ${data.customMessage ? `
-      <div style="border-left:4px solid #003DA5;padding:12px 16px;background:#eff6ff;border-radius:0 8px 8px 0;margin-bottom:24px;">
-        <p style="margin:0;color:#1e40af;font-size:14px;">${data.customMessage}</p>
+      <div style="border-left:4px solid #0ABCCE;padding:12px 16px;background:#f0fbfc;border-radius:0 8px 8px 0;margin-bottom:24px;">
+        <p style="margin:0;color:#0891a0;font-size:14px;">${data.customMessage}</p>
       </div>
       ` : ''}
 
       <!-- Google Calendar button -->
       <div style="text-align:center;margin-top:8px;">
         <a href="${gcalUrl}" target="_blank"
-          style="display:inline-block;background:#003DA5;color:#fff;font-weight:700;font-size:14px;padding:14px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+          style="display:inline-block;background:#111827;color:#fff;font-weight:700;font-size:14px;padding:14px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
           📅 &nbsp;Lägg till i Google Kalender
         </a>
         <p style="color:#9ca3af;font-size:12px;margin:10px 0 0;">Klicka på knappen för att spara kursdatumet i din kalender.</p>
@@ -136,11 +133,11 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
     </div>
 
     <!-- Footer -->
-    <div style="background:#f9fafb;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;padding:20px 32px;text-align:center;">
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
       <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@ihalka.se · 07 07 66 66 61</p>
-      <p style="color:#d1d5db;font-size:11px;margin:12px 0 0;">Transaktions-ID: ${data.transactionId}</p>
-      <p style="color:#d1d5db;font-size:11px;margin:4px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Transaktions-ID: ${data.transactionId}</p>
+      <p style="color:#4b5563;font-size:11px;margin:4px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
 
   </div>
