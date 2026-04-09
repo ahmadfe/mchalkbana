@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const bookings = await prisma.booking.findMany({
     include: {
       user: { select: { name: true, email: true } },
-      session: { include: { course: true, school: true } },
+      session: { include: { course: true, school: true, assignedSchoolUser: { select: { name: true } } } },
       payment: true,
     },
     orderBy: { bookingTime: 'desc' },

@@ -15,6 +15,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     include: {
       course: true,
       school: true,
+      assignedSchoolUser: { select: { name: true } },
       bookings: {
         where: { status: { not: 'Canceled' } },
         include: {
@@ -36,7 +37,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     phone: b.guestPhone || b.user?.phone || '–',
     email: b.guestEmail || b.user?.email || '–',
     bookedByRole: b.bookedByRole,
-    bookedBySchool: b.bookedByRole === 'school' ? (b.user?.name || 'Skola') : null,
+    bookedBySchool: b.bookedByRole === 'school' ? (session.assignedSchoolUser?.name || 'Skola') : null,
   }));
 
   return NextResponse.json({
