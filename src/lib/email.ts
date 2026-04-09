@@ -316,6 +316,156 @@ export async function sendSchoolAccountEmail(data: SchoolAccountEmailData): Prom
   }
 }
 
+// ── School monthly invoice ─────────────────────────────────────────────────
+
+interface SchoolInvoiceEmailData {
+  recipientEmail: string;
+  schoolName: string;
+  month: string; // e.g. "april 2026"
+  rows: {
+    courseName: string;
+    sessionDate: string;
+    studentCount: number;
+    pricePerStudent: number;
+    subtotal: number;
+  }[];
+  totalStudents: number;
+  totalAmount: number;
+}
+
+function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
+  const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+  const issuedDate = new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
+  const priceExVat = Math.round(data.totalAmount / 1.25);
+  const vatAmount = data.totalAmount - priceExVat;
+
+  const rowsHtml = data.rows.map((r) => `
+    <tr>
+      <td style="color:#111827;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;">${r.courseName}</td>
+      <td style="color:#6b7280;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;text-align:center;">${r.sessionDate}</td>
+      <td style="color:#6b7280;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;text-align:center;">${r.studentCount} elev${r.studentCount !== 1 ? 'er' : ''}</td>
+      <td style="color:#6b7280;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;text-align:right;">${r.pricePerStudent.toLocaleString('sv-SE')} kr/elev</td>
+      <td style="color:#111827;font-weight:600;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:14px;text-align:right;">${r.subtotal.toLocaleString('sv-SE')} kr</td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:640px;margin:32px auto;">
+
+    <!-- Header -->
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+
+    <!-- Banner -->
+    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">FAKTURA – ${data.month.toUpperCase()}</p>
+    </div>
+
+    <!-- Body -->
+    <div style="background:#fff;padding:32px;">
+
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.schoolName}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Nedan hittar du en sammanfattning av bokningar gjorda under <strong>${data.month}</strong>.</p>
+
+      <!-- Invoice meta -->
+      <div style="display:flex;justify-content:space-between;margin-bottom:24px;">
+        <div>
+          <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3px;">Fakturanummer</p>
+          <p style="color:#111827;font-size:14px;font-weight:700;margin:0;">${invoiceNumber}</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 3px;">Utfärdad</p>
+          <p style="color:#111827;font-size:14px;font-weight:600;margin:0;">${issuedDate}</p>
+        </div>
+      </div>
+
+      <!-- Sessions table -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;overflow-x:auto;">
+        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Bokade pass</p>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="color:#9ca3af;font-size:11px;text-transform:uppercase;padding:0 0 8px;text-align:left;font-weight:600;">Kurs</th>
+              <th style="color:#9ca3af;font-size:11px;text-transform:uppercase;padding:0 0 8px;text-align:center;font-weight:600;">Datum</th>
+              <th style="color:#9ca3af;font-size:11px;text-transform:uppercase;padding:0 0 8px;text-align:center;font-weight:600;">Elever</th>
+              <th style="color:#9ca3af;font-size:11px;text-transform:uppercase;padding:0 0 8px;text-align:right;font-weight:600;">Pris/elev</th>
+              <th style="color:#9ca3af;font-size:11px;text-transform:uppercase;padding:0 0 8px;text-align:right;font-weight:600;">Summa</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals -->
+      <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-bottom:24px;">
+        <table style="width:100%;font-size:14px;">
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Totalt antal elever</td>
+            <td style="color:#374151;text-align:right;font-weight:600;">${data.totalStudents} elever</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Belopp exkl. moms</td>
+            <td style="color:#374151;text-align:right;">${priceExVat.toLocaleString('sv-SE')} kr</td>
+          </tr>
+          <tr>
+            <td style="color:#6b7280;padding:5px 0;">Moms (25%)</td>
+            <td style="color:#374151;text-align:right;">${vatAmount.toLocaleString('sv-SE')} kr</td>
+          </tr>
+          <tr style="border-top:2px solid #0ABCCE;">
+            <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">Totalt att betala</td>
+            <td style="color:#0ABCCE;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.totalAmount.toLocaleString('sv-SE')} kr</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#0ABCCE;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendSchoolInvoiceEmail(data: SchoolInvoiceEmailData): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — skipping invoice for', data.recipientEmail);
+    return;
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@ihalka.se>',
+        to: [data.recipientEmail],
+        subject: `Faktura ${data.month} – Uppsala Halkbana`,
+        html: buildSchoolInvoiceHtml(data),
+      }),
+    });
+    if (!res.ok) console.error('[Email] Resend error:', await res.text());
+    else console.log('[Email] Invoice sent to', data.recipientEmail);
+  } catch (err) {
+    console.error('[Email] Failed to send invoice:', err);
+  }
+}
+
 export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

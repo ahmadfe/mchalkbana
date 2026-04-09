@@ -148,6 +148,18 @@ export default function AdminPage() {
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
 
+  // School invoice
+  const [invoiceSchool, setInvoiceSchool] = useState<{ id: number; name: string; email: string } | null>(null);
+  const [invoiceMonth, setInvoiceMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [invoiceReport, setInvoiceReport] = useState<{
+    schoolName: string; email: string; month: string;
+    rows: { courseName: string; sessionDate: string; studentCount: number; pricePerStudent: number; subtotal: number }[];
+    totalStudents: number; totalAmount: number;
+  } | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceSending, setInvoiceSending] = useState(false);
+  const [invoiceSent, setInvoiceSent] = useState(false);
+
   // Payments
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
@@ -489,6 +501,41 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const openInvoiceModal = async (acc: { id: number; name: string; email: string }, month: string) => {
+    setInvoiceReport(null);
+    setInvoiceSent(false);
+    setInvoiceSchool(acc);
+    setInvoiceMonth(month);
+    setInvoiceLoading(true);
+    const res = await fetch(`/api/admin/school-accounts/${acc.id}/report?month=${month}`);
+    const data = await res.json();
+    setInvoiceReport(data.report || null);
+    setInvoiceLoading(false);
+  };
+
+  const handleInvoiceMonthChange = async (month: string) => {
+    setInvoiceMonth(month);
+    if (!invoiceSchool) return;
+    setInvoiceLoading(true);
+    setInvoiceReport(null);
+    const res = await fetch(`/api/admin/school-accounts/${invoiceSchool.id}/report?month=${month}`);
+    const data = await res.json();
+    setInvoiceReport(data.report || null);
+    setInvoiceLoading(false);
+  };
+
+  const handleSendInvoice = async () => {
+    if (!invoiceSchool) return;
+    setInvoiceSending(true);
+    await fetch(`/api/admin/school-accounts/${invoiceSchool.id}/invoice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month: invoiceMonth }),
+    });
+    setInvoiceSending(false);
+    setInvoiceSent(true);
   };
 
   const openEditBooking = (b: Booking) => {
@@ -1102,13 +1149,22 @@ export default function AdminPage() {
                           <p className="font-medium text-gray-900 text-sm">{acc.name}</p>
                           <p className="text-xs text-gray-500">{acc.email}</p>
                         </div>
-                        <button
-                          onClick={() => handleDeleteSchoolAccount(acc.id)}
-                          className="text-gray-400 hover:text-red-500 transition p-1"
-                          title="Ta bort konto"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
+                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-blue-50 px-2 py-1.5 rounded-lg transition font-medium"
+                            title="Rapport & Faktura"
+                          >
+                            <FileText className="w-3.5 h-3.5" />Faktura
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSchoolAccount(acc.id)}
+                            className="text-gray-400 hover:text-red-500 transition p-1"
+                            title="Ta bort konto"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -1364,6 +1420,106 @@ export default function AdminPage() {
 
         </div>
       </main>
+
+      {/* School Invoice Modal */}
+      {invoiceSchool && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+              <div>
+                <h3 className="font-bold text-lg text-gray-900">Faktura – {invoiceSchool.name}</h3>
+                <p className="text-sm text-gray-500">{invoiceSchool.email}</p>
+              </div>
+              <button onClick={() => setInvoiceSchool(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Month picker */}
+            <div className="px-6 py-4 border-b border-gray-100 shrink-0">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Välj månad</label>
+              <input
+                type="month"
+                className="input-field w-48"
+                value={invoiceMonth}
+                onChange={(e) => handleInvoiceMonthChange(e.target.value)}
+              />
+            </div>
+
+            {/* Report content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {invoiceLoading ? (
+                <div className="flex items-center justify-center py-16 text-gray-400">
+                  <div className="w-6 h-6 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin mr-3" />
+                  Laddar rapport...
+                </div>
+              ) : !invoiceReport || invoiceReport.rows.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  <FileText className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                  <p className="text-sm">Inga bokningar för denna månad.</p>
+                </div>
+              ) : (
+                <>
+                  <table className="w-full text-sm mb-6">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left text-xs text-gray-500 uppercase pb-2 font-semibold">Kurs</th>
+                        <th className="text-center text-xs text-gray-500 uppercase pb-2 font-semibold">Datum</th>
+                        <th className="text-center text-xs text-gray-500 uppercase pb-2 font-semibold">Elever</th>
+                        <th className="text-right text-xs text-gray-500 uppercase pb-2 font-semibold">Pris/elev</th>
+                        <th className="text-right text-xs text-gray-500 uppercase pb-2 font-semibold">Summa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoiceReport.rows.map((r, i) => (
+                        <tr key={i} className="border-b border-gray-50">
+                          <td className="py-2.5 text-gray-900 font-medium">{r.courseName}</td>
+                          <td className="py-2.5 text-gray-500 text-center">{r.sessionDate}</td>
+                          <td className="py-2.5 text-gray-500 text-center">{r.studentCount}</td>
+                          <td className="py-2.5 text-gray-500 text-right">{r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
+                          <td className="py-2.5 text-gray-900 font-semibold text-right">{r.subtotal.toLocaleString('sv-SE')} kr</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="border-t-2 border-gray-200 pt-4 space-y-1">
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Totalt antal elever</span><span className="font-semibold text-gray-900">{invoiceReport.totalStudents}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Exkl. moms</span><span>{Math.round(invoiceReport.totalAmount / 1.25).toLocaleString('sv-SE')} kr</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Moms (25%)</span><span>{(invoiceReport.totalAmount - Math.round(invoiceReport.totalAmount / 1.25)).toLocaleString('sv-SE')} kr</span>
+                    </div>
+                    <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
+                      <span>Totalt att betala</span>
+                      <span className="text-swedish-blue">{invoiceReport.totalAmount.toLocaleString('sv-SE')} kr</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3">
+              <button onClick={() => setInvoiceSchool(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Stäng</button>
+              <button
+                onClick={handleSendInvoice}
+                disabled={invoiceSending || invoiceLoading || !invoiceReport || invoiceReport.rows.length === 0 || invoiceSent}
+                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {invoiceSending ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skickar...</>
+                ) : invoiceSent ? (
+                  <><CheckCircle2 className="w-4 h-4" />Faktura skickad!</>
+                ) : (
+                  <><FileText className="w-4 h-4" />Skicka faktura via e-post</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Booking Modal */}
       {editBooking && (
