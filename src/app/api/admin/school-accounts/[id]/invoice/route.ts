@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const schoolUser = await prisma.user.findUnique({
     where: { id: schoolUserId },
-    select: { name: true, email: true },
+    select: { id: true, name: true, email: true },
   });
   if (!schoolUser) return NextResponse.json({ error: 'Skola hittades inte' }, { status: 404 });
 
@@ -74,6 +74,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   await sendSchoolInvoiceEmail({
     recipientEmail: schoolUser.email,
     schoolName: schoolUser.name,
+    customerNumber: schoolUser.id,
     month: monthLabel,
     rows,
     totalStudents,
