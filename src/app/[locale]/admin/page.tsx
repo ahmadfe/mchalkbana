@@ -117,6 +117,10 @@ export default function AdminPage() {
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
+  const [editCourse, setEditCourse] = useState<Course | null>(null);
+  const [editCourseForm, setEditCourseForm] = useState({ titleSv: '', titleEn: '', description: '', type: '', vehicle: '', behorighet: '', price: '', location: '' });
+  const [editCourseSaving, setEditCourseSaving] = useState(false);
+  const [editCourseError, setEditCourseError] = useState('');
   const [showAddSession, setShowAddSession] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -362,6 +366,31 @@ export default function AdminPage() {
     setEditCard(card);
     setCardForm({ ...card });
     setShowAddCard(false);
+  };
+
+  const openEditCourse = (c: Course) => {
+    setEditCourse(c);
+    setEditCourseForm({ titleSv: c.titleSv, titleEn: c.titleEn, description: c.description || '', type: c.type, vehicle: c.vehicle, behorighet: c.behorighet, price: String(c.price), location: c.location || '' });
+    setEditCourseError('');
+  };
+
+  const handleSaveEditCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCourse) return;
+    setEditCourseSaving(true);
+    setEditCourseError('');
+    const res = await fetch(`/api/admin/courses/${editCourse.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editCourseForm),
+    });
+    const data = await res.json();
+    setEditCourseSaving(false);
+    if (!res.ok) { setEditCourseError(data.error || 'Något gick fel'); return; }
+    setCourses((prev) => prev.map((c) => c.id === editCourse.id ? data.course : c));
+    setEditCourse(null);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleDeleteCourse = async (id: number) => {
@@ -743,7 +772,7 @@ export default function AdminPage() {
                         <td className="py-3 px-5 font-semibold">{c.price.toLocaleString('sv-SE')} kr</td>
                         <td className="py-3 px-5">
                           <div className="flex gap-2">
-                            <button className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50">
+                            <button onClick={() => openEditCourse(c)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50" title="Redigera kurs">
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
@@ -1749,6 +1778,82 @@ export default function AdminPage() {
                 </button>
                 <button type="submit" className="flex-1 btn-primary py-2.5">
                   Spara kurs
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Course Modal */}
+      {editCourse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg">Redigera kurs</h3>
+              <button onClick={() => setEditCourse(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+            </div>
+            {editCourseError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{editCourseError}</div>
+            )}
+            <form className="space-y-4" onSubmit={handleSaveEditCourse}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel (Svenska)</label>
+                <input type="text" className="input-field" value={editCourseForm.titleSv} onChange={(e) => setEditCourseForm({ ...editCourseForm, titleSv: e.target.value })} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (English)</label>
+                <input type="text" className="input-field" value={editCourseForm.titleEn} onChange={(e) => setEditCourseForm({ ...editCourseForm, titleEn: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning</label>
+                <input type="text" className="input-field" value={editCourseForm.description} onChange={(e) => setEditCourseForm({ ...editCourseForm, description: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
+                  <select className="input-field" value={editCourseForm.type} onChange={(e) => setEditCourseForm({ ...editCourseForm, type: e.target.value })}>
+                    <option value="Risk1">Risk 1</option>
+                    <option value="Risk2">Risk 2</option>
+                    <option value="AM">AM-kurs (Moped)</option>
+                    <option value="Intro">Introduktionskurs</option>
+                    <option value="Other">Övrigt</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Fordon</label>
+                  <select className="input-field" value={editCourseForm.vehicle} onChange={(e) => setEditCourseForm({ ...editCourseForm, vehicle: e.target.value })}>
+                    <option value="Car">Bil</option>
+                    <option value="Motorcycle">Motorcykel</option>
+                    <option value="Moped">Moped</option>
+                    <option value="Other">Övrigt</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Behörighet</label>
+                  <select className="input-field" value={editCourseForm.behorighet} onChange={(e) => setEditCourseForm({ ...editCourseForm, behorighet: e.target.value })}>
+                    <option value="B">B</option>
+                    <option value="A">A</option>
+                    <option value="AM">AM</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (kr)</label>
+                <input type="number" className="input-field" value={editCourseForm.price} onChange={(e) => setEditCourseForm({ ...editCourseForm, price: e.target.value })} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
+                <input type="text" className="input-field" value={editCourseForm.location} onChange={(e) => setEditCourseForm({ ...editCourseForm, location: e.target.value })} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditCourse(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
+                  Avbryt
+                </button>
+                <button type="submit" disabled={editCourseSaving} className="flex-1 btn-primary py-2.5 disabled:opacity-60">
+                  {editCourseSaving ? 'Sparar...' : 'Spara ändringar'}
                 </button>
               </div>
             </form>
