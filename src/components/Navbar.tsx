@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
-import { Menu, X, GraduationCap } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import LanguageSwitch from './LanguageSwitch';
 import { useAuth } from '@/context/AuthContext';
 
@@ -28,9 +29,15 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={base} className="flex items-center gap-2 font-bold text-lg">
-            <GraduationCap className="w-7 h-7 text-swedish-yellow" />
-            <span className="hidden sm:inline">Uppsala Halkbana</span>
+          <Link href={base} className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Uppsala Halkbana"
+              width={44}
+              height={44}
+              className="rounded-full object-contain bg-white"
+            />
+            <span className="hidden sm:inline ml-2 font-bold text-lg">Uppsala Halkbana</span>
           </Link>
 
           {/* Desktop nav */}

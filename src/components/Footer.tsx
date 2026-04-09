@@ -1,6 +1,7 @@
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
-import { GraduationCap, MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
 
 export default function Footer() {
   const t = useTranslations('footer');
@@ -15,7 +16,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <GraduationCap className="w-6 h-6 text-swedish-yellow" />
+              <Image src="/logo.png" alt="Uppsala Halkbana" width={40} height={40} className="rounded-full object-contain bg-white" />
               <span className="font-bold text-white text-lg">Uppsala Halkbana</span>
             </div>
             <p className="text-sm leading-relaxed">
