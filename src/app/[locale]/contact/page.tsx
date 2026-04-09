@@ -2,7 +2,7 @@
 
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { MapPin, Mail, Phone, Clock } from 'lucide-react';
+import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard } from 'lucide-react';
 
 export default function ContactPage() {
   return (
@@ -23,6 +23,30 @@ export default function ContactPage() {
         </div>
       </section>
 
+      {/* Why Choose Us */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="section-title">Why Choose Us?</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { icon: <Shield className="w-8 h-8" />, title: 'Certified Training', desc: "All courses comply with the Swedish Transport Agency's requirements for risk training.", color: 'bg-blue-50 text-swedish-blue' },
+              { icon: <Calendar className="w-8 h-8" />, title: 'Easy Online Booking', desc: 'Book, pay, and manage your courses entirely online — any time of day.', color: 'bg-yellow-50 text-yellow-700' },
+              { icon: <CreditCard className="w-8 h-8" />, title: 'Secure Payment', desc: 'We use Stripe for secure payment with card, Swish, and Apple Pay.', color: 'bg-green-50 text-green-700' },
+            ].map((f) => (
+              <div key={f.title} className="text-center p-8 rounded-2xl bg-white border border-gray-100">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5 ${f.color}`}>
+                  {f.icon}
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg mb-2">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Contact content */}
       <section className="py-16 bg-white flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,9 +57,9 @@ export default function ContactPage() {
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Kontaktuppgifter</h2>
               <div className="space-y-5">
                 {[
-                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Industrigatan 12, 753 30 Uppsala', color: 'bg-blue-50 text-swedish-blue' },
+                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Halkbanevägen 12, 754 50 Uppsala', color: 'bg-blue-50 text-swedish-blue' },
                   { icon: <Mail className="w-5 h-5" />, label: 'E-post', value: 'info@uppsalahalkbana.se', color: 'bg-green-50 text-green-700' },
-                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '018-123 45 67', color: 'bg-yellow-50 text-yellow-700' },
+                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '018-12 34 56', color: 'bg-yellow-50 text-yellow-700' },
                   { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Måndag–Fredag: 08:00–17:00', color: 'bg-purple-50 text-purple-700' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
