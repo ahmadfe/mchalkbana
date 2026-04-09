@@ -91,6 +91,7 @@ interface StudentRecord {
   personnummer: string;
   phone: string;
   email: string;
+  bookedByRole: string;
   bookedBySchool: string | null;
 }
 
@@ -1727,9 +1728,13 @@ export default function AdminPage() {
                           <td className="py-2.5 px-4 text-gray-500 text-xs">{s.phone}</td>
                           <td className="py-2.5 px-4 text-gray-500 text-xs">{s.email}</td>
                           <td className="py-2.5 px-4 text-xs">
-                            {s.bookedBySchool ? (
+                            {s.bookedByRole === 'school' ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
-                                <School className="w-3 h-3" />{s.bookedBySchool}
+                                <School className="w-3 h-3" />Skola
+                              </span>
+                            ) : s.bookedByRole === 'admin' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">
+                                <Lock className="w-3 h-3" />Admin
                               </span>
                             ) : (
                               <span className="text-gray-400">Elev</span>

@@ -35,7 +35,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     personnummer: b.personnummer || '–',
     phone: b.guestPhone || b.user?.phone || '–',
     email: b.guestEmail || b.user?.email || '–',
-    bookedBySchool: b.user?.role === 'school' ? b.user.name : null,
+    bookedByRole: b.bookedByRole,
+    bookedBySchool: b.bookedByRole === 'school' ? (b.user?.name || 'Skola') : null,
   }));
 
   return NextResponse.json({
