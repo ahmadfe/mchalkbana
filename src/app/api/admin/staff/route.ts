@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { sendStaffAccountEmail } from '@/lib/email';
 
 export async function GET(request: Request) {
   const authUser = await getAuthUserFromRequest(request);
@@ -40,6 +41,8 @@ export async function POST(request: Request) {
     data: { name, email, password: hashed, role: 'admin' },
     select: { id: true, name: true, email: true, createdAt: true },
   });
+
+  await sendStaffAccountEmail({ name, email, password });
 
   return NextResponse.json({ user }, { status: 201 });
 }
