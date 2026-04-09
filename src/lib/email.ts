@@ -226,7 +226,7 @@ export async function sendBookingConfirmationEmail(data: BookingConfirmationEmai
       body: JSON.stringify({
         from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.recipientEmail],
-        subject: `Bokningsbekräftelse – ${data.courseName} ${data.courseDate}`,
+        subject: `Bokningsbekräftelse för ${data.courseName} på Uppsala Halkbana`,
         html: buildBookingConfirmationHtml(data),
       }),
     });
