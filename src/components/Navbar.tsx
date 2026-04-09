@@ -33,9 +33,9 @@ export default function Navbar() {
             <Image
               src="/logo.png"
               alt="Uppsala Halkbana"
-              width={44}
-              height={44}
-              className="rounded-full object-contain bg-white"
+              width={52}
+              height={52}
+              className="rounded-xl object-contain bg-white p-0.5"
             />
             <span className="hidden sm:inline ml-2 font-bold text-lg">Uppsala Halkbana</span>
           </Link>

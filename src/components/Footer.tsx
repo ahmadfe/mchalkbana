@@ -16,7 +16,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Image src="/logo.png" alt="Uppsala Halkbana" width={40} height={40} className="rounded-full object-contain bg-white" />
+              <Image src="/logo.png" alt="Uppsala Halkbana" width={48} height={48} className="rounded-xl object-contain bg-white p-0.5" />
               <span className="font-bold text-white text-lg">Uppsala Halkbana</span>
             </div>
             <p className="text-sm leading-relaxed">
