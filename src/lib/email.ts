@@ -219,7 +219,7 @@ export async function sendBookingConfirmationEmail(data: BookingConfirmationEmai
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.recipientEmail],
         subject: `Bokningsbekräftelse för ${data.courseName} på Uppsala Halkbana`,
         html: buildBookingConfirmationHtml(data),
@@ -303,7 +303,7 @@ export async function sendSchoolAccountEmail(data: SchoolAccountEmailData): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.email],
         subject: 'Ditt konto på Uppsala Halkbana är skapat',
         html: buildSchoolAccountHtml(data),
@@ -333,7 +333,7 @@ export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        from: 'Uppsala Halkbana <info@ihalka.se>',
         to: [data.recipientEmail],
         subject: `Kvitto ${receiptNumber} – Din bokning är bekräftad`,
         html: buildReceiptHtml(data),
