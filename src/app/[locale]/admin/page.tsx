@@ -1006,6 +1006,7 @@ export default function AdminPage() {
                             <th className="text-left py-3 px-4">Telefon</th>
                             <th className="text-left py-3 px-4">E-post</th>
                             <th className="text-left py-3 px-4">Kurs & Pass</th>
+                            <th className="text-left py-3 px-4">Bokad av</th>
                             <th className="text-left py-3 px-4">Status</th>
                             <th className="py-3 px-4" />
                           </tr>
@@ -1029,6 +1030,15 @@ export default function AdminPage() {
                                 <td className="py-3 px-4">
                                   <p className="font-medium text-xs">{courseTitle}</p>
                                   <p className="text-xs text-gray-400">{sessionDate} {sessionTime} · {schoolName}</p>
+                                </td>
+                                <td className="py-3 px-4">
+                                  {b.bookedByRole === 'school' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold"><School className="w-3 h-3" />Skola</span>
+                                  ) : b.bookedByRole === 'admin' ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold"><Lock className="w-3 h-3" />Admin</span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">Elev</span>
+                                  )}
                                 </td>
                                 <td className="py-3 px-4">
                                   <span className={clsx(

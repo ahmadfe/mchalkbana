@@ -87,6 +87,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         guestPhone: guestPhone || null,
         guestEmail: guestEmail || null,
         status: 'Confirmed',
+        bookedByRole: 'admin',
       },
     });
     await tx.session.update({

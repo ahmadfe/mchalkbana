@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         guestPhone: guestPhone || null,
         guestEmail: guestEmail || null,
         status: 'Confirmed',
+        bookedByRole: 'school',
       },
     }),
     prisma.session.update({

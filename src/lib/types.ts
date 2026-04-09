@@ -60,6 +60,7 @@ export interface Booking {
   guestEmail?: string | null;
   bookingTime: string;
   status: BookingStatus;
+  bookedByRole?: string;
 }
 
 export type PaymentStatus = 'Succeeded' | 'Failed' | 'Pending';

@@ -29,6 +29,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const bookings = await prisma.booking.findMany({
     where: {
       status: { not: 'Canceled' },
+      bookedByRole: 'school',
       bookingTime: { gte: from, lt: to },
       session: { assignedSchoolUserId: schoolUserId },
     },
