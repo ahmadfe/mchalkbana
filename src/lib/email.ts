@@ -344,7 +344,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
 
   const rowsHtml = data.rows.map((r) => `
     <tr>
-      <td style="padding:10px 12px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6;">${r.courseName} (${r.sessionDate})</td>
+      <td style="padding:10px 12px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6;">${r.courseName}</td>
       <td style="padding:10px 8px;font-size:14px;color:#111827;text-align:center;border-bottom:1px solid #f3f4f6;">${r.studentCount}</td>
       <td style="padding:10px 8px;font-size:14px;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;">${r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
       <td style="padding:10px 8px;font-size:14px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;"></td>
@@ -402,7 +402,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
               <p style="color:#fff;font-size:12px;font-weight:700;margin:0;">Faktureringsadress</p>
             </div>
             <div style="padding:10px 12px;">
-              <p style="font-size:14px;font-weight:700;color:#111827;margin:0;">${data.schoolName}</p>
+              <p style="font-size:15px;font-weight:900;color:#111827;margin:0;letter-spacing:0.3px;">${data.schoolName}</p>
             </div>
           </div>
         </td>
@@ -483,7 +483,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
         </td>
         <td style="vertical-align:top;padding-right:16px;">
           <p style="font-weight:700;color:#111827;margin:0 0 4px;">Webbplats</p>
-          <p style="color:#6b7280;margin:0;">uppsalahalkbana.se</p>
+          <p style="color:#6b7280;margin:0;">www.uppsalahalkbana.se</p>
           <p style="font-weight:700;color:#111827;margin:8px 0 4px;">Företagets e-post</p>
           <p style="color:#6b7280;margin:0;">info@uppsalahalkbana.se</p>
         </td>
