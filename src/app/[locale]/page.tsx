@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
 import HomeCardsSection from '@/components/HomeCardsSection';
+import FaqSection from '@/components/FaqSection';
 import { Shield, Calendar, CreditCard } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
@@ -161,6 +162,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
           </div>
         </section>
       )}
+
+      <FaqSection locale={locale} />
 
       <Footer />
     </div>
