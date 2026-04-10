@@ -100,7 +100,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
                 <p className="text-xs font-bold text-swedish-blue uppercase tracking-widest mb-2">Lediga platser</p>
                 <h2 className="font-headline text-3xl font-extrabold text-gray-900">Kommande Kurstillfällen</h2>
               </div>
-              <Link href={`/sv/courses`} className="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-swedish-blue hover:text-swedish-dark border border-swedish-blue/30 px-4 py-2 rounded-xl transition-colors">
+              <Link href={`/sv/courses`} className="hidden md:inline-flex items-center gap-2 text-sm font-bold bg-swedish-yellow text-gray-900 hover:bg-yellow-300 px-4 py-2 rounded-xl transition-colors">
                 Visa alla →
               </Link>
             </div>
