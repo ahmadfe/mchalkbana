@@ -123,7 +123,10 @@ export async function createPaymentRequest(params: {
     amount: params.amount,
     currency: 'SEK',
     callbackUrl,
-    message: params.message.slice(0, 50),
+    message: params.message
+      .replace(/–/g, '-')   // en-dash → ASCII hyphen
+      .replace(/[^\w\såäöÅÄÖ.,\-:;!?+()*/]/g, '')  // strip other disallowed chars
+      .slice(0, 50),
     payeePaymentReference: params.bookingId.toString(),
   });
 
