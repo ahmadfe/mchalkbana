@@ -181,6 +181,7 @@ export default function AdminPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
   const [refunding, setRefunding] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
   // Info Cards
   const [infoCards, setInfoCards] = useState<InfoCardRecord[]>([]);
@@ -660,11 +661,20 @@ export default function AdminPage() {
   const handleConfirmRefund = async () => {
     if (!refundTarget) return;
     setRefunding(true);
-    const res = await fetch(`/api/admin/payments/${refundTarget.id}/refund`, { method: 'POST' });
-    setRefunding(false);
-    if (res.ok) {
-      setPayments((prev) => prev.map((p) => p.id === refundTarget.id ? { ...p, status: 'Refunded' } : p));
-      setRefundTarget(null);
+    setRefundError(null);
+    try {
+      const res = await fetch(`/api/admin/payments/${refundTarget.id}/refund`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setPayments((prev) => prev.map((p) => p.id === refundTarget.id ? { ...p, status: 'Refunded' } : p));
+        setRefundTarget(null);
+      } else {
+        setRefundError(data?.error ?? `Fel ${res.status}`);
+      }
+    } catch (e) {
+      setRefundError('Nätverksfel – försök igen');
+    } finally {
+      setRefunding(false);
     }
   };
 
@@ -1825,12 +1835,15 @@ export default function AdminPage() {
               <strong>{refundTarget.amount.toLocaleString('sv-SE')} kr</strong> till{' '}
               <strong>{refundTarget.booking.guestName ?? refundTarget.booking.user?.name ?? 'kunden'}</strong>?
             </p>
-            <p className="text-xs text-gray-400 mb-6">
+            <p className="text-xs text-gray-400 mb-4">
               Bokning #{refundTarget.bookingId} kommer att avbokas och platsen återställas. Återbetalningen i Swish måste hanteras manuellt i Swish-appen.
             </p>
+            {refundError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{refundError}</p>
+            )}
             <div className="flex gap-3">
               <button
-                onClick={() => setRefundTarget(null)}
+                onClick={() => { setRefundTarget(null); setRefundError(null); }}
                 disabled={refunding}
                 className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
               >
