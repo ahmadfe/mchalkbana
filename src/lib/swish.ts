@@ -1,4 +1,5 @@
 import https from 'node:https';
+import crypto from 'node:crypto';
 
 export interface SwishPaymentStatus {
   id: string;
@@ -37,7 +38,7 @@ function swishRequest<T>(
     const req = https.request(
       {
         hostname: getSwishHost(),
-        path: `/swish-cpcapi/api/v2${path}`,
+        path,
         method,
         agent,
         headers: {
@@ -76,6 +77,11 @@ export function formatSwishPhone(phone: string): string {
   return digits;
 }
 
+/** Generate a Swish instruction UUID (32-char uppercase hex, no dashes) */
+function generateInstructionUUID(): string {
+  return crypto.randomUUID().replace(/-/g, '').toUpperCase();
+}
+
 export async function createPaymentRequest(params: {
   bookingId: number;
   amount: number;
@@ -88,18 +94,26 @@ export async function createPaymentRequest(params: {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
   const callbackUrl = `${appUrl}/api/swish/callback`;
 
-  const result = await swishRequest<null>('POST', '/paymentrequests', {
-    payeeAlias: merchantNumber,
-    payerAlias: formatSwishPhone(params.payerPhone),
-    amount: params.amount.toString(),
-    currency: 'SEK',
-    callbackUrl,
-    message: params.message.slice(0, 50),
-    payeePaymentReference: params.bookingId.toString(),
-  });
+  // v1 API: PUT with a client-generated UUID — supported by both test and production
+  const instructionUUID = generateInstructionUUID();
 
-  if (result.status === 201 && result.location) {
-    const id = result.location.split('/').pop()!;
+  const result = await swishRequest<null>(
+    'PUT',
+    `/swish-cpcapi/api/v1/paymentrequests/${instructionUUID}`,
+    {
+      payeeAlias: merchantNumber,
+      payerAlias: formatSwishPhone(params.payerPhone),
+      amount: params.amount.toString(),
+      currency: 'SEK',
+      callbackUrl,
+      message: params.message.slice(0, 50),
+      payeePaymentReference: params.bookingId.toString(),
+    },
+  );
+
+  if (result.status === 201) {
+    // Location header: https://host/swish-cpcapi/api/v1/paymentrequests/{uuid}
+    const id = result.location ? result.location.split('/').pop()! : instructionUUID;
     return { swishRequestId: id };
   }
 
@@ -107,7 +121,10 @@ export async function createPaymentRequest(params: {
 }
 
 export async function getPaymentRequest(swishRequestId: string): Promise<SwishPaymentStatus> {
-  const result = await swishRequest<SwishPaymentStatus>('GET', `/paymentrequests/${swishRequestId}`);
+  const result = await swishRequest<SwishPaymentStatus>(
+    'GET',
+    `/swish-cpcapi/api/v1/paymentrequests/${swishRequestId}`,
+  );
   if (result.status === 200 && result.data) return result.data;
   throw new Error(`Swish get error ${result.status}`);
 }
