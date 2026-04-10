@@ -244,10 +244,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
       {/* ─── TESTIMONIALS ────────────────────────────────────── */}
       <section className="py-24 bg-gray-950 text-white overflow-hidden relative">
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-swedish-blue rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-swedish-blue rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-        </div>
         <div className="max-w-7xl mx-auto px-6 sm:px-8 relative z-10">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-swedish-blue uppercase tracking-widest mb-3">Recensioner</p>
@@ -297,27 +293,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
-      {/* ─── TRUST SIGNALS ───────────────────────────────────── */}
-      <section className="py-14 bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          <p className="text-center text-gray-400 font-bold uppercase tracking-widest text-xs mb-8">
-            Auktoriserad & certifierad partner
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-50 grayscale hover:opacity-80 hover:grayscale-0 transition-all duration-500">
-            {[
-              { label: 'Transportstyrelsen', icon: '🛡️' },
-              { label: 'NTF', icon: '🏅' },
-              { label: 'STR Medlem', icon: '📋' },
-              { label: 'Säker Trafik', icon: '✅' },
-            ].map((p) => (
-              <div key={p.label} className="flex items-center gap-2">
-                <span className="text-2xl">{p.icon}</span>
-                <span className="font-headline font-bold text-gray-900">{p.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ─── FAQ ─────────────────────────────────────────────── */}
       <FaqSection locale={locale} />
