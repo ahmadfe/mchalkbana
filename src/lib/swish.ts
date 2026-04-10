@@ -10,6 +10,11 @@ export interface SwishPaymentStatus {
   errorMessage?: string;
 }
 
+// Vercel stores multiline env vars with literal \n — fix to real newlines
+function fixPemNewlines(pem: string): string {
+  return pem.replace(/\\n/g, '\n');
+}
+
 function getSwishAgent() {
   // Support both PEM cert+key (SWISH_CERT_PEM + SWISH_KEY_PEM)
   // and legacy PFX bundle (SWISH_CERT_PFX)
@@ -17,14 +22,16 @@ function getSwishAgent() {
   const keyPem = process.env.SWISH_KEY_PEM;
 
   if (certPem && keyPem) {
+    console.log('[Swish] Using PEM cert/key auth, merchant:', process.env.SWISH_MERCHANT_NUMBER);
     return new https.Agent({
-      cert: certPem,
-      key: keyPem,
+      cert: fixPemNewlines(certPem),
+      key: fixPemNewlines(keyPem),
     });
   }
 
   const pfxBase64 = process.env.SWISH_CERT_PFX;
   if (!pfxBase64) throw new Error('SWISH_CERT_PFX or SWISH_CERT_PEM+SWISH_KEY_PEM not configured');
+  console.log('[Swish] Using PFX cert auth, merchant:', process.env.SWISH_MERCHANT_NUMBER);
   return new https.Agent({
     pfx: Buffer.from(pfxBase64, 'base64'),
     passphrase: process.env.SWISH_CERT_PASSPHRASE ?? '',
@@ -120,6 +127,14 @@ export async function createPaymentRequest(params: {
     return { swishRequestId: id };
   }
 
+  console.error('[Swish] Full error response:', result.status, JSON.stringify(result.data));
+  console.error('[Swish] Request was:', {
+    host: getSwishHost(),
+    merchant: merchantNumber,
+    payer: formatSwishPhone(params.payerPhone),
+    amount: params.amount,
+    env: process.env.SWISH_ENV,
+  });
   throw new Error(`Swish create error ${result.status}: ${JSON.stringify(result.data)}`);
 }
 
