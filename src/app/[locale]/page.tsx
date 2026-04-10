@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
 import HomeCardsSection from '@/components/HomeCardsSection';
 import FaqSection from '@/components/FaqSection';
-import { Shield, MapPin, CheckCircle2, Star } from 'lucide-react';
+import { Shield, MapPin, CheckCircle2 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 import type { Session } from '@/lib/types';
@@ -57,10 +57,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
         <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full py-16 sm:py-24">
           <div className="max-w-xl">
-            <span className="inline-block py-1 px-3 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
-              Transportstyrelsen Godkänd
-            </span>
-            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-[1.1] tracking-tight mb-4 sm:mb-6">
+            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-swedish-blue leading-[1.1] tracking-tight mb-4 sm:mb-6">
               Uppsala Halkbana
             </h1>
             <p className="text-base sm:text-lg text-gray-300 mb-8 sm:mb-10 leading-relaxed font-medium max-w-md">
@@ -176,56 +173,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
-      {/* ─── TESTIMONIALS ────────────────────────────────────── */}
-      <section className="py-24 bg-gray-950 text-white overflow-hidden relative">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 relative z-10">
-          <div className="text-center mb-14">
-            <p className="text-xs font-bold text-swedish-blue uppercase tracking-widest mb-3">Recensioner</p>
-            <h2 className="font-headline text-3xl font-extrabold">Vad våra elever säger</h2>
-            <p className="text-white/50 mt-2">Över 2 400 nöjda elever har startat sin resa hos oss.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                text: 'Risktvåan var både lärorik och faktiskt riktigt rolig! Instruktörerna var lugna, professionella och förklarade allt tydligt.',
-                name: 'Erik Karlsson',
-                role: 'Tidigare elev',
-                initials: 'EK',
-              },
-              {
-                text: 'Väldigt bra bemötande och ett perfekt upplägg. Kände mig trygg hela vägen. Kan varmt rekommendera Uppsala Halkbana!',
-                name: 'Sara Lindström',
-                role: 'Tidigare elev',
-                initials: 'SL',
-              },
-              {
-                text: 'Proffsig anläggning och tydliga instruktioner. Motorcykelkursen var fantastisk – lärde mig massor på kort tid.',
-                name: 'Marcus Andersson',
-                role: 'Tidigare elev',
-                initials: 'MA',
-              },
-            ].map((r) => (
-              <div key={r.name} className="bg-white/5 backdrop-blur-sm p-7 rounded-2xl border border-white/10">
-                <div className="flex gap-0.5 mb-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-white/80 italic mb-6 leading-relaxed text-sm">&ldquo;{r.text}&rdquo;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-swedish-blue flex items-center justify-center text-white font-bold text-xs">
-                    {r.initials}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{r.name}</p>
-                    <p className="text-white/40 text-xs">{r.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
 
       {/* ─── FAQ ─────────────────────────────────────────────── */}
