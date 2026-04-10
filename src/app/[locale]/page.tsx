@@ -23,8 +23,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
   const now = new Date();
   const [infoCards, authUser, upcomingSessions, heroSettings] = await Promise.all([
-    prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }),
-    getAuthUser(),
+    prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }).catch(() => []),
+    getAuthUser().catch(() => null),
     prisma.session.findMany({
       where: {
         startTime: { gte: now },
@@ -34,8 +34,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
       orderBy: { startTime: 'asc' },
       take: 3,
       include: { course: true, school: true },
-    }),
-    prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }),
+    }).catch(() => []),
+    prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }).catch(() => []),
   ]);
 
   const isAdmin = authUser?.role === 'admin';
