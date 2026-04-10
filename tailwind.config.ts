@@ -30,6 +30,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        headline: ['Manrope', 'system-ui', 'sans-serif'],
       },
     },
   },
