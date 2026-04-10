@@ -120,7 +120,7 @@ export default function AdminPage() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
-  const [editCourseForm, setEditCourseForm] = useState({ titleSv: '', titleEn: '', description: '', type: '', vehicle: '', behorighet: '', price: '', location: '' });
+  const [editCourseForm, setEditCourseForm] = useState({ titleSv: '', titleEn: '', description: '', type: '', vehicle: '', behorighet: '', price: '', location: '', receiptMessage: '' });
   const [editCourseSaving, setEditCourseSaving] = useState(false);
   const [editCourseError, setEditCourseError] = useState('');
   const [showAddSession, setShowAddSession] = useState(false);
@@ -244,7 +244,7 @@ export default function AdminPage() {
   const [testEmailStatus, setTestEmailStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [testEmailError, setTestEmailError] = useState('');
 
-  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '' });
+  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] as number[] });
 
   const loadData = useCallback(async () => {
@@ -402,7 +402,7 @@ export default function AdminPage() {
 
   const openEditCourse = (c: Course) => {
     setEditCourse(c);
-    setEditCourseForm({ titleSv: c.titleSv, titleEn: c.titleEn, description: c.description || '', type: c.type, vehicle: c.vehicle, behorighet: c.behorighet, price: String(c.price), location: c.location || '' });
+    setEditCourseForm({ titleSv: c.titleSv, titleEn: c.titleEn, description: c.description || '', type: c.type, vehicle: c.vehicle, behorighet: c.behorighet, price: String(c.price), location: c.location || '', receiptMessage: c.receiptMessage || '' });
     setEditCourseError('');
   };
 
@@ -458,7 +458,7 @@ export default function AdminPage() {
       const data = await res.json();
       setCourses((prev) => [...prev, data.course]);
       setShowAddCourse(false);
-      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '' });
+      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -2184,6 +2184,10 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
                 <input type="text" className="input-field" placeholder="Uppsala Halkbana, Industrigatan 12" value={newCourse.location} onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })} />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande på kvitto</label>
+                <textarea className="input-field" rows={3} placeholder="T.ex. ta med körkort..." value={newCourse.receiptMessage} onChange={(e) => setNewCourse({ ...newCourse, receiptMessage: e.target.value })} />
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddCourse(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
                   Avbryt
@@ -2260,6 +2264,10 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
                 <input type="text" className="input-field" value={editCourseForm.location} onChange={(e) => setEditCourseForm({ ...editCourseForm, location: e.target.value })} />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande på kvitto</label>
+                <textarea className="input-field" rows={3} value={editCourseForm.receiptMessage} onChange={(e) => setEditCourseForm({ ...editCourseForm, receiptMessage: e.target.value })} />
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditCourse(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
                   Avbryt
@@ -2288,9 +2296,13 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Kurs</label>
                 <select className="input-field" value={newSession.courseId} onChange={(e) => setNewSession({ ...newSession, courseId: e.target.value })} required>
                   <option value="">Välj kurs...</option>
-                  {courses.map((c) => (
-                    <option key={c.id} value={c.id}>{locale === 'sv' ? c.titleSv : c.titleEn}</option>
-                  ))}
+                  {courses.map((c) => {
+                    const typeLabel = c.type === 'Risk1' ? 'Risk 1' : c.type === 'Risk2' ? 'Risk 2' : c.type;
+                    const vehicleLabel = c.vehicle === 'Car' ? 'Bil' : c.vehicle === 'Motorcycle' ? 'MC' : c.vehicle;
+                    return (
+                      <option key={c.id} value={c.id}>[{typeLabel} – {vehicleLabel}] {locale === 'sv' ? c.titleSv : c.titleEn}</option>
+                    );
+                  })}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

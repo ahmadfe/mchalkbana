@@ -75,7 +75,6 @@ export async function POST(request: Request) {
     const recipientName = booking.guestName ?? booking.user?.name ?? 'Kund';
 
     if (recipientEmail) {
-      const setting = await prisma.settings.findUnique({ where: { key: 'receipt_message' } });
       const start = new Date(booking.session.startTime);
       const end = new Date(booking.session.endTime);
 
@@ -95,7 +94,7 @@ export async function POST(request: Request) {
         endTimeIso: new Date(booking.session.endTime).toISOString(),
         personnummer: booking.personnummer,
         phone: booking.guestPhone,
-        customMessage: setting?.value ?? '',
+        customMessage: booking.session.course.receiptMessage ?? '',
       });
     }
 

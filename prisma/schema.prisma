@@ -38,8 +38,9 @@ model Course {
   vehicle     String
   behorighet  String    @default("B")
   price       Int
-  location    String    @default("")
-  sessions    Session[]
+  location       String    @default("")
+  receiptMessage String    @default("")
+  sessions       Session[]
 }
 
 model Session {

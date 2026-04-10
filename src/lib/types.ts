@@ -29,6 +29,7 @@ export interface Course {
   behorighet: string;
   price: number;
   location: string;
+  receiptMessage?: string;
 }
 
 export interface Session {
