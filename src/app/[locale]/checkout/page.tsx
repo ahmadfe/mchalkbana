@@ -7,8 +7,9 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, QrCode } from 'lucide-react';
 import clsx from 'clsx';
+import { QRCodeSVG } from 'qrcode.react';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
@@ -27,6 +28,7 @@ function CheckoutContent() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
+  const [swishRequestId, setSwishRequestId] = useState<string | null>(null);
   const [step, setStep] = useState<CheckoutStep>('form');
   const [guest, setGuest] = useState<GuestInfo>({
     name: '', personnummer: '', phone: '', email: '', swishPhone: '',
@@ -145,6 +147,9 @@ function CheckoutContent() {
       return;
     }
 
+    const swishData = await swishRes.json();
+    setSwishRequestId(swishData.swishRequestId ?? null);
+
     // 3. Enter waiting state — polling starts via useEffect
     setSubmitting(false);
     setStep('waiting');
@@ -152,44 +157,76 @@ function CheckoutContent() {
 
   // ── Waiting state ──────────────────────────────────────────────────────────
   if (step === 'waiting') {
+    const swishDeepLink = swishRequestId
+      ? `swish://paymentrequest?token=${swishRequestId}&callbackurl=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`
+      : null;
+
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
         <main className="flex-1 flex items-center justify-center py-12 px-4">
           <div className="w-full max-w-md text-center">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C]">
-              <Smartphone className="w-12 h-12 text-white" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C]">
+              <Smartphone className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Väntar på Swish</h1>
-            <p className="text-gray-500 mb-1">En betalningsförfrågan har skickats till</p>
-            <p className="font-semibold text-gray-800 mb-6">{guest.swishPhone}</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Väntar på Swish</h1>
+            <p className="text-gray-500 mb-6">Betala <strong>{course.price.toLocaleString('sv-SE')} kr</strong> för {locale === 'sv' ? course.titleSv : course.titleEn}</p>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 text-left">
-              <ol className="space-y-3 text-sm text-gray-600">
+            {/* QR code for desktop users */}
+            {swishDeepLink && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
+                <div className="flex items-center gap-2 justify-center mb-3 text-sm font-medium text-gray-700">
+                  <QrCode className="w-4 h-4" />
+                  Skanna med din telefon
+                </div>
+                <div className="flex justify-center mb-3">
+                  <div className="p-3 bg-white rounded-xl border-2 border-gray-100 inline-block">
+                    <QRCodeSVG
+                      value={swishDeepLink}
+                      size={180}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                      level="M"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400">Öppna kameran och skanna QR-koden för att betala i Swish-appen</p>
+
+                {/* Mobile deep link button */}
+                <a
+                  href={swishDeepLink}
+                  className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#4B0082] to-[#E91E8C] text-white text-sm font-semibold sm:hidden"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Öppna Swish-appen
+                </a>
+              </div>
+            )}
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4 text-left">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Eller godkänn i appen</p>
+              <ol className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                  Öppna Swish-appen på din mobil
+                  <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  Öppna Swish-appen på {guest.swishPhone}
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
                   Godkänn betalningen på <strong>{course.price.toLocaleString('sv-SE')} kr</strong>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
-                  Bekräftelse skickas automatiskt till {guest.email}
+                  <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                  Kvitto skickas till {guest.email}
                 </li>
               </ol>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-6">
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-3">
               <Clock className="w-4 h-4 animate-pulse" />
               <span>Väntar på godkännande...</span>
               <div className="w-4 h-4 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
             </div>
-
-            <p className="text-xs text-gray-400">
-              Betalningsförfrågan upphör automatiskt efter 3 minuter om den inte godkänns.
-            </p>
+            <p className="text-xs text-gray-400">Upphör automatiskt efter 3 minuter.</p>
           </div>
         </main>
         <Footer />
