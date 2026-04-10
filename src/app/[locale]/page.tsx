@@ -64,7 +64,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
           />
         ) : null}
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-swedish-blue/90 via-blue-800/85 to-blue-900/90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-950/95 via-cyan-950/80 to-gray-900/90" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
