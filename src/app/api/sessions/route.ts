@@ -23,10 +23,10 @@ export async function GET(request: Request) {
     // Admin sees everything
     visibilityFilter = {};
   } else if (isSchool) {
-    // School sees only sessions specifically assigned to them
+    // School sees only sessions assigned to them (many-to-many)
     visibilityFilter = {
       visibility: 'school',
-      assignedSchoolUserId: authUser!.userId,
+      assignedSchoolUsers: { some: { id: authUser!.userId } },
     };
   } else {
     // Public: only public sessions

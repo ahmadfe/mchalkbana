@@ -227,9 +227,9 @@ export default function AdminPage() {
   const [editForm, setEditForm] = useState({ guestName: '', personnummer: '', guestPhone: '', guestEmail: '', status: '' });
   const [editSaving, setEditSaving] = useState(false);
 
-  // Session assign school
+  // Session assign school (multi-select)
   const [assigningSchoolSession, setAssigningSchoolSession] = useState<number | null>(null);
-  const [assignSchoolId, setAssignSchoolId] = useState('');
+  const [assignSchoolIds, setAssignSchoolIds] = useState<number[]>([]);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
 
   // Course groups
@@ -244,7 +244,7 @@ export default function AdminPage() {
   const [testEmailError, setTestEmailError] = useState('');
 
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] as number[] });
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -474,7 +474,7 @@ export default function AdminPage() {
       const data = await res.json();
       setSessions((prev) => [...prev, data.session]);
       setShowAddSession(false);
-      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserId: '' });
+      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -637,19 +637,24 @@ export default function AdminPage() {
   };
 
   const handleAssignSchool = async (sessionId: number) => {
-    const schoolUserId = assignSchoolId;
-    const visibility = schoolUserId ? 'school' : 'public';
+    const visibility = assignSchoolIds.length > 0 ? 'school' : 'public';
     const res = await fetch(`/api/admin/sessions/${sessionId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visibility, assignedSchoolUserId: schoolUserId || null }),
+      body: JSON.stringify({ visibility, assignedSchoolUserIds: assignSchoolIds }),
     });
     if (res.ok) {
       const { session: updated } = await res.json();
       setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, ...updated } : s));
     }
     setAssigningSchoolSession(null);
-    setAssignSchoolId('');
+    setAssignSchoolIds([]);
+  };
+
+  const toggleAssignSchool = (id: number) => {
+    setAssignSchoolIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   const handleConfirmRefund = async () => {
@@ -961,7 +966,7 @@ export default function AdminPage() {
                               s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                             )}>
                               {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                              {s.visibility === 'public' ? 'Offentlig' : (s.assignedSchoolUser?.name ?? 'Skolkonto')}
+                              {s.visibility === 'public' ? 'Offentlig' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u) => u.name).join(', ') : 'Skolkonto')}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
@@ -983,34 +988,44 @@ export default function AdminPage() {
 
                         {/* Assign school */}
                         {assigningSchoolSession === s.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              value={assignSchoolId}
-                              onChange={(e) => setAssignSchoolId(e.target.value)}
-                              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white"
-                              autoFocus
-                            >
-                              <option value="">— Offentlig —</option>
+                          <div className="flex flex-col gap-1.5 min-w-[180px]">
+                            <div className="border border-gray-200 rounded-lg bg-white max-h-36 overflow-y-auto p-1.5 space-y-1">
                               {schoolAccounts.map((acc) => (
-                                <option key={acc.id} value={String(acc.id)}>{acc.name}</option>
+                                <label key={acc.id} className="flex items-center gap-2 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-50 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={assignSchoolIds.includes(acc.id)}
+                                    onChange={() => toggleAssignSchool(acc.id)}
+                                    className="accent-swedish-blue"
+                                  />
+                                  {acc.name}
+                                </label>
                               ))}
-                            </select>
-                            <button
-                              onClick={() => handleAssignSchool(s.id)}
-                              className="px-2.5 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-blue-700"
-                            >Spara</button>
-                            <button
-                              onClick={() => { setAssigningSchoolSession(null); setAssignSchoolId(''); }}
-                              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"
-                            ><X className="w-3.5 h-3.5" /></button>
+                              {schoolAccounts.length === 0 && <span className="text-xs text-gray-400 px-1">Inga skolor</span>}
+                            </div>
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleAssignSchool(s.id)}
+                                className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-blue-700"
+                              >Spara</button>
+                              <button
+                                onClick={() => { setAssigningSchoolSession(null); setAssignSchoolIds([]); }}
+                                className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"
+                              ><X className="w-3.5 h-3.5" /></button>
+                            </div>
                           </div>
                         ) : (
                           <button
-                            onClick={() => { setAssigningSchoolSession(s.id); setAssignSchoolId(s.assignedSchoolUserId ? String(s.assignedSchoolUserId) : ''); }}
+                            onClick={() => {
+                              setAssigningSchoolSession(s.id);
+                              setAssignSchoolIds((s.assignedSchoolUsers || []).map((u) => u.id));
+                            }}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition text-orange-600 border-orange-300 hover:bg-orange-50"
                           >
                             <School className="w-3.5 h-3.5" />
-                            {s.assignedSchoolUser ? `Skola: ${s.assignedSchoolUser.name}` : 'Tilldela skola'}
+                            {(s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0)
+                              ? s.assignedSchoolUsers.map((u) => u.name).join(', ')
+                              : 'Tilldela skola'}
                           </button>
                         )}
 
@@ -1104,7 +1119,7 @@ export default function AdminPage() {
                                 </td>
                                 <td className="py-3 px-4">
                                   {b.bookedByRole === 'school' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold"><School className="w-3 h-3" />{(b.session as any)?.assignedSchoolUser?.name || 'Skola'}</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold"><School className="w-3 h-3" />{(b as any).bookedBySchoolUser?.name || 'Skola'}</span>
                                   ) : b.bookedByRole === 'admin' ? (
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold"><Lock className="w-3 h-3" />Admin</span>
                                   ) : (
@@ -2282,7 +2297,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Synlighet</label>
-                  <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value, assignedSchoolUserId: '' })}>
+                  <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value, assignedSchoolUserIds: [] })}>
                     <option value="public">Offentlig</option>
                     <option value="school">Skolkonto</option>
                   </select>
@@ -2290,16 +2305,28 @@ export default function AdminPage() {
               </div>
               {newSession.visibility === 'school' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tilldela trafikskola</label>
-                  <select className="input-field" value={newSession.assignedSchoolUserId} onChange={(e) => setNewSession({ ...newSession, assignedSchoolUserId: e.target.value })} required>
-                    <option value="">Välj trafikskola...</option>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tilldela trafikskolor (välj en eller flera)</label>
+                  <div className="border border-gray-200 rounded-xl bg-white max-h-40 overflow-y-auto p-2 space-y-1">
                     {schoolAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                      <label key={acc.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-50 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={newSession.assignedSchoolUserIds.includes(acc.id)}
+                          onChange={() => setNewSession((prev) => ({
+                            ...prev,
+                            assignedSchoolUserIds: prev.assignedSchoolUserIds.includes(acc.id)
+                              ? prev.assignedSchoolUserIds.filter((x) => x !== acc.id)
+                              : [...prev.assignedSchoolUserIds, acc.id],
+                          }))}
+                          className="accent-swedish-blue"
+                        />
+                        {acc.name}
+                      </label>
                     ))}
-                  </select>
-                  {schoolAccounts.length === 0 && (
-                    <p className="text-xs text-orange-500 mt-1">Inga trafikskola-konton skapade ännu. Gå till fliken Trafikskolor.</p>
-                  )}
+                    {schoolAccounts.length === 0 && (
+                      <p className="text-xs text-orange-500 px-2 py-1">Inga trafikskola-konton skapade ännu. Gå till fliken Trafikskolor.</p>
+                    )}
+                  </div>
                 </div>
               )}
               <div className="flex gap-3 pt-2">

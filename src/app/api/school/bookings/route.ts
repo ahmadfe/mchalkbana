@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
-// GET: all bookings for sessions assigned to this school
+// GET: all bookings made by this school
 export async function GET(request: Request) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'school') {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const bookings = await prisma.booking.findMany({
     where: {
       status: { not: 'Canceled' },
-      session: { assignedSchoolUserId: authUser.userId },
+      bookedBySchoolUserId: authUser.userId,
     },
     include: {
       session: { include: { course: true, school: true } },
@@ -36,9 +36,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Session, namn och personnummer krävs' }, { status: 400 });
   }
 
-  const session = await prisma.session.findUnique({ where: { id: sessionId }, include: { course: true, school: true } });
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { course: true, school: true, assignedSchoolUsers: { select: { id: true } } },
+  });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
-  if (session.assignedSchoolUserId !== authUser.userId) {
+
+  // Verify this school is assigned to the session
+  const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
+  if (!isAssigned) {
     return NextResponse.json({ error: 'Detta pass är inte tilldelat din skola' }, { status: 403 });
   }
   if (session.seatsAvailable <= 0) {
@@ -61,6 +67,7 @@ export async function POST(request: Request) {
         guestEmail: guestEmail || null,
         status: 'Confirmed',
         bookedByRole: 'school',
+        bookedBySchoolUserId: authUser.userId,
       },
     }),
     prisma.session.update({

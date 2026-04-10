@@ -6,7 +6,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'admin') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
-  const data = await request.json();
+  const { assignedSchoolUserIds, ...data } = await request.json();
+  const ids: number[] = Array.isArray(assignedSchoolUserIds)
+    ? assignedSchoolUserIds.map(Number).filter(Boolean)
+    : [];
+
   const session = await prisma.session.update({
     where: { id: parseInt(params.id) },
     data: {
@@ -15,11 +19,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...(data.seatLimit ? { seatLimit: parseInt(data.seatLimit) } : {}),
       ...(data.seatsAvailable !== undefined ? { seatsAvailable: parseInt(data.seatsAvailable) } : {}),
       ...(data.visibility ? { visibility: data.visibility } : {}),
-      ...(data.visibility === 'school' && data.assignedSchoolUserId
-        ? { assignedSchoolUserId: parseInt(data.assignedSchoolUserId) }
-        : data.visibility === 'public' ? { assignedSchoolUserId: null } : {}),
+      ...(data.visibility === 'school'
+        ? { assignedSchoolUsers: { set: ids.map((id) => ({ id })) } }
+        : data.visibility === 'public' ? { assignedSchoolUsers: { set: [] } } : {}),
     },
-    include: { course: true, school: true, assignedSchoolUser: { select: { id: true, name: true } } },
+    include: { course: true, school: true, assignedSchoolUsers: { select: { id: true, name: true } } },
   });
   return NextResponse.json({ session });
 }

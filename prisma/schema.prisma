@@ -16,6 +16,7 @@ model User {
   role             String    @default("student")
   languagePref     String    @default("sv")
   bookings         Booking[]
+  schoolBookings   Booking[] @relation("BookingSchoolUser")
   assignedSessions Session[] @relation("AssignedSchoolSessions")
   createdAt        DateTime  @default(now())
 }
@@ -52,8 +53,7 @@ model Session {
   seatLimit            Int
   seatsAvailable       Int
   visibility           String    @default("public")
-  assignedSchoolUserId Int?
-  assignedSchoolUser   User?     @relation("AssignedSchoolSessions", fields: [assignedSchoolUserId], references: [id])
+  assignedSchoolUsers  User[]    @relation("AssignedSchoolSessions")
   bookings             Booking[]
 }
 
@@ -67,10 +67,12 @@ model Booking {
   personnummer String?
   guestPhone   String?
   guestEmail   String?
-  bookingTime  DateTime @default(now())
-  status       String   @default("Pending")
-  bookedByRole String   @default("student")
-  payment      Payment?
+  bookingTime          DateTime @default(now())
+  status               String   @default("Pending")
+  bookedByRole         String   @default("student")
+  bookedBySchoolUserId Int?
+  bookedBySchoolUser   User?    @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
+  payment              Payment?
 }
 
 model Payment {

@@ -8,7 +8,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const sessions = await prisma.session.findMany({
-    include: { course: true, school: true, assignedSchoolUser: { select: { id: true, name: true } } },
+    include: {
+      course: true,
+      school: true,
+      assignedSchoolUsers: { select: { id: true, name: true } },
+    },
     orderBy: { startTime: 'asc' },
   });
   return NextResponse.json({ sessions });
@@ -20,12 +24,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserId } = await request.json();
+  const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserIds } = await request.json();
   if (!courseId || !startTime || !endTime || !seatLimit) {
     return NextResponse.json({ error: 'Obligatoriska fält saknas' }, { status: 400 });
   }
 
   const seats = parseInt(seatLimit);
+  const ids: number[] = Array.isArray(assignedSchoolUserIds)
+    ? assignedSchoolUserIds.map(Number).filter(Boolean)
+    : [];
+
   const session = await prisma.session.create({
     data: {
       courseId: parseInt(courseId),
@@ -35,9 +43,11 @@ export async function POST(request: Request) {
       seatLimit: seats,
       seatsAvailable: seats,
       visibility: visibility || 'public',
-      assignedSchoolUserId: visibility === 'school' && assignedSchoolUserId ? parseInt(assignedSchoolUserId) : null,
+      ...(visibility === 'school' && ids.length > 0
+        ? { assignedSchoolUsers: { connect: ids.map((id) => ({ id })) } }
+        : {}),
     },
-    include: { course: true, school: true },
+    include: { course: true, school: true, assignedSchoolUsers: { select: { id: true, name: true } } },
   });
   return NextResponse.json({ session }, { status: 201 });
 }

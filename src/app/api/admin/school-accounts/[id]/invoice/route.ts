@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       status: { not: 'Canceled' },
       bookedByRole: 'school',
       bookingTime: { gte: from, lt: to },
-      session: { assignedSchoolUserId: schoolUserId },
+      bookedBySchoolUserId: schoolUserId,
     },
     include: {
       session: { include: { course: true } },

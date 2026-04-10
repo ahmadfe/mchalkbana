@@ -12,17 +12,17 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   const bookingId = parseInt(params.id);
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { session: true },
   });
 
   if (!booking) return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
-  if (booking.session.assignedSchoolUserId !== authUser.userId) {
+  if (booking.bookedBySchoolUserId !== authUser.userId) {
     return NextResponse.json({ error: 'Ej behörig att ta bort denna bokning' }, { status: 403 });
   }
 
+  const sessionId = booking.sessionId;
   await prisma.booking.delete({ where: { id: bookingId } });
   await prisma.session.update({
-    where: { id: booking.sessionId },
+    where: { id: sessionId },
     data: { seatsAvailable: { increment: 1 } },
   });
 

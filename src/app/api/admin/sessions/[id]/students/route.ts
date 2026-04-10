@@ -15,11 +15,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
     include: {
       course: true,
       school: true,
-      assignedSchoolUser: { select: { name: true } },
+      assignedSchoolUsers: { select: { id: true, name: true } },
       bookings: {
         where: { status: { not: 'Canceled' } },
         include: {
           user: { select: { name: true, email: true, phone: true, role: true } },
+          bookedBySchoolUser: { select: { name: true } },
         },
         orderBy: { bookingTime: 'asc' },
       },
@@ -37,7 +38,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     phone: b.guestPhone || b.user?.phone || '–',
     email: b.guestEmail || b.user?.email || '–',
     bookedByRole: b.bookedByRole,
-    bookedBySchool: b.bookedByRole === 'school' ? (session.assignedSchoolUser?.name || 'Skola') : null,
+    bookedBySchool: b.bookedByRole === 'school' ? (b.bookedBySchoolUser?.name || 'Skola') : null,
   }));
 
   return NextResponse.json({
@@ -49,6 +50,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       seatsAvailable: session.seatsAvailable,
       course: session.course,
       school: session.school,
+      assignedSchoolUsers: session.assignedSchoolUsers,
     },
     students,
   });
