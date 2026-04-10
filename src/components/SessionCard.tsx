@@ -42,9 +42,9 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
   const seatColor = seatPct === 0 ? 'bg-red-500' : seatPct < 0.3 ? 'bg-yellow-500' : 'bg-green-500';
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-brand-200 transition-all overflow-hidden">
       {/* Top color bar */}
-      <div className={clsx('h-1.5', course.type === 'Risk1' ? 'bg-swedish-blue' : 'bg-orange-500')} />
+      <div className={clsx('h-1', course.type === 'Risk1' ? 'bg-swedish-blue' : 'bg-orange-500')} />
 
       <div className="p-5">
         {/* Badges */}
@@ -96,7 +96,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
 
         {/* Footer */}
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-gray-900">
+          <span className="text-xl font-bold text-swedish-blue">
             {course.price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
           </span>
 
@@ -107,7 +107,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
           ) : (
             <Link
               href={`/${locale}/checkout?session=${session.id}`}
-              className="bg-swedish-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-swedish-dark transition"
+              className="bg-swedish-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-swedish-dark transition shadow-sm shadow-swedish-blue/30"
             >
               {t('book_session')}
             </Link>

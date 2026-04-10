@@ -252,9 +252,11 @@ function CheckoutContent() {
               Kvitto skickat till <strong>{guest.email}</strong>
             </p>
 
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-6 text-left mt-6">
-              <h3 className="font-semibold text-gray-900 mb-3">Bokningsdetaljer</h3>
-              <div className="space-y-2 text-sm">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-6 text-left mt-6">
+              <div className="bg-swedish-blue px-5 py-3">
+                <h3 className="font-semibold text-white text-sm tracking-wide uppercase">Bokningsdetaljer</h3>
+              </div>
+              <div className="p-5 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Namn:</span>
                   <span className="font-medium">{guest.name}</span>
@@ -285,9 +287,9 @@ function CheckoutContent() {
                     <span>#{bookingId}</span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-gray-100 pt-2 mt-2">
+                <div className="flex justify-between border-t-2 border-swedish-blue pt-2 mt-2">
                   <span className="font-semibold">Totalt betalt:</span>
-                  <span className="font-bold text-swedish-blue">{course.price.toLocaleString('sv-SE')} kr</span>
+                  <span className="font-bold text-swedish-blue text-base">{course.price.toLocaleString('sv-SE')} kr</span>
                 </div>
               </div>
             </div>

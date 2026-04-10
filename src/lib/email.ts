@@ -50,7 +50,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
     </div>
 
     <!-- Status banner -->
-    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
       <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BETALNING BEKRÄFTAD</p>
     </div>
 
@@ -74,7 +74,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 
       <!-- Course details card -->
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
-        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Kursdetaljer</p>
+        <p style="color:#00C4D4;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Kursdetaljer</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr>
             <td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td>
@@ -109,9 +109,9 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
             <td style="color:#6b7280;padding:5px 0;">Moms (25%)</td>
             <td style="color:#374151;text-align:right;">${vatAmount.toLocaleString('sv-SE')} kr</td>
           </tr>
-          <tr style="border-top:2px solid #0ABCCE;">
+          <tr style="border-top:2px solid #00C4D4;">
             <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">Totalt betalt</td>
-            <td style="color:#0ABCCE;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
+            <td style="color:#00C4D4;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
           </tr>
         </table>
       </div>
@@ -171,7 +171,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
     </div>
 
     <!-- Status banner -->
-    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
       <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BOKNING BEKRÄFTAD</p>
     </div>
 
@@ -181,7 +181,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
       <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Din plats är bokad. Nedan hittar du en sammanfattning av din bokning.</p>
 
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
-        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Bokningsdetaljer</p>
+        <p style="color:#00C4D4;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Bokningsdetaljer</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
@@ -193,7 +193,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
         </table>
       </div>
 
-      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#0ABCCE;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
     </div>
 
     <!-- Footer -->
@@ -256,7 +256,7 @@ function buildSchoolAccountHtml(data: SchoolAccountEmailData): string {
     </div>
 
     <!-- Status banner -->
-    <div style="background:#0ABCCE;padding:14px 32px;text-align:center;">
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
       <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;KONTO SKAPAT</p>
     </div>
 
@@ -266,18 +266,18 @@ function buildSchoolAccountHtml(data: SchoolAccountEmailData): string {
       <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Ditt konto på Uppsala Halkbanas trafikskolaportal har skapats. Nedan hittar du dina inloggningsuppgifter.</p>
 
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
-        <p style="color:#0ABCCE;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Inloggningsuppgifter</p>
+        <p style="color:#00C4D4;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Inloggningsuppgifter</p>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
           <tr><td style="color:#6b7280;padding:5px 0;width:40%;">E-post</td><td style="color:#111827;font-weight:600;text-align:right;">${data.email}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Lösenord</td><td style="color:#111827;font-weight:600;text-align:right;font-family:monospace;">${data.password}</td></tr>
         </table>
       </div>
 
-      <div style="border-left:4px solid #0ABCCE;padding:12px 16px;background:#f0fbfc;border-radius:0 8px 8px 0;margin-bottom:24px;">
+      <div style="border-left:4px solid #00C4D4;padding:12px 16px;background:#f0fbfc;border-radius:0 8px 8px 0;margin-bottom:24px;">
         <p style="margin:0;color:#0891a0;font-size:14px;">Byt lösenord efter första inloggningen av säkerhetsskäl.</p>
       </div>
 
-      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#0ABCCE;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
     </div>
 
     <!-- Footer -->
@@ -424,12 +424,12 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
     <table style="width:100%;border-collapse:collapse;">
       <tr>
         <td style="vertical-align:top;">
-          <p style="margin:0;font-size:22px;font-weight:700;color:#0ABCCE;line-height:1.2;">Consult Centre</p>
-          <p style="margin:0;font-size:22px;font-weight:700;color:#0ABCCE;line-height:1.4;">Scandinavia AB</p>
+          <p style="margin:0;font-size:22px;font-weight:700;color:#00C4D4;line-height:1.2;">Consult Centre</p>
+          <p style="margin:0;font-size:22px;font-weight:700;color:#00C4D4;line-height:1.4;">Scandinavia AB</p>
         </td>
         <td style="vertical-align:top;text-align:right;">
-          <p style="margin:0;font-size:30px;font-weight:900;color:#0ABCCE;letter-spacing:2px;">FAKTURA</p>
-          <div style="height:2px;background:#0ABCCE;margin-top:6px;"></div>
+          <p style="margin:0;font-size:30px;font-weight:900;color:#00C4D4;letter-spacing:2px;">FAKTURA</p>
+          <div style="height:2px;background:#00C4D4;margin-top:6px;"></div>
         </td>
       </tr>
     </table>
@@ -458,7 +458,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
         <!-- Right: billing address box -->
         <td style="vertical-align:top;width:30%;padding-left:8px;">
           <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
-            <div style="background:#0ABCCE;padding:6px 12px;">
+            <div style="background:#00C4D4;padding:6px 12px;">
               <p style="color:#fff;font-size:12px;font-weight:700;margin:0;">Faktureringsadress</p>
             </div>
             <div style="padding:10px 12px;">
@@ -474,7 +474,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
   <div style="padding:0 36px 24px;">
     <table style="width:100%;border-collapse:collapse;margin-top:24px;">
       <thead>
-        <tr style="background:#0ABCCE;">
+        <tr style="background:#00C4D4;">
           <th style="padding:10px 12px;text-align:left;color:#fff;font-size:13px;font-weight:700;">Produkt / tjänst</th>
           <th style="padding:10px 8px;text-align:center;color:#fff;font-size:13px;font-weight:700;">Antal</th>
           <th style="padding:10px 8px;text-align:right;color:#fff;font-size:13px;font-weight:700;">À pris</th>
@@ -496,7 +496,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
         <td style="vertical-align:middle;width:50%;text-align:center;padding:16px;">
           <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="120" height="120"
             style="opacity:0.12;object-fit:contain;" />
-          <p style="color:#0ABCCE;font-size:16px;font-weight:900;letter-spacing:3px;margin:8px 0 0;opacity:0.3;text-transform:uppercase;">UPPSALAHALKBANA</p>
+          <p style="color:#00C4D4;font-size:16px;font-weight:900;letter-spacing:3px;margin:8px 0 0;opacity:0.3;text-transform:uppercase;">UPPSALAHALKBANA</p>
         </td>
         <!-- Totals -->
         <td style="vertical-align:bottom;width:50%;padding-left:24px;">
