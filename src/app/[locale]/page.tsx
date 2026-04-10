@@ -56,9 +56,12 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
         <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full py-16 sm:py-24">
           <div className="max-w-xl">
-            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-swedish-blue leading-[1.1] tracking-tight mb-4 sm:mb-6">
+            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-swedish-blue leading-[1.1] tracking-tight mb-3 sm:mb-4">
               Uppsala Halkbana
             </h1>
+            <span className="inline-block py-1 px-3 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
+              Säkerhet framför allt
+            </span>
             <p className="text-base sm:text-lg text-gray-300 mb-8 sm:mb-10 leading-relaxed font-medium max-w-md">
               Professionell riskutbildning för bil och motorcykel. Erfarna instruktörer, moderna anläggningar, enkelt att boka.
             </p>
