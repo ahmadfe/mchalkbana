@@ -202,7 +202,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                 {card.badge && (
                   <span className="text-xs font-semibold text-swedish-blue uppercase tracking-wide mb-2">{card.badge}</span>
                 )}
-                <h3 className="font-bold text-swedish-blue text-xl leading-snug mb-2">{card.title}</h3>
+                <h3 className="font-bold text-gray-900 text-xl leading-snug mb-2">{card.title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed mb-4 flex-1">{card.description}</p>
                 {card.price && (
                   <p className="font-bold text-lg mb-3 text-swedish-blue">{card.price}</p>
