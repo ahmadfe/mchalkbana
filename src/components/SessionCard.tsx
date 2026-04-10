@@ -107,7 +107,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
           ) : (
             <Link
               href={`/${locale}/checkout?session=${session.id}`}
-              className="bg-swedish-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-blue-700 transition"
+              className="bg-swedish-blue text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-swedish-dark transition"
             >
               {t('book_session')}
             </Link>

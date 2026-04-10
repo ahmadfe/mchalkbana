@@ -275,7 +275,7 @@ export default function SchoolPage() {
                               'px-3 py-2 text-sm font-semibold rounded-xl transition flex items-center gap-1.5',
                               full
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-swedish-blue text-white hover:bg-blue-700'
+                                : 'bg-swedish-blue text-white hover:bg-swedish-dark'
                             )}
                           >
                             <Plus className="w-4 h-4" />

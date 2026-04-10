@@ -128,7 +128,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
           {isAdmin && (
             <button
               onClick={openAdd}
-              className="flex items-center gap-2 px-4 py-2 bg-swedish-blue text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition shrink-0 ml-4"
+              className="flex items-center gap-2 px-4 py-2 bg-swedish-blue text-white text-sm font-medium rounded-xl hover:bg-swedish-dark transition shrink-0 ml-4"
             >
               <Plus className="w-4 h-4" />
               Lägg till kort
@@ -448,7 +448,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               <button
                 onClick={handleSave}
                 disabled={saving || !form.title || !form.description}
-                className="flex-1 bg-swedish-blue text-white py-2.5 rounded-xl hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition"
+                className="flex-1 bg-swedish-blue text-white py-2.5 rounded-xl hover:bg-swedish-dark text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-60 transition"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saving ? 'Sparar...' : editCard ? 'Spara ändringar' : 'Skapa kort'}

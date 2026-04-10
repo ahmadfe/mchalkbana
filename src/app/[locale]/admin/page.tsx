@@ -991,7 +991,7 @@ export default function AdminPage() {
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleAssignSchool(s.id)}
-                                className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-blue-700"
+                                className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark"
                               >Spara</button>
                               <button
                                 onClick={() => { setAssigningSchoolSession(null); setAssignSchoolIds([]); }}
@@ -1859,7 +1859,7 @@ export default function AdminPage() {
               </div>
               <div className="flex items-center gap-2">
                 {studentsData && studentsData.students.length > 0 && (
-                  <button onClick={() => exportXml(studentsData)} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-blue-700 transition">
+                  <button onClick={() => exportXml(studentsData)} className="flex items-center gap-1.5 px-3 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark transition">
                     <Download className="w-4 h-4" />Exportera XML
                   </button>
                 )}
