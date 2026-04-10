@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
+import HomeCardsSection from '@/components/HomeCardsSection';
 import FaqSection from '@/components/FaqSection';
 import { Shield, MapPin, CheckCircle2, Star } from 'lucide-react';
 import { prisma } from '@/lib/db';
@@ -20,7 +21,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const t = await getTranslations('home');
 
   const now = new Date();
-  const [authUser, upcomingSessions, heroSettings] = await Promise.all([
+  const [infoCards, authUser, upcomingSessions, heroSettings] = await Promise.all([
+    prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }).catch(() => []),
     getAuthUser().catch(() => null),
     prisma.session.findMany({
       where: { startTime: { gte: now }, visibility: 'public', seatsAvailable: { gt: 0 } },
@@ -31,6 +33,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
     prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }).catch(() => []),
   ]);
 
+  const isAdmin = authUser?.role === 'admin';
   const heroVideoUrl = heroSettings.find((s) => s.key === 'heroVideoUrl')?.value ?? '';
   const heroImageUrl = heroSettings.find((s) => s.key === 'heroImageUrl')?.value ?? '';
 
@@ -86,6 +89,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
+      {/* ─── INFO CARDS (admin-editable) ─────────────────────── */}
+      <HomeCardsSection initialCards={infoCards} isAdmin={isAdmin} />
 
       {/* ─── UPCOMING SESSIONS ───────────────────────────────── */}
       {upcomingSessions.length > 0 && (
