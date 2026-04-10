@@ -1,4 +1,5 @@
 import https from 'node:https';
+import crypto from 'node:crypto';
 
 export interface SwishPaymentStatus {
   id: string;
@@ -16,8 +17,6 @@ function fixPemNewlines(pem: string): string {
 }
 
 function getSwishAgent() {
-  // Support both PEM cert+key (SWISH_CERT_PEM + SWISH_KEY_PEM)
-  // and legacy PFX bundle (SWISH_CERT_PFX)
   const certPem = process.env.SWISH_CERT_PEM;
   const keyPem = process.env.SWISH_KEY_PEM;
 
@@ -95,6 +94,11 @@ export function formatSwishPhone(phone: string): string {
   return digits;
 }
 
+/** Generate a Swish instruction UUID — 32 char uppercase hex, no dashes */
+function generateInstructionUUID(): string {
+  return crypto.randomUUID().replace(/-/g, '').toUpperCase();
+}
+
 export async function createPaymentRequest(params: {
   bookingId: number;
   amount: number;
@@ -107,23 +111,25 @@ export async function createPaymentRequest(params: {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
   const callbackUrl = `${appUrl}/api/swish/callback`;
 
-  // v1 API: POST without UUID — Swish returns the ID in the Location header
-  const result = await swishRequest<null>(
-    'POST',
-    '/swish-cpcapi/api/v1/paymentrequests',
-    {
-      payeeAlias: merchantNumber,
-      payerAlias: formatSwishPhone(params.payerPhone),
-      amount: params.amount.toString(),
-      currency: 'SEK',
-      callbackUrl,
-      message: params.message.slice(0, 50),
-      payeePaymentReference: params.bookingId.toString(),
-    },
-  );
+  // v2 API: PUT with client-generated UUID
+  const instructionUUID = generateInstructionUUID();
+  const path = `/swish-cpcapi/api/v2/paymentrequests/${instructionUUID}`;
 
-  if (result.status === 201 && result.location) {
-    const id = result.location.split('/').pop()!;
+  console.log('[Swish] Creating payment request, UUID:', instructionUUID, 'host:', getSwishHost());
+
+  const result = await swishRequest<null>('PUT', path, {
+    payeeAlias: merchantNumber,
+    payerAlias: formatSwishPhone(params.payerPhone),
+    amount: params.amount,
+    currency: 'SEK',
+    callbackUrl,
+    message: params.message.slice(0, 50),
+    payeePaymentReference: params.bookingId.toString(),
+  });
+
+  if (result.status === 201) {
+    const id = result.location ? result.location.split('/').pop()! : instructionUUID;
+    console.log('[Swish] Payment request created, ID:', id);
     return { swishRequestId: id };
   }
 
@@ -134,6 +140,7 @@ export async function createPaymentRequest(params: {
     payer: formatSwishPhone(params.payerPhone),
     amount: params.amount,
     env: process.env.SWISH_ENV,
+    path,
   });
   throw new Error(`Swish create error ${result.status}: ${JSON.stringify(result.data)}`);
 }
@@ -141,7 +148,7 @@ export async function createPaymentRequest(params: {
 export async function getPaymentRequest(swishRequestId: string): Promise<SwishPaymentStatus> {
   const result = await swishRequest<SwishPaymentStatus>(
     'GET',
-    `/swish-cpcapi/api/v1/paymentrequests/${swishRequestId}`,
+    `/swish-cpcapi/api/v2/paymentrequests/${swishRequestId}`,
   );
   if (result.status === 200 && result.data) return result.data;
   throw new Error(`Swish get error ${result.status}`);
