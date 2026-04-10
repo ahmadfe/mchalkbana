@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
       <Navbar />
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
-      <section className="relative min-h-[88vh] flex items-center overflow-hidden bg-gray-950">
+      <section className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center overflow-hidden bg-gray-950">
         {/* Background media */}
         {heroVideoUrl ? (
           <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40">
@@ -53,29 +53,29 @@ export default async function HomePage({ params }: { params: { locale: string } 
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-cyan-950 to-gray-900" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-950/95 via-gray-950/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-950/90 via-gray-950/60 to-transparent sm:bg-gradient-to-r sm:from-gray-950/95 sm:via-gray-950/60 sm:to-transparent" />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 w-full py-24">
-          <div className="max-w-2xl">
-            <span className="inline-block py-1 px-4 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-6">
+        <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full py-16 sm:py-24">
+          <div className="max-w-xl">
+            <span className="inline-block py-1 px-3 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
               Transportstyrelsen Godkänd
             </span>
-            <h1 className="font-headline text-5xl md:text-7xl font-extrabold text-white leading-[1.08] tracking-tight mb-6">
-              Börja din resa mot körkortet med oss
+            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-[1.1] tracking-tight mb-4 sm:mb-6">
+              Uppsala Halkbana
             </h1>
-            <p className="text-xl text-gray-300 mb-10 leading-relaxed font-medium max-w-lg">
+            <p className="text-base sm:text-lg text-gray-300 mb-8 sm:mb-10 leading-relaxed font-medium max-w-md">
               Professionell riskutbildning för bil och motorcykel. Erfarna instruktörer, moderna anläggningar, enkelt att boka.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href={`/sv/courses`}
-                className="px-8 py-4 bg-swedish-blue text-white rounded-xl font-bold text-base hover:bg-swedish-dark transition-all shadow-lg shadow-swedish-blue/20 hover:shadow-xl hover:-translate-y-0.5 text-center"
+                className="px-6 py-3.5 bg-swedish-blue text-white rounded-xl font-bold text-sm sm:text-base hover:bg-swedish-dark transition-all shadow-lg shadow-swedish-blue/20 hover:shadow-xl hover:-translate-y-0.5 text-center"
               >
                 Boka Riskutbildning
               </Link>
               <Link
                 href={`/sv/courses`}
-                className="px-8 py-4 bg-white/10 text-white border border-white/20 rounded-xl font-bold text-base hover:bg-white/20 transition-all text-center backdrop-blur-sm"
+                className="px-6 py-3.5 bg-white/10 text-white border border-white/20 rounded-xl font-bold text-sm sm:text-base hover:bg-white/20 transition-all text-center backdrop-blur-sm"
               >
                 Våra Kurser →
               </Link>
@@ -84,8 +84,8 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
-          <div className="w-0.5 h-8 bg-white rounded-full animate-pulse" />
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
+          <div className="w-0.5 h-6 bg-white rounded-full animate-pulse" />
         </div>
       </section>
 

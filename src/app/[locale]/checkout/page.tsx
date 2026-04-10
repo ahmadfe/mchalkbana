@@ -85,10 +85,13 @@ function CheckoutContent() {
   const course = session.course!;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const start = new Date(session.startTime);
+  const end = new Date(session.endTime);
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
-  const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const startStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const endStr = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = `${startStr} – ${endStr}`;
 
   const validate = (): boolean => {
     const errs: Partial<GuestInfo> = {};
