@@ -287,6 +287,12 @@ function CheckoutContent() {
                     <span>#{bookingId}</span>
                   </div>
                 )}
+                {course.receiptMessage && (
+                  <div className="flex justify-between gap-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                    <span className="font-bold text-red-600 shrink-0">OBS!</span>
+                    <span className="text-red-600 text-right">{course.receiptMessage}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t-2 border-swedish-blue pt-2 mt-2">
                   <span className="font-semibold">Totalt betalt:</span>
                   <span className="font-bold text-swedish-blue text-base">{course.price.toLocaleString('sv-SE')} kr</span>

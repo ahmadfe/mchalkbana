@@ -153,6 +153,7 @@ interface BookingConfirmationEmailData {
   schoolName?: string | null;
   personnummer?: string | null;
   phone?: string | null;
+  customMessage?: string;
 }
 
 function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): string {
@@ -190,6 +191,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
           ${data.schoolName ? `<tr><td style="color:#6b7280;padding:5px 0;">Trafikskola</td><td style="color:#111827;font-weight:600;text-align:right;">${data.schoolName}</td></tr>` : ''}
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
+          ${data.customMessage ? `<tr><td style="color:#dc2626;padding:8px 0 5px;font-weight:700;">OBS!</td><td style="color:#dc2626;font-weight:600;text-align:right;padding:8px 0 5px;">${data.customMessage}</td></tr>` : ''}
         </table>
       </div>
 
