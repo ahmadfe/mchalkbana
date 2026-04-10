@@ -156,3 +156,42 @@ export async function getPaymentRequest(swishRequestId: string): Promise<SwishPa
   if (result.status === 200 && result.data) return result.data;
   throw new Error(`Swish get error ${result.status}`);
 }
+
+/** Issue a Swish refund against an original payment reference */
+export async function createRefund(params: {
+  originalPaymentReference: string;
+  amount: number;
+  message: string;
+}): Promise<{ swishRefundId: string }> {
+  const merchantNumber = process.env.SWISH_MERCHANT_NUMBER;
+  if (!merchantNumber) throw new Error('SWISH_MERCHANT_NUMBER not configured');
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+  const callbackUrl = `${appUrl}/api/swish/callback`;
+
+  const instructionUUID = generateInstructionUUID();
+  const path = `/swish-cpcapi/api/v2/refunds/${instructionUUID}`;
+
+  console.log('[Swish] Creating refund, UUID:', instructionUUID, 'originalRef:', params.originalPaymentReference);
+
+  const result = await swishRequest<null>('PUT', path, {
+    originalPaymentReference: params.originalPaymentReference,
+    callbackUrl,
+    payerAlias: merchantNumber,
+    amount: params.amount,
+    currency: 'SEK',
+    message: params.message
+      .replace(/–/g, '-')
+      .replace(/[^\w\såäöÅÄÖ.,\-:;!?+()*/]/g, '')
+      .slice(0, 50),
+  });
+
+  if (result.status === 201) {
+    const id = result.location ? result.location.split('/').pop()! : instructionUUID;
+    console.log('[Swish] Refund created, ID:', id);
+    return { swishRefundId: id };
+  }
+
+  console.error('[Swish] Refund error response:', result.status, JSON.stringify(result.data));
+  throw new Error(`Swish refund error ${result.status}: ${JSON.stringify(result.data)}`);
+}

@@ -1836,7 +1836,7 @@ export default function AdminPage() {
               <strong>{refundTarget.booking.guestName ?? refundTarget.booking.user?.name ?? 'kunden'}</strong>?
             </p>
             <p className="text-xs text-gray-400 mb-4">
-              Bokning #{refundTarget.bookingId} kommer att avbokas och platsen återställas. Återbetalningen i Swish måste hanteras manuellt i Swish-appen.
+              Bokning #{refundTarget.bookingId} kommer att avbokas och platsen återställas. Pengarna skickas automatiskt tillbaka via Swish.
             </p>
             {refundError && (
               <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{refundError}</p>

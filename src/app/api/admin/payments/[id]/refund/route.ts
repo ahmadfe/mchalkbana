@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { createRefund } from '@/lib/swish';
+
+export const runtime = 'nodejs';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const auth = await getAuthUserFromRequest(request);
@@ -18,6 +21,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   if (!payment) return NextResponse.json({ error: 'Betalning hittades inte' }, { status: 404 });
   if (payment.status === 'Refunded') return NextResponse.json({ error: 'Redan återbetald' }, { status: 400 });
+
+  // transactionId holds the Swish paymentReference from the callback
+  if (!payment.transactionId || payment.transactionId.startsWith('swish_')) {
+    return NextResponse.json(
+      { error: 'Swish betalningsreferens saknas – återbetalning kan inte göras automatiskt' },
+      { status: 422 },
+    );
+  }
+
+  // Call Swish refund API
+  await createRefund({
+    originalPaymentReference: payment.transactionId,
+    amount: payment.amount,
+    message: `Aterbetalning bokning #${payment.bookingId}`,
+  });
 
   // Mark payment as refunded and booking as canceled, restore seat
   const [updated] = await prisma.$transaction([
