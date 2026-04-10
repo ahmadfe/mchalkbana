@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
       <Navbar />
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
-      <section className="relative min-h-[70vh] sm:min-h-[80vh] flex items-center overflow-hidden bg-gray-950">
+      <section className="relative min-h-[35vh] sm:min-h-[40vh] flex items-center overflow-hidden bg-gray-950">
         {/* Background media */}
         {heroVideoUrl ? (
           <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-40">
