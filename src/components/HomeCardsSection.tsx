@@ -211,7 +211,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                   {card.primaryButtonText && (
                     <Link
                       href={card.primaryButtonLink}
-                      className="text-sm font-semibold text-swedish-blue hover:underline flex items-center gap-1"
+                      className="inline-block bg-swedish-yellow text-gray-900 text-sm font-bold px-4 py-2 rounded-xl hover:bg-yellow-300 transition"
                     >
                       {card.primaryButtonText} →
                     </Link>
