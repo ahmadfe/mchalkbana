@@ -63,19 +63,19 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
         {/* Details */}
         <div className="space-y-1.5 mb-4">
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Calendar className="w-4 h-4 text-swedish-blue shrink-0" />
+            <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{dateStr}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock className="w-4 h-4 text-swedish-blue shrink-0" />
+            <Clock className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{timeStr}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <MapPin className="w-4 h-4 text-swedish-blue shrink-0" />
+            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
             <span>{course.location || session.school?.name}</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Users className="w-4 h-4 text-swedish-blue shrink-0" />
+            <Users className="w-4 h-4 text-gray-400 shrink-0" />
             <span>
               {isSoldOut ? (
                 <span className="text-red-600 font-semibold">{t('sold_out')}</span>
@@ -96,7 +96,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
 
         {/* Footer */}
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-swedish-blue">
+          <span className="text-xl font-bold text-gray-900">
             {course.price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
           </span>
 
