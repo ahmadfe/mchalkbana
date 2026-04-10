@@ -814,7 +814,7 @@ export default function AdminPage() {
             <div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
                 {[
-                  { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-swedish-blue bg-blue-50' },
+                  { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-swedish-blue bg-brand-50' },
                   { label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-green-600 bg-green-50' },
                   { label: t('upcoming_sessions'), value: stats.upcomingSessions, icon: <Calendar />, color: 'text-orange-600 bg-orange-50' },
                   { label: t('students'), value: stats.totalStudents, icon: <Users />, color: 'text-purple-600 bg-purple-50' },
@@ -865,7 +865,7 @@ export default function AdminPage() {
                         <td className="py-3 px-5">
                           <span className={clsx(
                             'px-2.5 py-1 rounded-full text-xs font-semibold',
-                            c.type === 'Risk1' ? 'bg-blue-100 text-blue-800' :
+                            c.type === 'Risk1' ? 'bg-brand-100 text-brand-800' :
                             c.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
                             c.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-700'
@@ -880,7 +880,7 @@ export default function AdminPage() {
                         <td className="py-3 px-5 font-semibold">{c.price.toLocaleString('sv-SE')} kr</td>
                         <td className="py-3 px-5">
                           <div className="flex gap-2">
-                            <button onClick={() => openEditCourse(c)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50" title="Redigera kurs">
+                            <button onClick={() => openEditCourse(c)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera kurs">
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
@@ -936,7 +936,7 @@ export default function AdminPage() {
                       <div className="flex items-center gap-4">
                         <div className={clsx(
                           'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                          s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' :
+                          s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
                           s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
                           s.course?.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
                           'bg-gray-100 text-gray-600'
@@ -965,7 +965,7 @@ export default function AdminPage() {
                       <div className="flex gap-2 flex-wrap justify-end items-center">
                         <button
                           onClick={() => handleViewStudents(s.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-blue-50 transition"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           Visa elever
@@ -1116,13 +1116,13 @@ export default function AdminPage() {
                                     'px-2.5 py-1 rounded-full text-xs font-semibold',
                                     b.status === 'Paid' ? 'bg-green-100 text-green-700' :
                                     b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                                    b.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
+                                    b.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' :
                                     'bg-yellow-100 text-yellow-700'
                                   )}>{b.status}</span>
                                 </td>
                                 <td className="py-3 px-4">
                                   <div className="flex gap-1 justify-end">
-                                    <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50" title="Redigera">
+                                    <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera">
                                       <Pencil className="w-3.5 h-3.5" />
                                     </button>
                                     <button onClick={() => handleDeleteStudent(b.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Ta bort">
@@ -1241,7 +1241,7 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
-                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-blue-50 px-2 py-1.5 rounded-lg transition font-medium"
+                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-brand-50 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Rapport & Faktura"
                           >
                             <FileText className="w-3.5 h-3.5" />Faktura
@@ -1494,7 +1494,7 @@ export default function AdminPage() {
                           <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
                             {card.visible ? 'Synlig' : 'Dold'}
                           </span>
-                          <button onClick={() => openEditCard(card)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-blue-50"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => openEditCard(card)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50"><Pencil className="w-4 h-4" /></button>
                           <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
@@ -1959,7 +1959,7 @@ export default function AdminPage() {
                           <td className="py-2.5 px-4">
                             <span className={clsx('px-2 py-0.5 rounded-full text-xs font-semibold',
                               s.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                              s.status === 'Confirmed' ? 'bg-blue-100 text-blue-700' :
+                              s.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' :
                               'bg-yellow-100 text-yellow-700'
                             )}>{s.status}</span>
                           </td>

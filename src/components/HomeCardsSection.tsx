@@ -157,7 +157,7 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
                 <div className="absolute top-3 right-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition">
                   <button
                     onClick={() => openEdit(card)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg shadow hover:bg-blue-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg shadow hover:bg-brand-50"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Redigera

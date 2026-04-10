@@ -61,10 +61,10 @@ export default function CoursesPage() {
       <Navbar />
 
       {/* Header */}
-      <section className="bg-gradient-to-r from-swedish-blue to-blue-700 text-white py-12">
+      <section className="bg-gradient-to-r from-swedish-blue to-brand-700 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{t('title')}</h1>
-          <p className="text-blue-100 text-lg">{t('subtitle')}</p>
+          <p className="text-brand-100 text-lg">{t('subtitle')}</p>
         </div>
       </section>
 

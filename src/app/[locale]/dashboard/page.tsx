@@ -65,7 +65,7 @@ export default function DashboardPage() {
   const StatusBadge = ({ status }: { status: Booking['status'] }) => {
     const configMap: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
       Paid: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('paid'), cls: 'bg-green-100 text-green-700' },
-      Confirmed: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('paid'), cls: 'bg-blue-100 text-blue-700' },
+      Confirmed: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: t('paid'), cls: 'bg-brand-100 text-brand-700' },
       Pending: { icon: <AlertCircle className="w-3.5 h-3.5" />, label: t('pending'), cls: 'bg-yellow-100 text-yellow-700' },
       Canceled: { icon: <XCircle className="w-3.5 h-3.5" />, label: t('canceled'), cls: 'bg-red-100 text-red-700' },
     };
@@ -94,7 +94,7 @@ export default function DashboardPage() {
         <div className="flex items-start gap-3">
           <div className={clsx(
             'w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm',
-            course.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+            course.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
           )}>
             {course.type === 'Risk1' ? 'R1' : 'R2'}
           </div>

@@ -8,14 +8,14 @@ export default function AboutPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-swedish-blue via-blue-800 to-blue-900 text-white py-20">
+      <section className="bg-gradient-to-br from-swedish-blue via-brand-700 to-brand-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-1 w-8 bg-swedish-yellow rounded-full" />
             <span className="text-swedish-yellow text-sm font-semibold uppercase tracking-widest">Om oss</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Uppsala Halkbana</h1>
-          <p className="text-blue-200 text-lg mt-4 max-w-2xl">
+          <p className="text-brand-100 text-lg mt-4 max-w-2xl">
             Vi erbjuder professionell riskutbildning för bil och motorcykel – godkänd av Transportstyrelsen sedan över 15 år.
           </p>
         </div>
@@ -36,7 +36,7 @@ export default function AboutPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { icon: <Award className="w-7 h-7" />, label: 'Transportstyrelsen godkänd', color: 'bg-blue-50 text-swedish-blue' },
+                { icon: <Award className="w-7 h-7" />, label: 'Transportstyrelsen godkänd', color: 'bg-brand-50 text-swedish-blue' },
                 { icon: <Users className="w-7 h-7" />, label: '2 400+ nöjda elever', color: 'bg-green-50 text-green-700' },
                 { icon: <Shield className="w-7 h-7" />, label: '15+ år i branschen', color: 'bg-yellow-50 text-yellow-700' },
                 { icon: <MapPin className="w-7 h-7" />, label: 'Centralt i Uppsala', color: 'bg-purple-50 text-purple-700' },

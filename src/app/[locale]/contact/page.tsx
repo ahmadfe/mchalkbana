@@ -10,14 +10,14 @@ export default function ContactPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-swedish-blue via-blue-800 to-blue-900 text-white py-20">
+      <section className="bg-gradient-to-br from-swedish-blue via-brand-700 to-brand-800 text-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 mb-4">
             <div className="h-1 w-8 bg-swedish-yellow rounded-full" />
             <span className="text-swedish-yellow text-sm font-semibold uppercase tracking-widest">Kontakta oss</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Vi hjälper dig gärna</h1>
-          <p className="text-blue-200 text-lg mt-4 max-w-2xl">
+          <p className="text-brand-100 text-lg mt-4 max-w-2xl">
             Har du frågor om våra kurser, bokning eller utbildning? Tveka inte att höra av dig.
           </p>
         </div>
@@ -31,7 +31,7 @@ export default function ContactPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { icon: <Shield className="w-8 h-8" />, title: 'Certified Training', desc: "All courses comply with the Swedish Transport Agency's requirements for risk training.", color: 'bg-blue-50 text-swedish-blue' },
+              { icon: <Shield className="w-8 h-8" />, title: 'Certified Training', desc: "All courses comply with the Swedish Transport Agency's requirements for risk training.", color: 'bg-brand-50 text-swedish-blue' },
               { icon: <Calendar className="w-8 h-8" />, title: 'Easy Online Booking', desc: 'Book, pay, and manage your courses entirely online — any time of day.', color: 'bg-yellow-50 text-yellow-700' },
               { icon: <CreditCard className="w-8 h-8" />, title: 'Secure Payment', desc: 'We use Stripe for secure payment with card, Swish, and Apple Pay.', color: 'bg-green-50 text-green-700' },
             ].map((f) => (
@@ -57,7 +57,7 @@ export default function ContactPage() {
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Kontaktuppgifter</h2>
               <div className="space-y-5">
                 {[
-                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Norrlövsta 147, 747 91 Alunda', color: 'bg-blue-50 text-swedish-blue' },
+                  { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Norrlövsta 147, 747 91 Alunda', color: 'bg-brand-50 text-swedish-blue' },
                   { icon: <Mail className="w-5 h-5" />, label: 'E-post', value: 'info@uppsalahalkbana.se', color: 'bg-green-50 text-green-700' },
                   { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '07 07 66 66 61', color: 'bg-yellow-50 text-yellow-700' },
                   { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Lör–Tor 08:00–17:00', color: 'bg-purple-50 text-purple-700' },

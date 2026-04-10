@@ -187,7 +187,7 @@ export default function SchoolPage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-swedish-blue" />
               </div>
               <div>
@@ -245,7 +245,7 @@ export default function SchoolPage() {
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                           <div className={clsx(
                             'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                            s.course?.type === 'Risk1' ? 'bg-blue-100 text-swedish-blue' :
+                            s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
                             s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
                             s.course?.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-600'
@@ -262,7 +262,7 @@ export default function SchoolPage() {
                                 👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
                               </span>
                               {sessionStudents.length > 0 && (
-                                <span className="text-blue-600 font-medium">{sessionStudents.length} elev{sessionStudents.length !== 1 ? 'er' : ''} bokade</span>
+                                <span className="text-swedish-blue font-medium">{sessionStudents.length} elev{sessionStudents.length !== 1 ? 'er' : ''} bokade</span>
                               )}
                             </div>
                           </div>
