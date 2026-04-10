@@ -5,9 +5,8 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
-import HomeCardsSection from '@/components/HomeCardsSection';
 import FaqSection from '@/components/FaqSection';
-import { Shield, BookOpen, Users, MapPin, CheckCircle2, Star } from 'lucide-react';
+import { Shield, MapPin, CheckCircle2, Star } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 import type { Session } from '@/lib/types';
@@ -21,8 +20,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const t = await getTranslations('home');
 
   const now = new Date();
-  const [infoCards, authUser, upcomingSessions, heroSettings] = await Promise.all([
-    prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }).catch(() => []),
+  const [authUser, upcomingSessions, heroSettings] = await Promise.all([
     getAuthUser().catch(() => null),
     prisma.session.findMany({
       where: { startTime: { gte: now }, visibility: 'public', seatsAvailable: { gt: 0 } },
@@ -33,7 +31,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
     prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }).catch(() => []),
   ]);
 
-  const isAdmin = authUser?.role === 'admin';
   const heroVideoUrl = heroSettings.find((s) => s.key === 'heroVideoUrl')?.value ?? '';
   const heroImageUrl = heroSettings.find((s) => s.key === 'heroImageUrl')?.value ?? '';
 
@@ -89,74 +86,6 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </div>
       </section>
 
-      {/* ─── INFO CARDS (admin-editable) ─────────────────────── */}
-      <HomeCardsSection initialCards={infoCards} isAdmin={isAdmin} />
-
-      {/* ─── COURSE CARDS BENTO ──────────────────────────────── */}
-      <section className="py-24 bg-[#f5f3f3]">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          <div className="mb-14">
-            <p className="text-xs font-bold text-swedish-blue uppercase tracking-widest mb-3">Vad vi erbjuder</p>
-            <h2 className="font-headline text-3xl md:text-4xl font-extrabold text-gray-900">Våra Utbildningar</h2>
-            <div className="h-1 w-16 bg-swedish-blue rounded-full mt-4" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Risk 1 */}
-            <div className="group bg-white p-8 rounded-2xl border border-gray-100 hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-lg">
-              <div className="w-14 h-14 bg-swedish-blue/10 rounded-2xl flex items-center justify-center mb-6">
-                <BookOpen className="w-7 h-7 text-swedish-blue" />
-              </div>
-              <h3 className="font-headline text-xl font-bold mb-3 text-gray-900">Risk 1 – Teori</h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                Obligatorisk utbildning om alkohol, droger, trötthet och riskbeteenden i trafiken. Genomförs i grupp med erfaren instruktör.
-              </p>
-              <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
-                <span className="font-bold text-gray-900">Från 900 kr</span>
-                <Link href={`/sv/courses`} className="text-swedish-blue hover:text-swedish-dark font-semibold text-sm flex items-center gap-1 transition-colors">
-                  Boka <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Risk 2 – highlighted */}
-            <div className="group bg-gray-950 text-white p-8 rounded-2xl shadow-2xl shadow-gray-900/30 hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden">
-              <div className="absolute top-4 right-4">
-                <span className="bg-swedish-blue text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">Populär</span>
-              </div>
-              <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-6">
-                <Shield className="w-7 h-7 text-swedish-blue" />
-              </div>
-              <h3 className="font-headline text-xl font-bold mb-3">Risk 2 – Halkbana</h3>
-              <p className="text-white/70 text-sm leading-relaxed mb-6">
-                Praktisk körning på halt underlag. Lär dig hantera fordonet vid kritiska situationer på vår moderna halkbana i Uppsala.
-              </p>
-              <div className="pt-5 border-t border-white/10 flex items-center justify-between">
-                <span className="font-bold">Från 2 200 kr</span>
-                <Link href={`/sv/courses`} className="text-swedish-blue hover:text-cyan-300 font-semibold text-sm flex items-center gap-1 transition-colors">
-                  Boka →
-                </Link>
-              </div>
-            </div>
-
-            {/* MC */}
-            <div className="group bg-white p-8 rounded-2xl border border-gray-100 hover:-translate-y-1.5 transition-all duration-300 shadow-sm hover:shadow-lg">
-              <div className="w-14 h-14 bg-swedish-blue/10 rounded-2xl flex items-center justify-center mb-6">
-                <Users className="w-7 h-7 text-swedish-blue" />
-              </div>
-              <h3 className="font-headline text-xl font-bold mb-3 text-gray-900">Risk 2 – Motorcykel</h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                Riskutbildning del 2 anpassad för motorcykelförare. Praktiska övningar på halkbana med fokus på bromsar och styrning.
-              </p>
-              <div className="pt-5 border-t border-gray-100 flex items-center justify-between">
-                <span className="font-bold text-gray-900">Från 2 600 kr</span>
-                <Link href={`/sv/courses`} className="text-swedish-blue hover:text-swedish-dark font-semibold text-sm flex items-center gap-1 transition-colors">
-                  Boka <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ─── UPCOMING SESSIONS ───────────────────────────────── */}
       {upcomingSessions.length > 0 && (
