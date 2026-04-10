@@ -86,7 +86,7 @@ export default function DashboardPage() {
     const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
       day: 'numeric', month: 'short', year: 'numeric',
     });
-    const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const isFuture = start > new Date();
 
     return (

@@ -28,7 +28,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
     year: 'numeric',
   });
 
-  const timeStr = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
 
   const typeColor = course.type === 'Risk1'
     ? 'bg-blue-100 text-blue-800'

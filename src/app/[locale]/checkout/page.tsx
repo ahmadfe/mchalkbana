@@ -86,7 +86,7 @@ function CheckoutContent() {
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
-  const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
 
   const validate = (): boolean => {
     const errs: Partial<GuestInfo> = {};

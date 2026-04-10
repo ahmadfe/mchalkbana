@@ -971,7 +971,7 @@ export default function AdminPage() {
                           </div>
                           <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                             <span>📅 {new Date(s.startTime).toLocaleDateString('sv-SE')}</span>
-                            <span>🕐 {new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>🕐 {new Date(s.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – {new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
                             <span>📍 {s.course?.location || s.school?.name}</span>
                             <span>👤 {s.seatsAvailable}/{s.seatLimit} platser kvar</span>
                           </div>
@@ -1104,7 +1104,7 @@ export default function AdminPage() {
                             const email = b.guestEmail ?? (b.user as { email?: string } | null | undefined)?.email ?? '–';
                             const courseTitle = locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn;
                             const sessionDate = b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–';
-                            const sessionTime = b.session ? new Date(b.session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                            const sessionTime = b.session ? new Date(b.session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '';
                             const schoolName = b.session?.school?.name ?? '';
                             return (
                               <tr key={b.id} className="hover:bg-gray-50">
