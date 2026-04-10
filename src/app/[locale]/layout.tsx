@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import CookieBanner from '@/components/CookieBanner';
 import { AuthProvider } from '@/context/AuthContext';
 
-const locales = ['sv', 'en'];
+const locales = ['sv', 'en', 'ar'];
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -40,7 +40,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <body>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
