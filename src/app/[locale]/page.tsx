@@ -68,7 +68,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href={`/sv/courses`}
-                className="px-6 py-3.5 bg-swedish-blue text-white rounded-xl font-bold text-sm sm:text-base hover:bg-swedish-dark transition-all shadow-lg shadow-swedish-blue/20 hover:shadow-xl hover:-translate-y-0.5 text-center"
+                className="px-6 py-3.5 bg-swedish-yellow text-gray-900 rounded-xl font-bold text-sm sm:text-base hover:bg-yellow-300 transition-all shadow-lg shadow-swedish-yellow/20 hover:shadow-xl hover:-translate-y-0.5 text-center"
               >
                 Boka Riskutbildning
               </Link>

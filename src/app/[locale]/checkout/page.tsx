@@ -454,7 +454,7 @@ function CheckoutContent() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-swedish-blue text-white font-bold text-lg py-4 rounded-xl hover:bg-swedish-dark transition flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full bg-swedish-yellow text-gray-900 font-bold text-lg py-4 rounded-xl hover:bg-yellow-300 transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
