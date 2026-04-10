@@ -11,8 +11,20 @@ export interface SwishPaymentStatus {
 }
 
 function getSwishAgent() {
+  // Support both PEM cert+key (SWISH_CERT_PEM + SWISH_KEY_PEM)
+  // and legacy PFX bundle (SWISH_CERT_PFX)
+  const certPem = process.env.SWISH_CERT_PEM;
+  const keyPem = process.env.SWISH_KEY_PEM;
+
+  if (certPem && keyPem) {
+    return new https.Agent({
+      cert: certPem,
+      key: keyPem,
+    });
+  }
+
   const pfxBase64 = process.env.SWISH_CERT_PFX;
-  if (!pfxBase64) throw new Error('SWISH_CERT_PFX not configured');
+  if (!pfxBase64) throw new Error('SWISH_CERT_PFX or SWISH_CERT_PEM+SWISH_KEY_PEM not configured');
   return new https.Agent({
     pfx: Buffer.from(pfxBase64, 'base64'),
     passphrase: process.env.SWISH_CERT_PASSPHRASE ?? '',
