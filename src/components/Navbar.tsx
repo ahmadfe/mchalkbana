@@ -58,6 +58,9 @@ export default function Navbar() {
             <Link href={`${base}/contact`} className="text-gray-600 hover:text-swedish-blue transition-colors text-sm font-medium">
               Kontakta oss
             </Link>
+            <Link href={`${base}/faq`} className="text-gray-600 hover:text-swedish-blue transition-colors text-sm font-medium">
+              FAQ
+            </Link>
             {user?.role === 'admin' && (
               <Link href={`${base}/admin`} className="text-gray-600 hover:text-swedish-blue transition-colors text-sm font-medium">
                 {t('admin')}
@@ -130,6 +133,9 @@ export default function Navbar() {
           </Link>
           <Link href={`${base}/contact`} className="block py-2.5 text-gray-700 hover:text-swedish-blue font-medium" onClick={() => setOpen(false)}>
             Kontakta oss
+          </Link>
+          <Link href={`${base}/faq`} className="block py-2.5 text-gray-700 hover:text-swedish-blue font-medium" onClick={() => setOpen(false)}>
+            FAQ
           </Link>
           {user?.role === 'admin' && (
             <Link href={`${base}/admin`} className="block py-2.5 text-gray-700 hover:text-swedish-blue font-medium" onClick={() => setOpen(false)}>
