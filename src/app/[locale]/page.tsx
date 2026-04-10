@@ -93,7 +93,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
       {/* ─── UPCOMING SESSIONS ───────────────────────────────── */}
       {upcomingSessions.length > 0 && (
-        <section className="py-24 bg-white">
+        <section className="py-24 bg-[#fbf9f8]">
           <div className="max-w-7xl mx-auto px-6 sm:px-8">
             <div className="flex items-end justify-between mb-12">
               <div>
@@ -117,7 +117,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
       )}
 
       {/* ─── WHY CHOOSE US ───────────────────────────────────── */}
-      <section className="py-24 bg-[#fbf9f8]">
+      <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
             {/* Left: stat cards */}
@@ -176,6 +176,25 @@ export default async function HomePage({ params }: { params: { locale: string } 
       </section>
 
 
+
+      {/* ─── CTA BANNER ──────────────────────────────────────── */}
+      <section className="bg-swedish-blue py-20">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 text-center">
+          <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-3">Kom igång idag</p>
+          <h2 className="font-headline text-3xl md:text-4xl font-extrabold text-white mb-4 leading-tight">
+            Redo att boka din riskutbildning?
+          </h2>
+          <p className="text-white/80 text-base sm:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+            Säkra din plats idag – populära kurstillfällen fylls snabbt.
+          </p>
+          <Link
+            href="/sv/courses"
+            className="inline-block px-8 py-4 bg-swedish-yellow text-gray-900 rounded-xl font-bold text-base hover:bg-yellow-300 transition-all shadow-lg shadow-black/20 hover:shadow-xl hover:-translate-y-0.5"
+          >
+            Boka nu →
+          </Link>
+        </div>
+      </section>
 
       <Footer />
     </div>
