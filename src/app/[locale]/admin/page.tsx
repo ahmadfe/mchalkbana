@@ -829,31 +829,6 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Custom receipt message */}
-              <div className="bg-white rounded-xl border border-gray-100 p-5 mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="w-4 h-4 text-swedish-blue" />
-                  <h2 className="font-bold text-gray-900">Meddelande på kvitto</h2>
-                </div>
-                <p className="text-sm text-gray-500 mb-3">Detta meddelande visas på bokningskvittot som skickas till eleven.</p>
-                <textarea
-                  value={receiptMessage}
-                  onChange={(e) => setReceiptMessage(e.target.value)}
-                  rows={3}
-                  className="input-field resize-none"
-                  placeholder="T.ex. &quot;Ta med körkort och ID-handling. Parkering finns på framsidan.&quot;"
-                />
-                <div className="flex justify-end mt-3">
-                  <button
-                    onClick={handleSaveReceiptMessage}
-                    disabled={messageSaving}
-                    className="btn-primary flex items-center gap-2 text-sm py-2 px-4 disabled:opacity-60"
-                  >
-                    <Save className="w-4 h-4" />
-                    {messageSaving ? 'Sparar...' : 'Spara meddelande'}
-                  </button>
-                </div>
-              </div>
 
             </div>
           )}
