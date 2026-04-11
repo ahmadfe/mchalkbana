@@ -39,11 +39,11 @@ export async function GET(request: Request) {
       time,
       startTime: s.startTime,
       seatsAvailable: s.seatsAvailable,
-      price: s.price ?? s.course.price,
+      price: s.course.price,
       location: s.course.location || s.school.name,
       // Pre-formatted line for WhatsApp message
-      lineSv: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} platser · ${(s.price ?? s.course.price).toLocaleString('sv-SE')} kr`,
-      lineEn: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} seats · ${(s.price ?? s.course.price).toLocaleString('sv-SE')} SEK`,
+      lineSv: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} platser · ${s.course.price.toLocaleString('sv-SE')} kr`,
+      lineEn: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} seats · ${s.course.price.toLocaleString('sv-SE')} SEK`,
     };
   });
 
