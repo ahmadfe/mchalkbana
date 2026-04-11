@@ -106,16 +106,19 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
         <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full py-16 sm:py-24">
           <div className="max-w-xl">
-            <span className="inline-block py-1 px-3 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6">
+            <span className="hero-fade inline-block py-1 px-3 bg-swedish-blue/20 text-swedish-blue border border-swedish-blue/30 rounded-full text-xs font-bold uppercase tracking-widest mb-4 sm:mb-6"
+              style={{ animationDelay: '0ms' }}>
               Säkerhet framför allt
             </span>
-            <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-swedish-blue leading-[1.1] tracking-tight mb-4 sm:mb-6">
+            <h1 className="hero-fade font-headline text-4xl sm:text-5xl md:text-6xl font-extrabold text-swedish-blue leading-[1.1] tracking-tight mb-4 sm:mb-6"
+              style={{ animationDelay: '150ms' }}>
               Uppsala Halkbana
             </h1>
-            <p className="text-base sm:text-lg text-gray-300 mb-8 sm:mb-10 leading-relaxed font-medium max-w-md">
+            <p className="hero-fade text-base sm:text-lg text-gray-300 mb-8 sm:mb-10 leading-relaxed font-medium max-w-md"
+              style={{ animationDelay: '300ms' }}>
               Professionell riskutbildning för bil och motorcykel. Erfarna instruktörer, moderna anläggningar, enkelt att boka.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="hero-fade flex flex-col sm:flex-row gap-3" style={{ animationDelay: '450ms' }}>
               <Link
                 href={`/sv/courses`}
                 className="px-6 py-3.5 bg-swedish-yellow text-gray-900 rounded-xl font-bold text-sm sm:text-base hover:bg-yellow-300 transition-all shadow-lg shadow-swedish-yellow/20 hover:shadow-xl hover:-translate-y-0.5 text-center"
