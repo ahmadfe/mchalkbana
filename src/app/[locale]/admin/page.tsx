@@ -488,7 +488,7 @@ export default function AdminPage() {
       else if (recurrence === 'weekly') d.setDate(d.getDate() + i * 7);
       else if (recurrence === 'biweekly') d.setDate(d.getDate() + i * 14);
       else if (recurrence === 'monthly') d.setMonth(d.getMonth() + i);
-      const ds = d.toISOString().split('T')[0];
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       return { start: `${ds}T${startHour}:00`, end: `${ds}T${endHour}:00` };
     });
   };
