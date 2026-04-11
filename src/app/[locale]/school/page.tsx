@@ -38,6 +38,7 @@ export default function SchoolPage() {
 
   const [sessions, setSessions] = useState<Session[]>([]);
   const [bookings, setBookings] = useState<SchoolBooking[]>([]);
+  const [priceMap, setPriceMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -50,16 +51,19 @@ export default function SchoolPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [sessionsRes, bookingsRes] = await Promise.all([
+    const [sessionsRes, bookingsRes, pricesRes] = await Promise.all([
       fetch('/api/sessions?includeSchool=true'),
       fetch('/api/school/bookings'),
+      fetch('/api/school/prices'),
     ]);
-    const [sessionsData, bookingsData] = await Promise.all([
+    const [sessionsData, bookingsData, pricesData] = await Promise.all([
       sessionsRes.json(),
       bookingsRes.json(),
+      pricesRes.json(),
     ]);
     setSessions(sessionsData.sessions || []);
     setBookings(bookingsData.bookings || []);
+    setPriceMap(pricesData.priceMap || {});
     setLoading(false);
   }, []);
 
@@ -237,6 +241,9 @@ export default function SchoolPage() {
                   const full = s.seatsAvailable === 0;
                   const isOpen = expanded.has(s.id);
                   const sessionStudents = bookingsBySession[s.id] || [];
+                  const courseId = s.course?.id;
+                  const customPrice = courseId !== undefined ? priceMap[courseId] : undefined;
+                  const displayPrice = customPrice ?? s.course?.price;
 
                   return (
                     <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -261,6 +268,12 @@ export default function SchoolPage() {
                               <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
                                 👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
                               </span>
+                              {displayPrice !== undefined && (
+                                <span className="text-gray-700 font-semibold">
+                                  {displayPrice.toLocaleString('sv-SE')} kr/elev
+                                  {customPrice !== undefined && <span className="ml-1 text-xs text-swedish-blue font-normal">(ert pris)</span>}
+                                </span>
+                              )}
                               {sessionStudents.length > 0 && (
                                 <span className="text-swedish-blue font-medium">{sessionStudents.length} elev{sessionStudents.length !== 1 ? 'er' : ''} bokade</span>
                               )}

@@ -150,6 +150,12 @@ export default function AdminPage() {
   const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
   const [showSchoolPwd, setShowSchoolPwd] = useState(false);
 
+  // School custom prices modal
+  const [pricesModal, setPricesModal] = useState<{ id: number; name: string } | null>(null);
+  const [schoolPriceMap, setSchoolPriceMap] = useState<Record<number, string>>({});
+  const [pricesSaving, setPricesSaving] = useState(false);
+  const [pricesSaved, setPricesSaved] = useState(false);
+
   // Reset password modal (school)
   const [resetPwdTarget, setResetPwdTarget] = useState<{ id: number; name: string; type: 'school' | 'staff' } | null>(null);
   const [resetPwdValue, setResetPwdValue] = useState('');
@@ -521,6 +527,34 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const openPricesModal = async (acc: { id: number; name: string }) => {
+    setPricesModal(acc);
+    setPricesSaved(false);
+    const res = await fetch(`/api/admin/school-accounts/${acc.id}/prices`);
+    const data = await res.json();
+    const map: Record<number, string> = {};
+    for (const p of data.prices || []) {
+      map[p.courseId] = String(p.price);
+    }
+    setSchoolPriceMap(map);
+  };
+
+  const handleSavePrices = async () => {
+    if (!pricesModal) return;
+    setPricesSaving(true);
+    const prices = courses
+      .filter((c) => schoolPriceMap[c.id] !== undefined && schoolPriceMap[c.id] !== '')
+      .map((c) => ({ courseId: c.id, price: parseInt(schoolPriceMap[c.id]) }))
+      .filter((p) => !isNaN(p.price) && p.price > 0);
+    await fetch(`/api/admin/school-accounts/${pricesModal.id}/prices`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prices }),
+    });
+    setPricesSaving(false);
+    setPricesSaved(true);
   };
 
   const openResetPwd = (id: number, name: string, type: 'school' | 'staff') => {
@@ -1240,6 +1274,13 @@ export default function AdminPage() {
                             <KeyRound className="w-3.5 h-3.5" />Lösenord
                           </button>
                           <button
+                            onClick={() => openPricesModal(acc)}
+                            className="flex items-center gap-1 text-xs text-gray-600 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            title="Ange priser per kurs"
+                          >
+                            <Tag className="w-3.5 h-3.5" />Priser
+                          </button>
+                          <button
                             onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
                             className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-brand-50 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Rapport & Faktura"
@@ -1641,6 +1682,68 @@ export default function AdminPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* School Prices Modal */}
+      {pricesModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+              <div>
+                <h3 className="font-bold text-lg text-gray-900">Priser – {pricesModal.name}</h3>
+                <p className="text-sm text-gray-500">Lämna tomt för att använda kursens standardpris</p>
+              </div>
+              <button onClick={() => setPricesModal(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {courses.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">Inga kurser skapade ännu.</p>
+              ) : (
+                courses.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-gray-50">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{c.titleSv}</p>
+                      <p className="text-xs text-gray-400">Standardpris: {c.price.toLocaleString('sv-SE')} kr</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder={String(c.price)}
+                        value={schoolPriceMap[c.id] ?? ''}
+                        onChange={(e) => setSchoolPriceMap((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                        className="w-28 input-field text-sm py-1.5 text-right"
+                      />
+                      <span className="text-sm text-gray-500">kr</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-100 shrink-0 flex gap-3">
+              <button onClick={() => setPricesModal(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium">
+                Stäng
+              </button>
+              <button
+                onClick={handleSavePrices}
+                disabled={pricesSaving}
+                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {pricesSaving ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</>
+                ) : pricesSaved ? (
+                  <><CheckCircle2 className="w-4 h-4" />Sparat!</>
+                ) : (
+                  <><Save className="w-4 h-4" />Spara priser</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

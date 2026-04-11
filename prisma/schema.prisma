@@ -19,6 +19,7 @@ model User {
   bookings         Booking[]
   schoolBookings   Booking[] @relation("BookingSchoolUser")
   assignedSessions Session[] @relation("AssignedSchoolSessions")
+  schoolCoursePrices SchoolCoursePrice[]
   createdAt        DateTime  @default(now())
 }
 
@@ -42,6 +43,17 @@ model Course {
   location       String    @default("")
   receiptMessage String    @default("")
   sessions       Session[]
+  schoolPrices   SchoolCoursePrice[]
+}
+
+model SchoolCoursePrice {
+  id           Int    @id @default(autoincrement())
+  schoolUserId Int
+  schoolUser   User   @relation(fields: [schoolUserId], references: [id], onDelete: Cascade)
+  courseId     Int
+  course       Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  price        Int
+  @@unique([schoolUserId, courseId])
 }
 
 model Session {

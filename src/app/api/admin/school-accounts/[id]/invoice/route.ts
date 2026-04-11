@@ -26,18 +26,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
   if (!schoolUser) return NextResponse.json({ error: 'Skola hittades inte' }, { status: 404 });
 
-  const bookings = await prisma.booking.findMany({
-    where: {
-      status: { not: 'Canceled' },
-      bookedByRole: 'school',
-      bookingTime: { gte: from, lt: to },
-      bookedBySchoolUserId: schoolUserId,
-    },
-    include: {
-      session: { include: { course: true } },
-    },
-    orderBy: { session: { startTime: 'asc' } },
-  });
+  const [bookings, schoolPrices] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        status: { not: 'Canceled' },
+        bookedByRole: 'school',
+        bookingTime: { gte: from, lt: to },
+        bookedBySchoolUserId: schoolUserId,
+      },
+      include: {
+        session: { include: { course: true } },
+      },
+      orderBy: { session: { startTime: 'asc' } },
+    }),
+    prisma.schoolCoursePrice.findMany({
+      where: { schoolUserId },
+      select: { courseId: true, price: true },
+    }),
+  ]);
+
+  // Build courseId → custom price map
+  const customPriceMap: Record<number, number> = {};
+  for (const p of schoolPrices) {
+    customPriceMap[p.courseId] = p.price;
+  }
 
   const sessionMap: Record<number, {
     courseName: string;
@@ -49,10 +61,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   for (const b of bookings) {
     const sid = b.sessionId;
     if (!sessionMap[sid]) {
+      const courseId = b.session.course.id;
+      const effectivePrice = customPriceMap[courseId] ?? b.session.course.price;
       sessionMap[sid] = {
         courseName: b.session.course.titleSv,
         sessionDate: new Date(b.session.startTime).toLocaleDateString('sv-SE'),
-        pricePerStudent: b.session.course.price,
+        pricePerStudent: effectivePrice,
         count: 0,
       };
     }
