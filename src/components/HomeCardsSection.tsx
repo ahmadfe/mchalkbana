@@ -205,14 +205,14 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
           {/* Scrollable track */}
           <div
             ref={scrollRef}
-            className="flex gap-5 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+            className="flex gap-6 overflow-x-auto [&::-webkit-scrollbar]:hidden"
             style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
           >
             {visibleCards.map((card) => (
               <div
                 key={card.id}
                 className={clsx(
-                  'min-w-[82%] sm:min-w-[calc(50%-10px)] lg:min-w-[calc(33.33%-14px)]',
+                  'min-w-[82%] sm:min-w-[calc(50%-12px)] lg:min-w-[calc(33.33%-16px)]',
                   'flex-shrink-0 bg-white rounded-[28px] overflow-hidden shadow-sm',
                   'group relative flex flex-col hover:-translate-y-1 transition-transform duration-200',
                   !card.visible && isAdmin && 'opacity-60',
