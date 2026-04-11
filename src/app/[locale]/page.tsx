@@ -13,12 +13,12 @@ import type { Session } from '@/lib/types';
 
 export async function generateMetadata() {
   return {
-    title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
+    title: 'Uppsalahalkbana',
     description:
       'Boka riskutbildning Risk 1 och Risk 2 för bil och motorcykel nära Uppsala, Stockholm och Gävle. Säkra din plats idag – populära kurstillfällen fylls snabbt.',
     alternates: { canonical: '/sv' },
     openGraph: {
-      title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
+      title: 'Uppsalahalkbana',
       description:
         'Professionell riskutbildning godkänd av Transportstyrelsen. Boka online – snabbt och enkelt.',
       url: 'https://www.uppsalahalkbana.se/sv',
