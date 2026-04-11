@@ -117,6 +117,8 @@ export default function AdminPage() {
 
   const [tab, setTab] = useState<Tab>('overview');
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
+  const [bookingYear, setBookingYear] = useState(() => String(new Date().getFullYear()));
+  const [bookingMonth, setBookingMonth] = useState(() => String(new Date().getMonth() + 1));
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
@@ -1064,7 +1066,20 @@ export default function AdminPage() {
 
           {/* Bookings */}
           {tab === 'bookings' && (() => {
-            const filtered = bookingStatusFilter === 'all' ? bookings : bookings.filter(b => b.status === bookingStatusFilter);
+            const MONTHS = [
+              { v: '1', l: 'Januari' }, { v: '2', l: 'Februari' }, { v: '3', l: 'Mars' },
+              { v: '4', l: 'April' }, { v: '5', l: 'Maj' }, { v: '6', l: 'Juni' },
+              { v: '7', l: 'Juli' }, { v: '8', l: 'Augusti' }, { v: '9', l: 'September' },
+              { v: '10', l: 'Oktober' }, { v: '11', l: 'November' }, { v: '12', l: 'December' },
+            ];
+            const availableYears = Array.from(new Set(bookings.map(b => String(new Date(b.bookingTime).getFullYear())))).sort((a, b) => Number(b) - Number(a));
+            const filtered = bookings.filter(b => {
+              const d = new Date(b.bookingTime);
+              const yearMatch = String(d.getFullYear()) === bookingYear;
+              const monthMatch = bookingMonth === 'all' || String(d.getMonth() + 1) === bookingMonth;
+              const statusMatch = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
+              return yearMatch && monthMatch && statusMatch;
+            });
             const groups: Record<string, Booking[]> = {};
             [...filtered].sort((a, b) => new Date(b.bookingTime).getTime() - new Date(a.bookingTime).getTime()).forEach((b) => {
               const key = new Date(b.bookingTime).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
@@ -1075,7 +1090,7 @@ export default function AdminPage() {
             return (
               <div>
                 <div className="flex justify-between items-center mb-5">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <h2 className="font-bold text-gray-900">Alla bokningar ({filtered.length})</h2>
                     <select
                       value={bookingStatusFilter}
@@ -1088,12 +1103,30 @@ export default function AdminPage() {
                       <option value="Paid">Paid</option>
                       <option value="Canceled">Canceled</option>
                     </select>
+                    <select
+                      value={bookingYear}
+                      onChange={(e) => { setBookingYear(e.target.value); setBookingMonth('all'); }}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    <select
+                      value={bookingMonth}
+                      onChange={(e) => setBookingMonth(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      <option value="all">Alla månader</option>
+                      {MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    </select>
                   </div>
                   <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
                     <Download className="w-4 h-4" />
                     {t('export_csv')}
                   </button>
                 </div>
+                {monthKeys.length === 0 && (
+                  <div className="text-center py-16 text-gray-400 text-sm">Inga bokningar för vald period.</div>
+                )}
                 {monthKeys.map((month) => (
                   <div key={month} className="mb-8">
                     <div className="flex items-center gap-3 mb-3">
