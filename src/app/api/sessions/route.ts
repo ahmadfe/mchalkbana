@@ -34,9 +34,13 @@ export async function GET(request: Request) {
     visibilityFilter = { visibility: 'public' };
   }
 
+  // Public users: hide sessions starting within 1 hour
+  const cutoff = !isAdmin ? new Date(Date.now() + 60 * 60 * 1000) : undefined;
+
   const sessions = await prisma.session.findMany({
     where: {
       ...visibilityFilter,
+      ...(cutoff ? { startTime: { gt: cutoff } } : {}),
       ...(availableOnly ? { seatsAvailable: { gt: 0 } } : {}),
       course: {
         ...(type ? { type } : {}),
