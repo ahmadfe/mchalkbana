@@ -279,7 +279,7 @@ function CheckoutContent() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Plats:</span>
-                  <span className="font-medium">{session.school?.name}</span>
+                  <span className="font-medium">{course.location || session.school?.address || session.school?.name}</span>
                 </div>
                 {bookingId && (
                   <div className="flex justify-between text-xs text-gray-400 pt-1">
@@ -487,7 +487,7 @@ function CheckoutContent() {
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-gray-500">Plats:</span>
-                    <span className="font-medium text-right">{session.school?.name}</span>
+                    <span className="font-medium text-right">{course.location || session.school?.address || session.school?.name}</span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-gray-500">Platser kvar:</span>

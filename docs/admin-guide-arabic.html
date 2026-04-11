@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>دليل المدير – Uppsala Halkbana</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', 'Arial', sans-serif;
+      direction: rtl;
+      text-align: right;
+      color: #1a1a1a;
+      background: #fff;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 40px;
+      line-height: 1.9;
+      font-size: 14pt;
+    }
+
+    /* Cover */
+    .cover {
+      text-align: center;
+      padding: 60px 0 80px;
+      border-bottom: 3px solid #00C4D4;
+      margin-bottom: 48px;
+    }
+    .cover h1 {
+      font-size: 28pt;
+      color: #00C4D4;
+      margin: 0 0 8px;
+    }
+    .cover h2 {
+      font-size: 18pt;
+      color: #333;
+      font-weight: normal;
+      margin: 0 0 24px;
+    }
+    .cover .meta {
+      font-size: 11pt;
+      color: #888;
+    }
+
+    /* Section headings */
+    h2.section {
+      font-size: 17pt;
+      color: #00C4D4;
+      border-bottom: 2px solid #e0f9fb;
+      padding-bottom: 6px;
+      margin-top: 48px;
+      margin-bottom: 16px;
+    }
+    h3.subsection {
+      font-size: 13pt;
+      color: #007a87;
+      margin-top: 28px;
+      margin-bottom: 8px;
+    }
+
+    /* Note / tip box */
+    .note {
+      background: #e0f9fb;
+      border-right: 4px solid #00C4D4;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 12pt;
+    }
+    .warn {
+      background: #fff3cd;
+      border-right: 4px solid #f59e0b;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 12pt;
+    }
+
+    /* Steps */
+    ol.steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+    }
+    ol.steps li {
+      counter-increment: step;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    ol.steps li::before {
+      content: counter(step);
+      background: #00C4D4;
+      color: #fff;
+      font-weight: bold;
+      min-width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11pt;
+      flex-shrink: 0;
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 12pt;
+    }
+    th {
+      background: #00C4D4;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: right;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    tr:nth-child(even) td {
+      background: #f8fffe;
+    }
+
+    /* Path label */
+    .path {
+      background: #1e293b;
+      color: #7dd3fc;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11pt;
+      display: inline-block;
+    }
+
+    /* TOC */
+    .toc {
+      background: #f8fffe;
+      border: 1px solid #b2eef3;
+      border-radius: 8px;
+      padding: 20px 28px;
+      margin-bottom: 40px;
+    }
+    .toc h3 {
+      color: #00C4D4;
+      margin: 0 0 12px;
+      font-size: 13pt;
+    }
+    .toc ol {
+      margin: 0;
+      padding-right: 20px;
+    }
+    .toc li {
+      margin-bottom: 6px;
+      font-size: 12pt;
+    }
+
+    p { margin: 8px 0 14px; }
+    ul { padding-right: 20px; }
+    li { margin-bottom: 6px; }
+
+    @media print {
+      body { padding: 20px; }
+      .cover { page-break-after: always; }
+      h2.section { page-break-before: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     COVER
+══════════════════════════════════════════ -->
+<div class="cover">
+  <h1>Uppsala Halkbana</h1>
+  <h2>دليل المدير – شرح كامل لاستخدام لوحة التحكم</h2>
+  <div class="meta">
+    الإصدار 1.0 &nbsp;|&nbsp; تاريخ التوثيق: أبريل 2026
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════════ -->
+<div class="toc">
+  <h3>📋 فهرس المحتويات</h3>
+  <ol>
+    <li>نظرة عامة على النظام</li>
+    <li>تسجيل الدخول</li>
+    <li>لوحة تحكم المدير – نظرة عامة</li>
+    <li>إدارة الكورسات (Kurser)</li>
+    <li>إدارة الجلسات / المواعيد (Sessioner)</li>
+    <li>إدارة الحجوزات (Bokningar)</li>
+    <li>إضافة طالب يدوياً</li>
+    <li>إدارة حسابات المدارس (Trafikskolor)</li>
+    <li>إدارة بطاقات الصفحة الرئيسية (Infokort)</li>
+    <li>إعدادات الموقع (Hero & رسالة الكويتانس)</li>
+    <li>الإحصائيات والتقارير</li>
+    <li>رسالة OBS على الكويتانس</li>
+    <li>الأسئلة الشائعة للمدير</li>
+  </ol>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     1. نظرة عامة
+══════════════════════════════════════════ -->
+<h2 class="section">١. نظرة عامة على النظام</h2>
+
+<p>
+  موقع <strong>Uppsala Halkbana</strong> هو نظام حجز إلكتروني متكامل لتسجيل دورات تعليم القيادة (Risk 1 و Risk 2 وغيرها).
+  يتيح النظام للمدير إدارة كل شيء بالكامل من خلال لوحة تحكم مركزية.
+</p>
+
+<table>
+  <tr><th>الدور</th><th>الوصف</th></tr>
+  <tr><td><strong>Admin (مدير)</strong></td><td>صلاحيات كاملة – إدارة كل شيء</td></tr>
+  <tr><td><strong>School (مدرسة)</strong></td><td>يرى الجلسات المخصصة له ويحجز للطلاب</td></tr>
+  <tr><td><strong>Student (طالب)</strong></td><td>يحجز ويدفع بنفسه عبر الموقع</td></tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════
+     2. تسجيل الدخول
+══════════════════════════════════════════ -->
+<h2 class="section">٢. تسجيل الدخول</h2>
+
+<ol class="steps">
+  <li>افتح الموقع واضغط على <strong>"Skolinloggning"</strong> في شريط التنقل العلوي</li>
+  <li>أدخل البريد الإلكتروني وكلمة المرور الخاصة بحساب المدير</li>
+  <li>اضغط <strong>"Logga in"</strong></li>
+  <li>بعد الدخول، ستظهر كلمة <strong>"Admin"</strong> في شريط التنقل – اضغط عليها للدخول إلى لوحة التحكم</li>
+</ol>
+
+<div class="note">
+  💡 رابط لوحة التحكم المباشر: <span class="path">/sv/admin</span>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     3. لوحة التحكم
+══════════════════════════════════════════ -->
+<h2 class="section">٣. لوحة تحكم المدير – نظرة عامة</h2>
+
+<p>تحتوي لوحة التحكم على تبويبات (Tabs) رئيسية في الأعلى:</p>
+
+<table>
+  <tr><th>اسم التبويب</th><th>ماذا يحتوي</th></tr>
+  <tr><td>Översikt</td><td>إحصائيات عامة: عدد الحجوزات، الإيرادات، الجلسات القادمة</td></tr>
+  <tr><td>Kurser</td><td>إدارة الكورسات (إضافة، تعديل، حذف)</td></tr>
+  <tr><td>Sessioner</td><td>إدارة المواعيد / الجلسات</td></tr>
+  <tr><td>Bokningar</td><td>جميع الحجوزات وإدارتها</td></tr>
+  <tr><td>Trafikskolor</td><td>إدارة حسابات المدارس</td></tr>
+  <tr><td>Infokort</td><td>بطاقات الصفحة الرئيسية</td></tr>
+  <tr><td>Inställningar</td><td>إعدادات الموقع (فيديو، صورة، رسائل)</td></tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════
+     4. إدارة الكورسات
+══════════════════════════════════════════ -->
+<h2 class="section">٤. إدارة الكورسات (Kurser)</h2>
+
+<h3 class="subsection">إضافة كورس جديد</h3>
+<ol class="steps">
+  <li>اضغط على تبويب <strong>Kurser</strong></li>
+  <li>اضغط على زر <strong>"+ Ny kurs"</strong></li>
+  <li>املأ الحقول التالية:</li>
+</ol>
+
+<table>
+  <tr><th>الحقل</th><th>الوصف</th></tr>
+  <tr><td>Titel (SV)</td><td>اسم الكورس بالسويدية</td></tr>
+  <tr><td>Titel (EN)</td><td>اسم الكورس بالإنجليزية</td></tr>
+  <tr><td>Beskrivning</td><td>وصف مختصر للكورس</td></tr>
+  <tr><td>Typ</td><td>نوع الكورس: Risk1 / Risk2 / AM / Intro / Other</td></tr>
+  <tr><td>Fordon</td><td>نوع المركبة: Car / Motorcycle / Moped</td></tr>
+  <tr><td>Behörighet</td><td>رمز الرخصة المطلوبة (مثلاً B، A، AM)</td></tr>
+  <tr><td>Pris (kr)</td><td>السعر الإجمالي شامل الضريبة (25% moms)</td></tr>
+  <tr><td>Plats</td><td>الموقع الجغرافي</td></tr>
+  <tr><td>Meddelande på kvitto</td><td>رسالة OBS تظهر على الكويتانس (اختياري)</td></tr>
+</table>
+
+<ol class="steps" start="4">
+  <li>اضغط <strong>"Spara"</strong> لحفظ الكورس</li>
+</ol>
+
+<h3 class="subsection">تعديل كورس موجود</h3>
+<p>
+  اضغط على أيقونة القلم ✏️ بجانب الكورس، عدّل الحقول المطلوبة ثم اضغط <strong>"Spara"</strong>.
+</p>
+
+<div class="warn">
+  ⚠️ حذف كورس سيؤدي إلى حذف جميع الجلسات المرتبطة به. تأكد قبل الحذف.
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     5. إدارة الجلسات
+══════════════════════════════════════════ -->
+<h2 class="section">٥. إدارة الجلسات / المواعيد (Sessioner)</h2>
+
+<h3 class="subsection">إضافة جلسة جديدة</h3>
+<ol class="steps">
+  <li>اضغط على تبويب <strong>Sessioner</strong></li>
+  <li>اضغط <strong>"+ Ny session"</strong></li>
+  <li>اختر الكورس من القائمة</li>
+  <li>اختر المدرسة / الموقع</li>
+  <li>حدد تاريخ ووقت البداية <strong>(Starttid)</strong></li>
+  <li>حدد وقت النهاية <strong>(Sluttid)</strong></li>
+  <li>حدد عدد المقاعد المتاحة <strong>(Platser)</strong></li>
+  <li>اختر مستوى الظهور: <strong>public</strong> (يظهر للجميع) أو <strong>private</strong> (للمدارس فقط)</li>
+  <li>اضغط <strong>"Spara"</strong></li>
+</ol>
+
+<div class="note">
+  💡 يمكن تعيين الجلسة لمدرسة معينة بحيث يراها مستخدمو تلك المدرسة فقط.
+</div>
+
+<h3 class="subsection">عرض طلاب الجلسة</h3>
+<p>
+  اضغط على <strong>"Visa elever"</strong> بجانب أي جلسة لعرض قائمة الطلاب المسجلين فيها.
+</p>
+
+
+<!-- ══════════════════════════════════════════
+     6. إدارة الحجوزات
+══════════════════════════════════════════ -->
+<h2 class="section">٦. إدارة الحجوزات (Bokningar)</h2>
+
+<p>يعرض هذا القسم جميع الحجوزات في النظام مع إمكانية البحث والتصفية.</p>
+
+<table>
+  <tr><th>الحالة</th><th>المعنى</th></tr>
+  <tr><td>Paid ✅</td><td>تم الدفع – الحجز مكتمل</td></tr>
+  <tr><td>Confirmed ✅</td><td>محجوز من قبل مدير أو مدرسة (بدون دفع فوري)</td></tr>
+  <tr><td>Pending ⏳</td><td>في انتظار الدفع</td></tr>
+  <tr><td>Canceled ❌</td><td>ملغى</td></tr>
+</table>
+
+<h3 class="subsection">تعديل حجز</h3>
+<p>اضغط على أيقونة القلم ✏️ بجانب الحجز لتعديل: الاسم، رقم الهوية، الإيميل، الهاتف، أو الحالة.</p>
+
+<h3 class="subsection">حذف حجز</h3>
+<p>اضغط على أيقونة الحذف 🗑️ – سيُعاد المقعد تلقائياً إلى الجلسة.</p>
+
+
+<!-- ══════════════════════════════════════════
+     7. إضافة طالب يدوياً
+══════════════════════════════════════════ -->
+<h2 class="section">٧. إضافة طالب يدوياً</h2>
+
+<p>يمكن للمدير حجز مقعد لطالب مباشرة بدون الحاجة إلى دفع إلكتروني.</p>
+
+<ol class="steps">
+  <li>اذهب إلى تبويب <strong>Sessioner</strong></li>
+  <li>ابحث عن الجلسة المطلوبة واضغط <strong>"Visa elever"</strong></li>
+  <li>اضغط <strong>"+ Lägg till elev"</strong></li>
+  <li>أدخل: الاسم، رقم الهوية الشخصية (Personnummer)، الإيميل، الهاتف</li>
+  <li>اضغط <strong>"Lägg till"</strong></li>
+</ol>
+
+<div class="note">
+  💡 إذا أدخلت إيميل الطالب، سيتلقى تلقائياً رسالة تأكيد الحجز تتضمن تفاصيل الكورس ورسالة OBS إن وجدت.
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     8. إدارة حسابات المدارس
+══════════════════════════════════════════ -->
+<h2 class="section">٨. إدارة حسابات المدارس (Trafikskolor)</h2>
+
+<h3 class="subsection">إضافة مدرسة جديدة</h3>
+<ol class="steps">
+  <li>اضغط على تبويب <strong>Trafikskolor</strong></li>
+  <li>اضغط <strong>"+ Ny trafikskola"</strong></li>
+  <li>أدخل: اسم المدرسة، البريد الإلكتروني، كلمة المرور، العنوان</li>
+  <li>اضغط <strong>"Spara"</strong> – سيتلقى المسؤول بريداً بتفاصيل الدخول</li>
+</ol>
+
+<h3 class="subsection">الفواتير والتقارير</h3>
+<p>
+  بجانب كل مدرسة يوجد زر <strong>📄 Rapport & Faktura</strong>.
+  اضغط عليه واختر الشهر لتوليد تقرير PDF بجميع حجوزات تلك المدرسة وفاتورة شهرية.
+</p>
+
+<table>
+  <tr><th>العملية</th><th>الوصف</th></tr>
+  <tr><td>Rapport</td><td>تقرير بجميع الحجوزات والمبالغ للشهر المحدد</td></tr>
+  <tr><td>Faktura</td><td>فاتورة رسمية PDF ترسل للمدرسة</td></tr>
+</table>
+
+
+<!-- ══════════════════════════════════════════
+     9. بطاقات الصفحة الرئيسية
+══════════════════════════════════════════ -->
+<h2 class="section">٩. إدارة بطاقات الصفحة الرئيسية (Infokort)</h2>
+
+<p>
+  بطاقات المعلومات هي الكروت التي تظهر في الصفحة الرئيسية أسفل الـ Hero مباشرة.
+  يمكن للمدير إضافتها وتعديلها وحذفها مباشرة من الصفحة الرئيسية بعد تسجيل الدخول.
+</p>
+
+<h3 class="subsection">إضافة بطاقة</h3>
+<ol class="steps">
+  <li>افتح الصفحة الرئيسية وأنت مسجل دخول كمدير</li>
+  <li>اضغط <strong>"+ Lägg till kort"</strong></li>
+  <li>أدخل: العنوان، الوصف، السعر، رابط الصورة أو الفيديو، أزرار الروابط</li>
+  <li>اضغط <strong>"Spara"</strong></li>
+</ol>
+
+<h3 class="subsection">تعديل أو حذف بطاقة</h3>
+<p>
+  مرر الماوس فوق البطاقة – ستظهر أزرار <strong>"Redigera"</strong> و<strong>"Ta bort"</strong> في الزاوية العلوية.
+</p>
+
+<div class="note">
+  💡 يمكن إخفاء بطاقة مؤقتاً بتعطيل خيار <strong>"Synlig"</strong> دون حذفها.
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     10. إعدادات الموقع
+══════════════════════════════════════════ -->
+<h2 class="section">١٠. إعدادات الموقع (Inställningar)</h2>
+
+<table>
+  <tr><th>الإعداد</th><th>الوصف</th></tr>
+  <tr><td>Hero Video URL</td><td>رابط فيديو يظهر خلفية الـ Hero في الصفحة الرئيسية</td></tr>
+  <tr><td>Hero Image URL</td><td>رابط صورة تظهر بدلاً من الفيديو</td></tr>
+  <tr><td>Kvittomeddelande</td><td>رسالة عامة تظهر على جميع الكويتانسات</td></tr>
+</table>
+
+<div class="note">
+  💡 إذا لم يُضف فيديو أو صورة، يظهر تدرج لوني افتراضي بألوان العلامة التجارية.
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     11. الإحصائيات
+══════════════════════════════════════════ -->
+<h2 class="section">١١. الإحصائيات والتقارير (Översikt)</h2>
+
+<p>تبويب <strong>Översikt</strong> يعرض:</p>
+<ul>
+  <li>إجمالي الحجوزات</li>
+  <li>الإيرادات الكلية (kr)</li>
+  <li>عدد الجلسات القادمة</li>
+  <li>عدد الطلاب المسجلين</li>
+  <li>آخر الحجوزات</li>
+  <li>الكورسات الأكثر حجزاً</li>
+</ul>
+
+
+<!-- ══════════════════════════════════════════
+     12. رسالة OBS
+══════════════════════════════════════════ -->
+<h2 class="section">١٢. رسالة OBS على الكويتانس</h2>
+
+<p>
+  رسالة <strong>OBS</strong> هي تنبيه بالأحمر يظهر للطالب على الكويتانس بعد الدفع.
+  تُستخدم لتذكير الطالب بأشياء مهمة مثل: "أحضر معك الهوية" أو "ارتدِ ملابس دافئة".
+</p>
+
+<h3 class="subsection">كيفية إضافة رسالة OBS</h3>
+<ol class="steps">
+  <li>اذهب إلى تبويب <strong>Kurser</strong></li>
+  <li>اضغط على أيقونة التعديل ✏️ للكورس المطلوب</li>
+  <li>في حقل <strong>"Meddelande på kvitto"</strong> أدخل النص المطلوب</li>
+  <li>اضغط <strong>"Spara"</strong></li>
+</ol>
+
+<p>ستظهر الرسالة:</p>
+<ul>
+  <li>✅ على الكويتانس الإلكتروني داخل الموقع</li>
+  <li>✅ في رسالة الإيميل المرسلة للطالب بعد الدفع</li>
+  <li>✅ في رسالة تأكيد الحجز عند إضافة طالب يدوياً من قبل المدير</li>
+</ul>
+
+<div class="warn">
+  ⚠️ إذا تركت الحقل فارغاً، لن يظهر أي تنبيه OBS على الكويتانس.
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     13. أسئلة شائعة للمدير
+══════════════════════════════════════════ -->
+<h2 class="section">١٣. الأسئلة الشائعة للمدير</h2>
+
+<h3 class="subsection">كيف أغير كلمة مرور مدرسة؟</h3>
+<p>
+  حالياً يجب التواصل مع المطور لتغيير كلمة المرور مباشرة من قاعدة البيانات.
+</p>
+
+<h3 class="subsection">كيف أجعل جلسة مخفية عن العامة؟</h3>
+<p>
+  عند إنشاء أو تعديل الجلسة، غيّر خيار <strong>Synlighet</strong> من <strong>public</strong> إلى <strong>private</strong>.
+</p>
+
+<h3 class="subsection">هل يمكن إعادة إرسال الكويتانس؟</h3>
+<p>
+  لا يوجد حالياً زر "إعادة إرسال" – يجب التواصل مع الطالب يدوياً أو من خلال نظام الإيميل.
+</p>
+
+<h3 class="subsection">ماذا يحدث إذا ألغيت حجزاً؟</h3>
+<p>
+  يُعاد المقعد تلقائياً إلى الجلسة ويمكن لطالب آخر حجزه.
+  لا يتم استرجاع الدفع تلقائياً – يجب إدارة الاسترجاع يدوياً عبر Swish.
+</p>
+
+<h3 class="subsection">من أين أجد رقم الحجز (Boknings-ID)؟</h3>
+<p>
+  يظهر رقم الحجز في تبويب <strong>Bokningar</strong> بجانب كل حجز، وأيضاً في الكويتانس المرسل للطالب.
+</p>
+
+<!-- Footer -->
+<div style="margin-top: 60px; border-top: 2px solid #00C4D4; padding-top: 16px; text-align: center; color: #888; font-size: 10pt;">
+  Uppsala Halkbana &nbsp;|&nbsp; وثيقة داخلية للمدير &nbsp;|&nbsp; إصدار 1.0 – أبريل 2026
+</div>
+
+</body>
+</html>

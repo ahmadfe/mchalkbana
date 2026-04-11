@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { Menu, X } from 'lucide-react';
-import LanguageSwitch from './LanguageSwitch';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
@@ -80,7 +79,6 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="hidden md:flex items-center gap-3">
-            <LanguageSwitch />
             {user ? (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">{user.name}</span>
@@ -153,7 +151,6 @@ export default function Navbar() {
             </Link>
           )}
           <div className="flex items-center gap-3 pt-3 border-t border-gray-100 mt-2">
-            <LanguageSwitch />
             {user ? (
               <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-gray-900">
                 {t('logout')}
