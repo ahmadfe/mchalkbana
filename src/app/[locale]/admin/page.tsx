@@ -34,6 +34,8 @@ import {
   Video,
   MonitorPlay,
   KeyRound,
+  Clock,
+  RefreshCw,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -253,7 +255,12 @@ export default function AdminPage() {
   const [testEmailError, setTestEmailError] = useState('');
 
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] as number[] });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] as number[] });
+  const [sessionDate, setSessionDate] = useState('');
+  const [startHour, setStartHour] = useState('09:00');
+  const [endHour, setEndHour] = useState('12:00');
+  const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
+  const [recurrenceCount, setRecurrenceCount] = useState(4);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -472,21 +479,42 @@ export default function AdminPage() {
     }
   };
 
+  const getSessionDates = () => {
+    if (!sessionDate) return [];
+    const count = recurrence === 'none' ? 1 : recurrenceCount;
+    return Array.from({ length: count }, (_, i) => {
+      const d = new Date(`${sessionDate}T00:00:00`);
+      if (recurrence === 'weekly') d.setDate(d.getDate() + i * 7);
+      else if (recurrence === 'biweekly') d.setDate(d.getDate() + i * 14);
+      else if (recurrence === 'monthly') d.setMonth(d.getMonth() + i);
+      const ds = d.toISOString().split('T')[0];
+      return { start: `${ds}T${startHour}:00`, end: `${ds}T${endHour}:00` };
+    });
+  };
+
   const handleAddSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newSession),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setSessions((prev) => [...prev, data.session]);
-      setShowAddSession(false);
-      setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', startTime: '', endTime: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
+    const dates = getSessionDates();
+    const results = await Promise.all(
+      dates.map(({ start, end }) =>
+        fetch('/api/admin/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...newSession, startTime: start, endTime: end }),
+        }).then(r => r.ok ? r.json() : null)
+      )
+    );
+    const created = results.filter(Boolean).map((d: any) => d.session);
+    setSessions((prev) => [...prev, ...created]);
+    setShowAddSession(false);
+    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] });
+    setSessionDate('');
+    setStartHour('09:00');
+    setEndHour('12:00');
+    setRecurrence('none');
+    setRecurrenceCount(4);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleSaveReceiptMessage = async () => {
@@ -2395,54 +2423,75 @@ export default function AdminPage() {
       {/* Add Session Modal */}
       {showAddSession && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
               <h3 className="font-bold text-lg">{t('add_session')}</h3>
-              <button onClick={() => setShowAddSession(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowAddSession(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form className="space-y-4" onSubmit={handleAddSession}>
+
+            <form className="flex-1 overflow-y-auto px-6 py-5 space-y-5" onSubmit={handleAddSession}>
+              {/* Course */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Kurs</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Kurs</label>
                 <select className="input-field" value={newSession.courseId} onChange={(e) => setNewSession({ ...newSession, courseId: e.target.value })} required>
                   <option value="">Välj kurs...</option>
                   {courses.map((c) => {
-                    const typeLabel = c.type === 'Risk1' ? 'Risk 1' : c.type === 'Risk2' ? 'Risk 2' : c.type;
-                    const vehicleLabel = c.vehicle === 'Car' ? 'Bil' : c.vehicle === 'Motorcycle' ? 'MC' : c.vehicle;
-                    return (
-                      <option key={c.id} value={c.id}>[{typeLabel} – {vehicleLabel}] {locale === 'sv' ? c.titleSv : c.titleEn}</option>
-                    );
+                    const vehicleLabel = c.vehicle === 'Car' ? 'Bil 🚗' : c.vehicle === 'Motorcycle' ? 'MC 🏍️' : c.vehicle;
+                    return <option key={c.id} value={c.id}>{locale === 'sv' ? c.titleSv : c.titleEn} · {vehicleLabel}</option>;
                   })}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Startdatum</label>
-                  <input type="datetime-local" className="input-field" value={newSession.startTime} onChange={(e) => setNewSession({ ...newSession, startTime: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Slutdatum</label>
-                  <input type="datetime-local" className="input-field" value={newSession.endTime} onChange={(e) => setNewSession({ ...newSession, endTime: e.target.value })} required />
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Datum</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input type="date" className="input-field pl-9" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} required />
                 </div>
               </div>
+
+              {/* Times */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Platsgräns</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Starttid</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <input type="time" className="input-field pl-9" value={startHour} onChange={(e) => setStartHour(e.target.value)} required />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sluttid</label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <input type="time" className="input-field pl-9" value={endHour} onChange={(e) => setEndHour(e.target.value)} required />
+                  </div>
+                </div>
+              </div>
+
+              {/* Seats + Visibility */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Platsgräns</label>
                   <input type="number" className="input-field" placeholder="20" min="1" value={newSession.seatLimit} onChange={(e) => setNewSession({ ...newSession, seatLimit: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Synlighet</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Synlighet</label>
                   <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value, assignedSchoolUserIds: [] })}>
                     <option value="public">Offentlig</option>
                     <option value="school">Skolkonto</option>
                   </select>
                 </div>
               </div>
+
+              {/* School assignment */}
               {newSession.visibility === 'school' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Tilldela trafikskolor (välj en eller flera)</label>
-                  <div className="border border-gray-200 rounded-xl bg-white max-h-40 overflow-y-auto p-2 space-y-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tilldela trafikskolor</label>
+                  <div className="border border-gray-200 rounded-xl bg-white max-h-36 overflow-y-auto p-2 space-y-1">
                     {schoolAccounts.map((acc) => (
                       <label key={acc.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-50 text-sm">
                         <input
@@ -2460,17 +2509,84 @@ export default function AdminPage() {
                       </label>
                     ))}
                     {schoolAccounts.length === 0 && (
-                      <p className="text-xs text-orange-500 px-2 py-1">Inga trafikskola-konton skapade ännu. Gå till fliken Trafikskolor.</p>
+                      <p className="text-xs text-orange-500 px-2 py-1">Inga trafikskola-konton skapade ännu.</p>
                     )}
                   </div>
                 </div>
               )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
+
+              {/* Recurrence */}
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+                  <RefreshCw className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-700">Upprepa pass</span>
+                </div>
+                <div className="px-4 py-4 space-y-4">
+                  {/* Repeat type buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'none', label: 'Ingen upprepning' },
+                      { value: 'weekly', label: 'Varje vecka' },
+                      { value: 'biweekly', label: 'Varannan vecka' },
+                      { value: 'monthly', label: 'Varje månad' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setRecurrence(opt.value as typeof recurrence)}
+                        className={clsx(
+                          'px-3 py-2 rounded-xl text-sm font-medium border transition-all',
+                          recurrence === opt.value
+                            ? 'bg-swedish-blue text-white border-swedish-blue shadow-sm'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-swedish-blue hover:text-swedish-blue'
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Count + preview */}
+                  {recurrence !== 'none' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Antal upprepningar</label>
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => setRecurrenceCount(c => Math.max(2, c - 1))} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 font-bold">−</button>
+                          <span className="text-xl font-bold text-gray-900 w-8 text-center">{recurrenceCount}</span>
+                          <button type="button" onClick={() => setRecurrenceCount(c => Math.min(52, c + 1))} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 font-bold">+</button>
+                          <span className="text-sm text-gray-400">pass skapas</span>
+                        </div>
+                      </div>
+
+                      {sessionDate && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Förhandsgranskning</label>
+                          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            {getSessionDates().map(({ start }, i) => {
+                              const d = new Date(start);
+                              return (
+                                <div key={i} className="flex items-center gap-2.5 text-sm text-gray-600">
+                                  <span className="w-5 h-5 rounded-full bg-swedish-blue/10 text-swedish-blue text-xs flex items-center justify-center font-bold shrink-0">{i + 1}</span>
+                                  <span>{d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })} · {startHour}–{endHour}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer buttons */}
+              <div className="flex gap-3 pt-1 pb-1">
+                <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 font-medium">
                   Avbryt
                 </button>
                 <button type="submit" className="flex-1 btn-primary py-2.5">
-                  Spara pass
+                  {recurrence !== 'none' ? `Skapa ${recurrenceCount} pass` : 'Spara pass'}
                 </button>
               </div>
             </form>
