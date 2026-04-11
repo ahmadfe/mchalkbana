@@ -18,6 +18,7 @@ interface StudentForm {
   personnummer: string;
   phone: string;
   email: string;
+  sendConfirmation: boolean;
 }
 
 interface SchoolBooking {
@@ -84,14 +85,14 @@ export default function SchoolPage() {
 
   const openModal = (session: Session) => {
     setActiveSession(session);
-    setStudents([{ name: '', personnummer: '', phone: '', email: '' }]);
+    setStudents([{ name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
     setSaveError('');
     setSaveSuccess(false);
   };
 
-  const addStudentRow = () => setStudents((p) => [...p, { name: '', personnummer: '', phone: '', email: '' }]);
+  const addStudentRow = () => setStudents((p) => [...p, { name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
   const removeStudentRow = (i: number) => setStudents((p) => p.filter((_, idx) => idx !== i));
-  const updateStudentRow = (i: number, field: keyof StudentForm, value: string) =>
+  const updateStudentRow = (i: number, field: keyof StudentForm, value: string | boolean) =>
     setStudents((p) => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
 
   const handleSaveStudents = async () => {
@@ -112,6 +113,7 @@ export default function SchoolPage() {
           personnummer: student.personnummer,
           guestPhone: student.phone || null,
           guestEmail: student.email || null,
+          sendConfirmation: student.sendConfirmation,
         }),
       });
       if (!res.ok) {
@@ -464,6 +466,17 @@ export default function SchoolPage() {
                           <input type="email" className="input-field text-sm" placeholder="anna@skola.se" value={s.email} onChange={(e) => updateStudentRow(i, 'email', e.target.value)} />
                         </div>
                       </div>
+                      {s.email && (
+                        <label className="flex items-center gap-2 cursor-pointer select-none mt-1">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded accent-swedish-blue"
+                            checked={s.sendConfirmation}
+                            onChange={(e) => updateStudentRow(i, 'sendConfirmation', e.target.checked)}
+                          />
+                          <span className="text-xs text-gray-600">Skicka bokningsbekräftelse via e-post</span>
+                        </label>
+                      )}
                     </div>
                   ))}
                   <button

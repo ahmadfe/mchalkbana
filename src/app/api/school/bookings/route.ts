@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { sessionId, guestName, personnummer, guestPhone, guestEmail } = await request.json();
+  const { sessionId, guestName, personnummer, guestPhone, guestEmail, sendConfirmation } = await request.json();
   if (!sessionId || !guestName || !personnummer) {
     return NextResponse.json({ error: 'Session, namn och personnummer krävs' }, { status: 400 });
   }
@@ -77,7 +77,11 @@ export async function POST(request: Request) {
     }),
   ]);
 
-  if (guestEmail) {
+  if (guestEmail && sendConfirmation) {
+    const schoolUser = await prisma.user.findUnique({
+      where: { id: authUser.userId },
+      select: { name: true },
+    });
     const courseDate = new Date(session.startTime).toLocaleDateString('sv-SE');
     const courseTime = `${new Date(session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${new Date(session.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
     await sendBookingConfirmationEmail({
@@ -88,7 +92,7 @@ export async function POST(request: Request) {
       courseDate,
       courseTime,
       location: session.course.location || session.school.name,
-      schoolName: session.school.name,
+      schoolName: schoolUser?.name || session.school.name,
       personnummer,
       phone: guestPhone || null,
     });
