@@ -87,6 +87,7 @@ model Booking {
   bookedByRole         String   @default("student")
   bookedBySchoolUserId Int?
   bookedBySchoolUser   User?    @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
+  reminderSentAt       DateTime?
   payment              Payment?
 }
 

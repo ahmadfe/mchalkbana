@@ -100,20 +100,39 @@ export async function POST(request: Request) {
 
     console.log('[Swish] Booking #' + bookingId + ' marked as Paid');
 
-    // Send WhatsApp confirmation if booked via WhatsApp
-    if (booking.bookedByRole === 'whatsapp' && booking.guestPhone) {
+    // Send WhatsApp confirmation if booked via WhatsApp and has phone
+    const waPhone = booking.bookedByRole === 'whatsapp' ? booking.guestPhone : null;
+    if (waPhone) {
       const wahaUrl = process.env.WAHA_URL;
       const wahaSession = process.env.WAHA_SESSION ?? 'default';
       if (wahaUrl) {
         const start = new Date(booking.session.startTime);
-        const msgSv = `✅ Betalning mottagen! Bokning #${bookingId} bekräftad.\n📅 ${start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}\n🕐 ${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}\n📍 ${booking.session.school?.name ?? ''}\n\nVi ses där! 🎉`;
+        const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+        const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        const location = booking.session.course?.location || booking.session.school?.name || '';
+        const msg =
+          `✅ *Betalning bekräftad!*\n` +
+          `Bokning *#${bookingId}* är nu bekräftad.\n\n` +
+          `📚 ${booking.session.course.titleSv}\n` +
+          `📅 ${dateStrSv}\n` +
+          `🕐 ${timeStr}\n` +
+          `📍 ${location}\n\n` +
+          `_Vi ses där! Om du har frågor, ring 07 07 66 66 61_\n\n` +
+          `---\n` +
+          `✅ *Payment confirmed!*\n` +
+          `Booking *#${bookingId}* is now confirmed.\n\n` +
+          `📚 ${booking.session.course.titleEn}\n` +
+          `📅 ${dateStrSv}\n` +
+          `🕐 ${timeStr}\n` +
+          `📍 ${location}\n\n` +
+          `_See you there! Questions? Call 07 07 66 66 61_`;
         await fetch(`${wahaUrl}/api/sendText`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Api-Key': process.env.WAHA_API_KEY ?? '' },
           body: JSON.stringify({
             session: wahaSession,
-            chatId: `${booking.guestPhone.replace(/\D/g, '')}@c.us`,
-            text: msgSv,
+            chatId: `${waPhone.replace(/\D/g, '')}@c.us`,
+            text: msg,
           }),
         }).catch((err) => console.error('[Swish] WhatsApp confirm failed:', err));
       }

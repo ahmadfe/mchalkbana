@@ -230,6 +230,33 @@
     },
     {
       "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 1 }] }
+      },
+      "id": "cron-1hour",
+      "name": "Every Hour (Reminders)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 780],
+      "notes": "Runs every hour to send 24h reminders"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/send-reminders",
+        "sendMethod": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "send-reminders",
+      "name": "Send 24h Reminders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 780]
+    },
+    {
+      "parameters": {
         "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] }
       },
       "id": "cron-5min",
@@ -329,6 +356,7 @@
     "Get Appointments": { "main": [[{ "node": "Save Conversation State", "type": "main", "index": 0 }]] },
     "Save Conversation State": { "main": [[{ "node": "Send WhatsApp Reply", "type": "main", "index": 0 }]] },
     "Send WhatsApp Reply": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Every Hour (Reminders)": { "main": [[{ "node": "Send 24h Reminders", "type": "main", "index": 0 }]] },
     "Every 5 Minutes": { "main": [[{ "node": "Cancel Expired Bookings", "type": "main", "index": 0 }]] },
     "Cancel Expired Bookings": { "main": [[{ "node": "Any Expired?", "type": "main", "index": 0 }]] },
     "Any Expired?": { "main": [[{ "node": "Split Expired", "type": "main", "index": 0 }], []] },
