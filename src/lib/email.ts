@@ -44,7 +44,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 
     <!-- Header -->
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
         style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
@@ -172,7 +172,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
 
     <!-- Header -->
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
         style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
@@ -231,7 +231,7 @@ export async function sendBookingConfirmationEmail(data: BookingConfirmationEmai
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@ihalka.se>',
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.recipientEmail],
         subject: `Bokningsbekräftelse för ${data.courseName} på Uppsala Halkbana`,
         html: buildBookingConfirmationHtml(data),
@@ -262,7 +262,7 @@ function buildSchoolAccountHtml(data: SchoolAccountEmailData): string {
 
     <!-- Header -->
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
         style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
@@ -315,7 +315,7 @@ export async function sendSchoolAccountEmail(data: SchoolAccountEmailData): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@ihalka.se>',
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.email],
         subject: 'Ditt konto på Uppsala Halkbana är skapat',
         html: buildSchoolAccountHtml(data),
@@ -343,7 +343,7 @@ export async function sendStaffAccountEmail(data: { name: string; email: string;
 <body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:32px auto;">
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
         style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
@@ -375,7 +375,7 @@ export async function sendStaffAccountEmail(data: { name: string; email: string;
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@ihalka.se>',
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.email],
         subject: 'Ditt adminkonto på Uppsala Halkbana är skapat',
         html,
@@ -506,7 +506,7 @@ function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
       <tr>
         <!-- Logo watermark -->
         <td style="vertical-align:middle;width:50%;text-align:center;padding:16px;">
-          <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="120" height="120"
+          <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="120" height="120"
             style="opacity:0.12;object-fit:contain;" />
           <p style="color:#00C4D4;font-size:16px;font-weight:900;letter-spacing:3px;margin:8px 0 0;opacity:0.3;text-transform:uppercase;">UPPSALAHALKBANA</p>
         </td>
@@ -597,7 +597,7 @@ export async function sendSchoolInvoiceEmail(data: SchoolInvoiceEmailData): Prom
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@ihalka.se>',
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.recipientEmail],
         subject: `Faktura ${data.month} – Uppsala Halkbana`,
         html: buildSchoolInvoiceHtml(data),
@@ -627,7 +627,7 @@ export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@ihalka.se>',
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.recipientEmail],
         subject: `Kvitto ${receiptNumber} – Din bokning är bekräftad`,
         html: buildReceiptHtml(data),

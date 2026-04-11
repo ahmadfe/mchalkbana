@@ -23,14 +23,14 @@ export async function POST(request: Request) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Uppsala Halkbana <info@ihalka.se>',
+      from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
       to: [to],
       subject: 'Testmail – Uppsala Halkbana',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:32px auto;padding:32px;background:#fff;border-radius:12px;border:1px solid #e5e7eb;">
           <h2 style="color:#003DA5;margin:0 0 16px;">Uppsala Halkbana – Testmail</h2>
           <p style="color:#374151;">Om du ser detta mail fungerar e-postsystemet korrekt!</p>
-          <p style="color:#6b7280;font-size:13px;margin-top:24px;">Skickat från: info@ihalka.se via Resend</p>
+          <p style="color:#6b7280;font-size:13px;margin-top:24px;">Skickat från: info@uppsalahalkbana.se via Resend</p>
         </div>
       `,
     }),

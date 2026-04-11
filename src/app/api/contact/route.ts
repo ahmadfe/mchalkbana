@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     <!-- Header -->
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
-      <img src="https://ihalka.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
         style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
       <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
     </div>
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      from: 'Uppsala Halkbana <info@ihalka.se>',
+      from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
       to: ['info@uppsalahalkbana.se'],
       reply_to: email,
       subject: emailSubject,
