@@ -105,7 +105,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       recipientEmail: guestEmail,
       recipientName: guestName,
       bookingId: booking.id,
-      courseName: `${session.course.titleSv} ${session.course.vehicle === 'Car' ? '🚗' : '🏍️'}`,
+      courseName: `${session.course.titleSv} (${session.course.behorighet})`,
       courseDate,
       courseTime,
       location: session.course.location || session.school.name,
