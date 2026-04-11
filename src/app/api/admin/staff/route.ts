@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const staff = await prisma.user.findMany({
-    where: { role: 'admin' },
+    where: { role: 'admin', hidden: false },
     select: { id: true, name: true, email: true, createdAt: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -61,8 +61,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Du kan inte ta bort ditt eget konto' }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id }, select: { role: true } });
-  if (!user || user.role !== 'admin') {
+  const user = await prisma.user.findUnique({ where: { id }, select: { role: true, hidden: true } });
+  if (!user || user.role !== 'admin' || user.hidden) {
     return NextResponse.json({ error: 'Konto hittades inte' }, { status: 404 });
   }
 

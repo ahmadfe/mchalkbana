@@ -17,8 +17,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: 'Lösenordet måste vara minst 8 tecken' }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!user || user.role !== 'admin') {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, hidden: true } });
+  if (!user || user.role !== 'admin' || user.hidden) {
     return NextResponse.json({ error: 'Konto hittades inte' }, { status: 404 });
   }
 

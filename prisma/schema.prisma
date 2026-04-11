@@ -15,6 +15,7 @@ model User {
   password         String
   phone            String?
   role             String    @default("student")
+  hidden           Boolean   @default(false)
   languagePref     String    @default("sv")
   bookings         Booking[]
   schoolBookings   Booking[] @relation("BookingSchoolUser")
