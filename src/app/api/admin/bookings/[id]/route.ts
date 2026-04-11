@@ -97,10 +97,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return b;
   });
 
+  const start = new Date(session.startTime);
+  const end = new Date(session.endTime);
+  const courseDate = start.toLocaleDateString('sv-SE');
+  const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+  const location = session.course.location || session.school.name;
+
   // Send confirmation email if email provided
   if (guestEmail) {
-    const courseDate = new Date(session.startTime).toLocaleDateString('sv-SE');
-    const courseTime = `${new Date(session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${new Date(session.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
     await sendBookingConfirmationEmail({
       recipientEmail: guestEmail,
       recipientName: guestName,
@@ -108,11 +112,47 @@ export async function POST(request: Request, { params }: { params: { id: string 
       courseName: `${session.course.titleSv} (${session.course.behorighet})`,
       courseDate,
       courseTime,
-      location: session.course.location || session.school.name,
+      location,
       personnummer,
       phone: guestPhone || null,
       customMessage: session.course.receiptMessage || '',
     });
+  }
+
+  // Send WhatsApp confirmation if phone provided
+  if (guestPhone) {
+    const wahaUrl = process.env.WAHA_URL;
+    const wahaSession = process.env.WAHA_SESSION ?? 'default';
+    if (wahaUrl) {
+      const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+      const msg =
+        `✅ *Bokning bekräftad!*\n` +
+        `Du har blivit inbokad på en kurs hos Uppsala Halkbana.\n\n` +
+        `📚 ${session.course.titleSv}\n` +
+        `📅 ${dateStrSv}\n` +
+        `🕐 ${courseTime}\n` +
+        `📍 ${location}\n` +
+        `🎫 Bokning *#${booking.id}*\n\n` +
+        `_Vid frågor, ring 07 07 66 66 61_\n\n` +
+        `---\n` +
+        `✅ *Booking confirmed!*\n` +
+        `You have been booked for a course at Uppsala Halkbana.\n\n` +
+        `📚 ${session.course.titleEn}\n` +
+        `📅 ${dateStrSv}\n` +
+        `🕐 ${courseTime}\n` +
+        `📍 ${location}\n` +
+        `🎫 Booking *#${booking.id}*\n\n` +
+        `_Questions? Call 07 07 66 66 61_`;
+      await fetch(`${wahaUrl}/api/sendText`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Api-Key': process.env.WAHA_API_KEY ?? '' },
+        body: JSON.stringify({
+          session: wahaSession,
+          chatId: `${guestPhone.replace(/\D/g, '')}@c.us`,
+          text: msg,
+        }),
+      }).catch((err) => console.error('[Admin booking] WhatsApp confirm failed:', err));
+    }
   }
 
   return NextResponse.json({ booking }, { status: 201 });
