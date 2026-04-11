@@ -1,10 +1,35 @@
 'use client';
 
+import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard } from 'lucide-react';
+import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function ContactPage() {
+  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    setError('');
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    setSending(false);
+    if (res.ok) {
+      setSent(true);
+      setForm({ name: '', email: '', subject: '', message: '' });
+    } else {
+      const data = await res.json();
+      setError(data.error || 'Något gick fel. Försök igen.');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -91,27 +116,39 @@ export default function ContactPage() {
             {/* Contact form */}
             <div>
               <h2 className="text-2xl font-extrabold text-gray-900 mb-6">Skicka ett meddelande</h2>
-              <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
-                  <input type="text" className="input-field" placeholder="Ditt namn" />
+              {sent ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center bg-green-50 rounded-2xl border border-green-100">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
+                  <p className="font-semibold text-gray-900 text-lg">Meddelandet skickat!</p>
+                  <p className="text-gray-500 text-sm mt-1">Vi återkommer så snart vi kan.</p>
+                  <button onClick={() => setSent(false)} className="mt-5 text-sm text-swedish-blue hover:underline">Skicka ett till</button>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">E-post</label>
-                  <input type="email" className="input-field" placeholder="din@email.se" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ämne</label>
-                  <input type="text" className="input-field" placeholder="Vad gäller det?" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande</label>
-                  <textarea rows={5} className="input-field resize-none" placeholder="Skriv ditt meddelande här..." />
-                </div>
-                <button type="submit" className="w-full btn-primary py-3">
-                  Skicka meddelande
-                </button>
-              </form>
+              ) : (
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+                    <input type="text" className="input-field" placeholder="Ditt namn" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-post</label>
+                    <input type="email" className="input-field" placeholder="din@email.se" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Ämne</label>
+                    <input type="text" className="input-field" placeholder="Vad gäller det?" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande</label>
+                    <textarea rows={5} className="input-field resize-none" placeholder="Skriv ditt meddelande här..." required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+                  </div>
+                  <button type="submit" disabled={sending} className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-60">
+                    {sending ? <><Loader2 className="w-4 h-4 animate-spin" />Skickar...</> : 'Skicka meddelande'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
