@@ -60,9 +60,9 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
       <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
       <p style="color:#6b7280;font-size:14px;margin:0 0 ${data.customMessage ? '16px' : '28px'};">Tack för din bokning! Nedan hittar du ditt kvitto.</p>
       ${data.customMessage ? `
-      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:12px 16px;margin-bottom:24px;">
-        <p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 4px;">⚠️ Viktig information</p>
-        <p style="color:#7c2d12;font-size:13px;margin:0;">${data.customMessage}</p>
+      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+        <p style="color:#9a3412;font-size:12px;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">⚠️ Viktig information</p>
+        <p style="color:#7c2d12;font-size:14px;margin:0;line-height:1.7;">${data.customMessage.replace(/\n/g, '<br>')}</p>
       </div>` : ''}
 
       <!-- Receipt meta -->
@@ -187,9 +187,9 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
       <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
       <p style="color:#6b7280;font-size:14px;margin:0 0 ${data.customMessage ? '16px' : '28px'};">Din plats är bokad. Nedan hittar du en sammanfattning av din bokning.</p>
       ${data.customMessage ? `
-      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:12px 16px;margin-bottom:24px;">
-        <p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 4px;">⚠️ Viktig information</p>
-        <p style="color:#7c2d12;font-size:13px;margin:0;">${data.customMessage}</p>
+      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+        <p style="color:#9a3412;font-size:12px;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">⚠️ Viktig information</p>
+        <p style="color:#7c2d12;font-size:14px;margin:0;line-height:1.7;">${data.customMessage.replace(/\n/g, '<br>')}</p>
       </div>` : ''}
 
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
