@@ -84,9 +84,7 @@ function CheckoutContent() {
 
   const course = session.course!;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
-  const typeLabel = course.type === 'Risk1' ? 'Risk 1' : course.type === 'Risk2' ? 'Risk 2' : course.type;
-  const vehicleLabel = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
-  const courseSubtitle = `${typeLabel} – ${vehicleLabel}`;
+  const courseSubtitle = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
