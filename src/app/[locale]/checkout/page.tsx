@@ -84,6 +84,9 @@ function CheckoutContent() {
 
   const course = session.course!;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
+  const typeLabel = course.type === 'Risk1' ? 'Risk 1' : course.type === 'Risk2' ? 'Risk 2' : course.type;
+  const vehicleLabel = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
+  const courseSubtitle = `${typeLabel} – ${vehicleLabel}`;
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
@@ -265,9 +268,12 @@ function CheckoutContent() {
                   <span className="text-gray-500">Personnummer:</span>
                   <span className="font-medium">{guest.personnummer}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Kurs:</span>
-                  <span className="font-medium">{title}</span>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500 shrink-0">Kurs:</span>
+                  <div className="text-right">
+                    <p className="font-medium">{title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{courseSubtitle}</p>
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Datum:</span>
@@ -474,8 +480,11 @@ function CheckoutContent() {
 
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-3">
-                    <span className="text-gray-500">Kurs:</span>
-                    <span className="font-medium text-right">{title}</span>
+                    <span className="text-gray-500 shrink-0">Kurs:</span>
+                    <div className="text-right">
+                      <p className="font-medium">{title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{courseSubtitle}</p>
+                    </div>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-gray-500">Datum:</span>
