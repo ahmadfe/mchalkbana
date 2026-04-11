@@ -41,6 +41,8 @@ const emptyForm = {
   visible: true,
 };
 
+const GAP = 24; // gap-6 = 24px
+
 export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   // ── Admin state ───────────────────────────────────────────────────────────
   const [cards, setCards] = useState<InfoCard[]>(initialCards);
@@ -51,25 +53,39 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Carousel state ────────────────────────────────────────────────────────
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(0);
+  const touchStartX = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [cardMinWidth, setCardMinWidth] = useState('calc(33.33% - 16px)');
+  const [perView, setPerView] = useState(3);
+  const [cardWidth, setCardWidth] = useState(0);
 
+  const visibleCards = isAdmin ? cards : cards.filter((c) => c.visible);
+  const maxIndex = Math.max(0, visibleCards.length - perView);
+
+  // Measure container and compute perView + cardWidth
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      if (w >= 1024) setCardMinWidth('calc(33.33% - 16px)');
-      else if (w >= 640) setCardMinWidth('calc(50% - 12px)');
-      else setCardMinWidth('82%');
+      const pv = w >= 1024 ? 3 : w >= 640 ? 2 : 1;
+      setPerView(pv);
+      if (containerRef.current) {
+        const cw = (containerRef.current.offsetWidth - (pv - 1) * GAP) / pv;
+        setCardWidth(cw);
+      }
+      // Clamp activeIndex if perView changed
+      setActiveIndex((prev) => {
+        const newMax = Math.max(0, visibleCards.length - (w >= 1024 ? 3 : w >= 640 ? 2 : 1));
+        const clamped = Math.min(prev, newMax);
+        activeRef.current = clamped;
+        return clamped;
+      });
     };
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, []);
-
-  const visibleCards = isAdmin ? cards : cards.filter((c) => c.visible);
+  }, [visibleCards.length]);
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const openEdit = (card: InfoCard) => { setEditCard(card); setForm({ ...card }); setShowAdd(false); };
@@ -120,59 +136,39 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
     closeModal();
   };
 
-  // ── Carousel helpers ──────────────────────────────────────────────────────
-  const scrollTo = useCallback((index: number) => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const child = container.children[index] as HTMLElement | undefined;
-    if (!child) return;
-    const offset = child.getBoundingClientRect().left - container.getBoundingClientRect().left;
-    container.scrollBy({ left: offset, behavior: 'smooth' });
-  }, []);
-
-  const goTo = useCallback((index: number) => {
-    const clamped = ((index % visibleCards.length) + visibleCards.length) % visibleCards.length;
-    activeRef.current = clamped;
-    setActiveIndex(clamped);
-    scrollTo(clamped);
-  }, [visibleCards.length, scrollTo]);
+  // ── Carousel navigation ───────────────────────────────────────────────────
+  const goTo = useCallback((raw: number) => {
+    const idx = raw < 0 ? maxIndex : raw > maxIndex ? 0 : raw;
+    activeRef.current = idx;
+    setActiveIndex(idx);
+  }, [maxIndex]);
 
   // ── Auto-advance ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isPaused || visibleCards.length <= 1) return;
+    if (isPaused || maxIndex === 0) return;
     const timer = setInterval(() => {
-      const next = (activeRef.current + 1) % visibleCards.length;
+      const next = activeRef.current >= maxIndex ? 0 : activeRef.current + 1;
       activeRef.current = next;
       setActiveIndex(next);
-      scrollTo(next);
     }, 4500);
     return () => clearInterval(timer);
-  }, [isPaused, visibleCards.length, scrollTo]);
+  }, [isPaused, maxIndex]);
 
-  // ── Sync dot indicator on manual swipe ───────────────────────────────────
-  const handleScroll = useCallback(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-    const children = Array.from(container.children) as HTMLElement[];
-    const scrollLeft = container.scrollLeft;
-    let closest = 0;
-    let minDist = Infinity;
-    children.forEach((child, i) => {
-      const dist = Math.abs(child.offsetLeft - scrollLeft);
-      if (dist < minDist) { minDist = dist; closest = i; }
-    });
-    activeRef.current = closest;
-    setActiveIndex(closest);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
+  // ── Touch swipe ───────────────────────────────────────────────────────────
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    setIsPaused(true);
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 40) goTo(activeRef.current + (diff > 0 ? -1 : 1));
+    setIsPaused(false);
+  };
 
   if (!isAdmin && visibleCards.length === 0) return null;
+
+  const trackOffset = cardWidth > 0 ? activeIndex * (cardWidth + GAP) : 0;
+  const showArrows = maxIndex > 0;
 
   return (
     <section className="py-16" style={{ background: '#fefcf5' }}>
@@ -195,125 +191,135 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
           )}
         </div>
 
-        {/* Carousel */}
+        {/* Carousel wrapper */}
         <div
           className="relative"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
-          {/* Prev arrow */}
-          {visibleCards.length > 1 && (
+          {/* Left arrow */}
+          {showArrows && (
             <button
               onClick={() => goTo(activeIndex - 1)}
-              className="absolute left-0 top-[calc(50%-24px)] -translate-x-5 z-10
+              disabled={activeIndex === 0}
+              className="absolute left-0 top-[calc(50%-1.25rem)] -translate-x-5 z-10
                          w-11 h-11 bg-white border border-gray-200 rounded-full shadow-md
-                         items-center justify-center hover:bg-gray-50 transition-colors
-                         hidden sm:flex"
+                         hidden sm:flex items-center justify-center
+                         hover:bg-gray-50 disabled:opacity-30 transition-all"
               aria-label="Föregående"
             >
               <ChevronLeft className="w-5 h-5 text-gray-700" />
             </button>
           )}
 
-          {/* Scrollable track */}
-          <div
-            ref={scrollRef}
-            className="flex gap-6 overflow-x-auto [&::-webkit-scrollbar]:hidden"
-            style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
-          >
-            {visibleCards.map((card) => (
-              <div
-                key={card.id}
-                className={clsx(
-                  'flex-shrink-0 bg-white rounded-[28px] overflow-hidden shadow-sm',
-                  'group relative flex flex-col hover:-translate-y-1 transition-transform duration-200',
-                  !card.visible && isAdmin && 'opacity-60',
-                )}
-                style={{
-                  minWidth: cardMinWidth,
-                  border: '1px solid #ece5d8',
-                  scrollSnapAlign: 'start',
-                }}
-              >
-                {/* Admin hidden badge */}
-                {isAdmin && !card.visible && (
-                  <span className="absolute top-3 left-3 z-10 bg-gray-800 text-white text-xs font-medium px-2 py-0.5 rounded-full">Dold</span>
-                )}
+          {/* Overflow clip */}
+          <div ref={containerRef} className="overflow-hidden">
+            {/* Sliding track */}
+            <div
+              className="flex"
+              style={{
+                gap: GAP + 'px',
+                transform: `translateX(-${trackOffset}px)`,
+                transition: 'transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'transform',
+              }}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
+            >
+              {visibleCards.map((card) => (
+                <div
+                  key={card.id}
+                  className={clsx(
+                    'flex-shrink-0 bg-white rounded-[28px] overflow-hidden shadow-sm',
+                    'group relative flex flex-col hover:-translate-y-1 transition-transform duration-200',
+                    !card.visible && isAdmin && 'opacity-60',
+                  )}
+                  style={{
+                    width: cardWidth > 0 ? cardWidth + 'px' : `calc(${100 / perView}% - ${(perView - 1) * GAP / perView}px)`,
+                    border: '1px solid #ece5d8',
+                  }}
+                >
+                  {/* Admin hidden badge */}
+                  {isAdmin && !card.visible && (
+                    <span className="absolute top-3 left-3 z-10 bg-gray-800 text-white text-xs font-medium px-2 py-0.5 rounded-full">Dold</span>
+                  )}
 
-                {/* Admin controls */}
-                {isAdmin && (
-                  <div className="absolute top-3 right-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                    <button
-                      onClick={() => openEdit(card)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg shadow hover:bg-brand-50"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Redigera
-                    </button>
-                    <button
-                      onClick={() => handleDelete(card.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg shadow hover:bg-red-700"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Ta bort
-                    </button>
-                  </div>
-                )}
-
-                {/* Image / Video */}
-                <div className="w-full bg-gray-100 relative overflow-hidden" style={{ height: '220px' }}>
-                  {card.videoUrl ? (
-                    <video autoPlay muted loop playsInline className="w-full h-full object-cover absolute inset-0">
-                      <source src={card.videoUrl} type="video/mp4" />
-                    </video>
-                  ) : card.imageUrl ? (
-                    <img src={card.imageUrl} alt={card.title} className="w-full h-full object-cover absolute inset-0" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-300">
-                      <ImagePlus className="w-12 h-12" />
+                  {/* Admin controls */}
+                  {isAdmin && (
+                    <div className="absolute top-3 right-3 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        onClick={() => openEdit(card)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-800 text-xs font-semibold rounded-lg shadow hover:bg-brand-50"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        Redigera
+                      </button>
+                      <button
+                        onClick={() => handleDelete(card.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg shadow hover:bg-red-700"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Ta bort
+                      </button>
                     </div>
                   )}
-                </div>
 
-                {/* Content */}
-                <div className="flex flex-col flex-1 p-6">
-                  {card.badge && (
-                    <span className="text-xs font-semibold text-swedish-blue uppercase tracking-wide mb-2">{card.badge}</span>
-                  )}
-                  <h3 className="font-bold text-gray-900 text-xl leading-snug mb-2">{card.title}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-4 flex-1">{card.description}</p>
-                  {card.price && <p className="font-bold text-lg mb-3 text-gray-900">{card.price}</p>}
-                  <div className="flex flex-wrap gap-2">
-                    {card.primaryButtonText && (
-                      <Link
-                        href={card.primaryButtonLink}
-                        className="inline-block bg-swedish-yellow text-gray-900 text-sm font-bold px-4 py-2 rounded-xl hover:bg-yellow-300 transition"
-                      >
-                        {card.primaryButtonText} →
-                      </Link>
-                    )}
-                    {card.secondaryButtonText && (
-                      <Link
-                        href={card.secondaryButtonLink}
-                        className="text-sm font-semibold text-swedish-blue hover:underline flex items-center gap-1"
-                      >
-                        {card.secondaryButtonText} →
-                      </Link>
+                  {/* Image / Video */}
+                  <div className="w-full bg-gray-100 relative overflow-hidden" style={{ height: '220px' }}>
+                    {card.videoUrl ? (
+                      <video autoPlay muted loop playsInline className="w-full h-full object-cover absolute inset-0">
+                        <source src={card.videoUrl} type="video/mp4" />
+                      </video>
+                    ) : card.imageUrl ? (
+                      <img src={card.imageUrl} alt={card.title} className="w-full h-full object-cover absolute inset-0" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                        <ImagePlus className="w-12 h-12" />
+                      </div>
                     )}
                   </div>
+
+                  {/* Content */}
+                  <div className="flex flex-col flex-1 p-6">
+                    {card.badge && (
+                      <span className="text-xs font-semibold text-swedish-blue uppercase tracking-wide mb-2">{card.badge}</span>
+                    )}
+                    <h3 className="font-bold text-gray-900 text-xl leading-snug mb-2">{card.title}</h3>
+                    <p className="text-gray-500 text-sm leading-relaxed mb-4 flex-1">{card.description}</p>
+                    {card.price && <p className="font-bold text-lg mb-3 text-gray-900">{card.price}</p>}
+                    <div className="flex flex-wrap gap-2">
+                      {card.primaryButtonText && (
+                        <Link
+                          href={card.primaryButtonLink}
+                          className="inline-block bg-swedish-yellow text-gray-900 text-sm font-bold px-4 py-2 rounded-xl hover:bg-yellow-300 transition"
+                        >
+                          {card.primaryButtonText} →
+                        </Link>
+                      )}
+                      {card.secondaryButtonText && (
+                        <Link
+                          href={card.secondaryButtonLink}
+                          className="text-sm font-semibold text-swedish-blue hover:underline flex items-center gap-1"
+                        >
+                          {card.secondaryButtonText} →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Next arrow */}
-          {visibleCards.length > 1 && (
+          {/* Right arrow */}
+          {showArrows && (
             <button
               onClick={() => goTo(activeIndex + 1)}
-              className="absolute right-0 top-[calc(50%-24px)] translate-x-5 z-10
+              disabled={activeIndex === maxIndex}
+              className="absolute right-0 top-[calc(50%-1.25rem)] translate-x-5 z-10
                          w-11 h-11 bg-white border border-gray-200 rounded-full shadow-md
-                         items-center justify-center hover:bg-gray-50 transition-colors
-                         hidden sm:flex"
+                         hidden sm:flex items-center justify-center
+                         hover:bg-gray-50 disabled:opacity-30 transition-all"
               aria-label="Nästa"
             >
               <ChevronRight className="w-5 h-5 text-gray-700" />
@@ -321,39 +327,34 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
           )}
         </div>
 
-        {/* Dot indicators + mobile arrows */}
-        {visibleCards.length > 1 && (
+        {/* Dots + mobile arrows */}
+        {showArrows && (
           <div className="flex justify-center items-center gap-3 mt-8">
-            {/* Mobile prev */}
             <button
               onClick={() => goTo(activeIndex - 1)}
-              className="sm:hidden w-9 h-9 bg-white border border-gray-200 rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition"
+              className="sm:hidden w-9 h-9 bg-white border border-gray-200 rounded-full shadow flex items-center justify-center"
               aria-label="Föregående"
             >
               <ChevronLeft className="w-4 h-4 text-gray-700" />
             </button>
 
-            {/* Dots */}
             <div className="flex items-center gap-2">
-              {visibleCards.map((_, i) => (
+              {Array.from({ length: maxIndex + 1 }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => goTo(i)}
                   className={clsx(
                     'rounded-full transition-all duration-300',
-                    i === activeIndex
-                      ? 'w-6 h-2 bg-swedish-blue'
-                      : 'w-2 h-2 bg-gray-300 hover:bg-gray-400',
+                    i === activeIndex ? 'w-6 h-2 bg-swedish-blue' : 'w-2 h-2 bg-gray-300 hover:bg-gray-400',
                   )}
-                  aria-label={`Gå till kort ${i + 1}`}
+                  aria-label={`Gå till position ${i + 1}`}
                 />
               ))}
             </div>
 
-            {/* Mobile next */}
             <button
               onClick={() => goTo(activeIndex + 1)}
-              className="sm:hidden w-9 h-9 bg-white border border-gray-200 rounded-full shadow flex items-center justify-center hover:bg-gray-50 transition"
+              className="sm:hidden w-9 h-9 bg-white border border-gray-200 rounded-full shadow flex items-center justify-center"
               aria-label="Nästa"
             >
               <ChevronRight className="w-4 h-4 text-gray-700" />
