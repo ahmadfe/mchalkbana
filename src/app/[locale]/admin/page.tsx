@@ -259,7 +259,7 @@ export default function AdminPage() {
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('12:00');
-  const [recurrence, setRecurrence] = useState<'none' | 'weekly' | 'biweekly' | 'monthly'>('none');
+  const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
 
   const loadData = useCallback(async () => {
@@ -484,7 +484,8 @@ export default function AdminPage() {
     const count = recurrence === 'none' ? 1 : recurrenceCount;
     return Array.from({ length: count }, (_, i) => {
       const d = new Date(`${sessionDate}T00:00:00`);
-      if (recurrence === 'weekly') d.setDate(d.getDate() + i * 7);
+      if (recurrence === 'daily') d.setDate(d.getDate() + i);
+      else if (recurrence === 'weekly') d.setDate(d.getDate() + i * 7);
       else if (recurrence === 'biweekly') d.setDate(d.getDate() + i * 14);
       else if (recurrence === 'monthly') d.setMonth(d.getMonth() + i);
       const ds = d.toISOString().split('T')[0];
@@ -2523,9 +2524,10 @@ export default function AdminPage() {
                 </div>
                 <div className="px-4 py-4 space-y-4">
                   {/* Repeat type buttons */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { value: 'none', label: 'Ingen upprepning' },
+                      { value: 'daily', label: 'Varje dag' },
                       { value: 'weekly', label: 'Varje vecka' },
                       { value: 'biweekly', label: 'Varannan vecka' },
                       { value: 'monthly', label: 'Varje månad' },
