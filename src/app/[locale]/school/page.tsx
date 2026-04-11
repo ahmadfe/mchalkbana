@@ -45,7 +45,7 @@ export default function SchoolPage() {
 
   // Add student modal
   const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '' }]);
+  const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
