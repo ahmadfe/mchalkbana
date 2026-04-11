@@ -266,7 +266,7 @@ export default function SchoolPage() {
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                               <span>📅 {start.toLocaleDateString('sv-SE')}</span>
                               <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
-                              <span>📍 {s.school?.name}</span>
+                              <span>📍 {s.course?.location || s.school?.name}</span>
                               <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
                                 👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
                               </span>
