@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   }
 
   const prices = await prisma.schoolCoursePrice.findMany({
-    where: { schoolUserId: authUser.id },
+    where: { schoolUserId: authUser.userId },
     select: { courseId: true, price: true },
   });
 
