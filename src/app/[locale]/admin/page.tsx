@@ -243,7 +243,8 @@ export default function AdminPage() {
   const [assignSchoolIds, setAssignSchoolIds] = useState<number[]>([]);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
-  const [collapsedYears, setCollapsedYears] = useState<Set<string>>(new Set());
+  const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
+  const [sessionMonth, setSessionMonth] = useState('all');
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -968,24 +969,39 @@ export default function AdminPage() {
 
           {/* Sessions */}
           {tab === 'sessions' && (() => {
+            const SESSION_MONTHS = [
+              { v: '1', l: 'Januari' }, { v: '2', l: 'Februari' }, { v: '3', l: 'Mars' },
+              { v: '4', l: 'April' }, { v: '5', l: 'Maj' }, { v: '6', l: 'Juni' },
+              { v: '7', l: 'Juli' }, { v: '8', l: 'Augusti' }, { v: '9', l: 'September' },
+              { v: '10', l: 'Oktober' }, { v: '11', l: 'November' }, { v: '12', l: 'December' },
+            ];
+
+            const availableSessionYears = Array.from(new Set(
+              sessions.map(s => String(new Date(s.startTime).getFullYear()))
+            )).sort((a, b) => Number(a) - Number(b));
+
             const filtered = sessions
               .filter((s) => sessionFilter === 'all' || s.visibility === sessionFilter)
               .filter((s) => vehicleFilter === 'all' || s.course?.vehicle === vehicleFilter)
+              .filter((s) => {
+                const d = new Date(s.startTime);
+                const yMatch = !sessionYear || String(d.getFullYear()) === sessionYear;
+                const mMatch = sessionMonth === 'all' || String(d.getMonth() + 1) === sessionMonth;
+                return yMatch && mMatch;
+              })
               .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-            // Build: { year: { month: { vehicle: Session[] } } }
-            const tree: Record<string, Record<string, Record<string, typeof filtered>>> = {};
+            // Group by month → vehicle (year already filtered by dropdown)
+            const monthGroups: Record<string, Record<string, typeof filtered>> = {};
             for (const s of filtered) {
               const d = new Date(s.startTime);
-              const year = String(d.getFullYear());
-              const month = d.toLocaleDateString('sv-SE', { month: 'long' });
+              const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
               const vehicle = s.course?.vehicle === 'Car' ? 'Car' : s.course?.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Other';
-              if (!tree[year]) tree[year] = {};
-              if (!tree[year][month]) tree[year][month] = {};
-              if (!tree[year][month][vehicle]) tree[year][month][vehicle] = [];
-              tree[year][month][vehicle].push(s);
+              if (!monthGroups[mKey]) monthGroups[mKey] = {};
+              if (!monthGroups[mKey][vehicle]) monthGroups[mKey][vehicle] = [];
+              monthGroups[mKey][vehicle].push(s);
             }
-            const years = Object.keys(tree).sort((a, b) => Number(a) - Number(b));
+            const monthKeys = Object.keys(monthGroups).sort();
 
             const renderCard = (s: typeof filtered[0]) => {
               const isCar = s.course?.vehicle === 'Car';
@@ -1092,6 +1108,7 @@ export default function AdminPage() {
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-bold text-gray-900">Pass ({filtered.length})</h2>
+                    {/* Visibility filter */}
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                       {(['all', 'public', 'school'] as const).map((f) => (
                         <button key={f} onClick={() => setSessionFilter(f)} className={clsx('px-3 py-1 text-xs rounded-md font-medium transition', sessionFilter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
@@ -1099,6 +1116,7 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
+                    {/* Vehicle filter */}
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                       {([['all', 'Alla fordon'], ['Car', '🚗 Bil'], ['Motorcycle', '🏍️ MC']] as const).map(([v, l]) => (
                         <button key={v} onClick={() => setVehicleFilter(v)} className={clsx('px-3 py-1 text-xs rounded-md font-medium transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
@@ -1106,6 +1124,23 @@ export default function AdminPage() {
                         </button>
                       ))}
                     </div>
+                    {/* Year dropdown */}
+                    <select
+                      value={sessionYear}
+                      onChange={(e) => { setSessionYear(e.target.value); setSessionMonth('all'); }}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      {availableSessionYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                    {/* Month dropdown */}
+                    <select
+                      value={sessionMonth}
+                      onChange={(e) => setSessionMonth(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                    >
+                      <option value="all">Alla månader</option>
+                      {SESSION_MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    </select>
                   </div>
                   <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
                     <Plus className="w-4 h-4" />{t('add_session')}
@@ -1113,71 +1148,40 @@ export default function AdminPage() {
                 </div>
 
                 {filtered.length === 0 && (
-                  <div className="text-center py-16 text-gray-400 text-sm">Inga pass matchar valt filter.</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">Inga pass för vald period.</div>
                 )}
 
-                {/* Year → Month → Vehicle grouping */}
+                {/* Month → Vehicle grouping */}
                 <div className="space-y-6">
-                  {years.map((year) => {
-                    const isCollapsed = collapsedYears.has(year);
-                    const yearCount = Object.values(tree[year]).flatMap(mv => Object.values(mv).flat()).length;
+                  {monthKeys.map((mKey) => {
+                    const [yr, mo] = mKey.split('-');
+                    const monthLabel = SESSION_MONTHS.find(m => m.v === String(Number(mo)))?.l ?? mo;
+                    const monthCount = Object.values(monthGroups[mKey]).flat().length;
                     return (
-                      <div key={year}>
-                        {/* Year banner */}
-                        <button
-                          type="button"
-                          onClick={() => setCollapsedYears(prev => {
-                            const next = new Set(prev);
-                            next.has(year) ? next.delete(year) : next.add(year);
-                            return next;
-                          })}
-                          className="w-full flex items-center gap-3 mb-4 group"
-                        >
-                          <div className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl font-bold text-sm">
-                            <span>{year}</span>
-                            <span className="text-gray-400 font-normal text-xs">{yearCount} pass</span>
-                            <span className="text-gray-400 text-xs ml-1">{isCollapsed ? '▶' : '▼'}</span>
-                          </div>
+                      <div key={mKey}>
+                        {/* Month divider */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-sm font-semibold text-gray-600 capitalize">{monthLabel} {yr}</h3>
                           <div className="flex-1 h-px bg-gray-200" />
-                        </button>
-
-                        {!isCollapsed && (
-                          <div className="space-y-6 pl-2">
-                            {Object.keys(tree[year]).map((month) => {
-                              const monthCount = Object.values(tree[year][month]).flat().length;
-                              return (
-                                <div key={month}>
-                                  {/* Month divider */}
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <h3 className="text-sm font-semibold text-gray-500 capitalize">{month} {year}</h3>
-                                    <div className="flex-1 h-px bg-gray-100" />
-                                    <span className="text-xs text-gray-400">{monthCount} pass</span>
-                                  </div>
-
-                                  {/* Vehicle sub-groups */}
-                                  <div className="space-y-4">
-                                    {Object.keys(tree[year][month]).sort().map((vehicle) => {
-                                      const vSessions = tree[year][month][vehicle];
-                                      const vLabel = vehicle === 'Car' ? '🚗 Bil' : vehicle === 'Motorcycle' ? '🏍️ MC' : vehicle;
-                                      return (
-                                        <div key={vehicle}>
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <span className={clsx('text-xs font-bold px-2.5 py-1 rounded-full', vehicle === 'Car' ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
-                                              {vLabel} · {vSessions.length} pass
-                                            </span>
-                                          </div>
-                                          <div className="space-y-2">
-                                            {vSessions.map(renderCard)}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                          <span className="text-xs text-gray-400">{monthCount} pass</span>
+                        </div>
+                        {/* Vehicle sub-groups */}
+                        <div className="space-y-4">
+                          {Object.keys(monthGroups[mKey]).sort().map((vehicle) => {
+                            const vSessions = monthGroups[mKey][vehicle];
+                            const vLabel = vehicle === 'Car' ? '🚗 Bil' : vehicle === 'Motorcycle' ? '🏍️ MC' : vehicle;
+                            return (
+                              <div key={vehicle}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={clsx('text-xs font-bold px-2.5 py-1 rounded-full', vehicle === 'Car' ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
+                                    {vLabel} · {vSessions.length} pass
+                                  </span>
                                 </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                                <div className="space-y-2">{vSessions.map(renderCard)}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   })}
