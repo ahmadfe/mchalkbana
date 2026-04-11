@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       recipientEmail: guestEmail,
       recipientName: guestName,
       bookingId: booking.id,
-      courseName: session.course.titleSv,
+      courseName: `${session.course.titleSv} ${session.course.vehicle === 'Car' ? '🚗' : '🏍️'}`,
       courseDate,
       courseTime,
       location: session.course.location || session.school.name,

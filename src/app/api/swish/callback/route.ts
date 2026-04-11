@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         recipientName,
         bookingId,
         transactionId,
-        courseName: booking.session.course.titleSv,
+        courseName: `${booking.session.course.titleSv} ${booking.session.course.vehicle === 'Car' ? '🚗' : '🏍️'}`,
         courseDate: start.toLocaleDateString('sv-SE', {
           weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         }),

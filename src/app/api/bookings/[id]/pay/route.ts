@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       recipientName,
       bookingId,
       transactionId,
-      courseName: booking.session.course.titleSv,
+      courseName: `${booking.session.course.titleSv} ${booking.session.course.vehicle === 'Car' ? '🚗' : '🏍️'}`,
       courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
       courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
       location: booking.session.school?.name || '',

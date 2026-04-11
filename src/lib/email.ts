@@ -58,7 +58,12 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
     <div style="background:#fff;padding:32px;">
 
       <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
-      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Tack för din bokning! Nedan hittar du ditt kvitto.</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 ${data.customMessage ? '16px' : '28px'};">Tack för din bokning! Nedan hittar du ditt kvitto.</p>
+      ${data.customMessage ? `
+      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:12px 16px;margin-bottom:24px;">
+        <p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 4px;">⚠️ Viktig information</p>
+        <p style="color:#7c2d12;font-size:13px;margin:0;">${data.customMessage}</p>
+      </div>` : ''}
 
       <!-- Receipt meta -->
       <div style="display:flex;justify-content:space-between;margin-bottom:24px;">
@@ -90,11 +95,12 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
           </tr>
           <tr>
             <td style="color:#6b7280;padding:5px 0;">Plats</td>
-            <td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td>
+            <td style="font-weight:600;text-align:right;">
+              <a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#00C4D4;text-decoration:none;">📍 ${data.location}</a>
+            </td>
           </tr>
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
-          ${data.customMessage ? `<tr><td style="color:#dc2626;padding:8px 0 5px;font-weight:700;">OBS!</td><td style="color:#dc2626;font-weight:600;text-align:right;padding:8px 0 5px;">${data.customMessage}</td></tr>` : ''}
         </table>
       </div>
 
@@ -130,7 +136,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
     <!-- Footer -->
     <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
       <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
-      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;"><a href="mailto:info@uppsalahalkbana.se" style="color:#9ca3af;text-decoration:none;">info@uppsalahalkbana.se</a> · <a href="tel:+46707666661" style="color:#9ca3af;text-decoration:none;">07 07 66 66 61</a></p>
       <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Transaktions-ID: ${data.transactionId}</p>
       <p style="color:#4b5563;font-size:11px;margin:4px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
     </div>
@@ -179,7 +185,12 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
     <!-- Body -->
     <div style="background:#fff;padding:32px;">
       <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
-      <p style="color:#6b7280;font-size:14px;margin:0 0 28px;">Din plats är bokad. Nedan hittar du en sammanfattning av din bokning.</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 ${data.customMessage ? '16px' : '28px'};">Din plats är bokad. Nedan hittar du en sammanfattning av din bokning.</p>
+      ${data.customMessage ? `
+      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:12px 16px;margin-bottom:24px;">
+        <p style="color:#9a3412;font-size:13px;font-weight:700;margin:0 0 4px;">⚠️ Viktig information</p>
+        <p style="color:#7c2d12;font-size:13px;margin:0;">${data.customMessage}</p>
+      </div>` : ''}
 
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
         <p style="color:#00C4D4;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Bokningsdetaljer</p>
@@ -187,15 +198,14 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
           <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
-          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#00C4D4;text-decoration:none;">📍 ${data.location}</a></td></tr>
           ${data.schoolName ? `<tr><td style="color:#6b7280;padding:5px 0;">Trafikskola</td><td style="color:#111827;font-weight:600;text-align:right;">${data.schoolName}</td></tr>` : ''}
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
-          ${data.customMessage ? `<tr><td style="color:#dc2626;padding:8px 0 5px;font-weight:700;">OBS!</td><td style="color:#dc2626;font-weight:600;text-align:right;padding:8px 0 5px;">${data.customMessage}</td></tr>` : ''}
         </table>
       </div>
 
-      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a> eller ring <a href="tel:+46707666661" style="color:#00C4D4;">07 07 66 66 61</a>.</p>
     </div>
 
     <!-- Footer -->
