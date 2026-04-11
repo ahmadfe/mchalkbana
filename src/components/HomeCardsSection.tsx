@@ -55,6 +55,19 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
   const activeRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [cardMinWidth, setCardMinWidth] = useState('calc(33.33% - 16px)');
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      if (w >= 1024) setCardMinWidth('calc(33.33% - 16px)');
+      else if (w >= 640) setCardMinWidth('calc(50% - 12px)');
+      else setCardMinWidth('82%');
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const visibleCards = isAdmin ? cards : cards.filter((c) => c.visible);
 
@@ -212,12 +225,12 @@ export default function HomeCardsSection({ initialCards, isAdmin }: Props) {
               <div
                 key={card.id}
                 className={clsx(
-                  'min-w-[82%] sm:min-w-[calc(50%-12px)] lg:min-w-[calc(33.33%-16px)]',
                   'flex-shrink-0 bg-white rounded-[28px] overflow-hidden shadow-sm',
                   'group relative flex flex-col hover:-translate-y-1 transition-transform duration-200',
                   !card.visible && isAdmin && 'opacity-60',
                 )}
                 style={{
+                  minWidth: cardMinWidth,
                   border: '1px solid #ece5d8',
                   scrollSnapAlign: 'start',
                 }}
