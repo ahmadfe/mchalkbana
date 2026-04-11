@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
 
   const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserIds } = await request.json();
-  if (!courseId || !startTime || !endTime || !seatLimit) {
+  if (!courseId || !schoolId || !startTime || !endTime || !seatLimit) {
     return NextResponse.json({ error: 'Obligatoriska fält saknas' }, { status: 400 });
   }
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const session = await prisma.session.create({
     data: {
       courseId: parseInt(courseId),
-      schoolId: parseInt(schoolId) || 1,
+      schoolId: parseInt(schoolId),
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       seatLimit: seats,

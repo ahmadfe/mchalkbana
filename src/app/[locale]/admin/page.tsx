@@ -2446,6 +2446,23 @@ export default function AdminPage() {
                 </select>
               </div>
 
+              {/* School venue */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Plats / Anläggning</label>
+                {schools.length === 0 ? (
+                  <p className="text-sm text-orange-500 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                    Inga anläggningar skapade. Gå till fliken <strong>Trafikskolor</strong> och lägg till en anläggning först.
+                  </p>
+                ) : (
+                  <select className="input-field" value={newSession.schoolId} onChange={(e) => setNewSession({ ...newSession, schoolId: e.target.value })} required>
+                    <option value="">Välj anläggning...</option>
+                    {schools.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               {/* Date */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Datum</label>
