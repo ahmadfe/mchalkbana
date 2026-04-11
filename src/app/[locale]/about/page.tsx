@@ -2,6 +2,20 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Shield, Users, MapPin, Award } from 'lucide-react';
 
+export async function generateMetadata() {
+  return {
+    title: 'Om oss – Uppsala Halkbana',
+    description:
+      'Lär känna Uppsala Halkbana – godkänd av Transportstyrelsen. Vi erbjuder professionell riskutbildning för bil och motorcykel nära Uppsala, Stockholm och Gävle.',
+    alternates: { canonical: '/sv/about' },
+    openGraph: {
+      title: 'Om oss – Uppsala Halkbana',
+      description: 'Professionell riskutbildning godkänd av Transportstyrelsen sedan många år.',
+      url: 'https://www.uppsalahalkbana.se/sv/about',
+    },
+  };
+}
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col">

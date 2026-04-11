@@ -12,8 +12,54 @@ import { getAuthUser } from '@/lib/auth';
 import type { Session } from '@/lib/types';
 
 export async function generateMetadata() {
-  return { title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2' };
+  return {
+    title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
+    description:
+      'Boka riskutbildning Risk 1 och Risk 2 för bil och motorcykel nära Uppsala, Stockholm och Gävle. Säkra din plats idag – populära kurstillfällen fylls snabbt.',
+    alternates: { canonical: '/sv' },
+    openGraph: {
+      title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
+      description:
+        'Professionell riskutbildning godkänd av Transportstyrelsen. Boka online – snabbt och enkelt.',
+      url: 'https://www.uppsalahalkbana.se/sv',
+      images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Uppsala Halkbana' }],
+    },
+  };
 }
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'DrivingSchool',
+  name: 'Uppsala Halkbana',
+  url: 'https://www.uppsalahalkbana.se',
+  logo: 'https://www.uppsalahalkbana.se/logo.png',
+  telephone: '+46707666661',
+  email: 'info@uppsalahalkbana.se',
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Norrlövsta 147',
+    addressLocality: 'Alunda',
+    postalCode: '747 91',
+    addressCountry: 'SE',
+  },
+  areaServed: [
+    { '@type': 'City', name: 'Uppsala' },
+    { '@type': 'City', name: 'Stockholm' },
+    { '@type': 'City', name: 'Gävle' },
+    { '@type': 'City', name: 'Enköping' },
+    { '@type': 'City', name: 'Västerås' },
+  ],
+  sameAs: ['https://www.facebook.com/UppsalaHalkbanaOfficial'],
+  description:
+    'Professionell riskutbildning Risk 1 och Risk 2 för bil och motorcykel. Godkänd av Transportstyrelsen.',
+  priceRange: '$$',
+  openingHoursSpecification: {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    opens: '07:00',
+    closes: '20:00',
+  },
+};
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
   const { locale } = await params;
@@ -38,6 +84,10 @@ export default async function HomePage({ params }: { params: { locale: string } 
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fbf9f8]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Navbar />
 
       {/* ─── HERO ─────────────────────────────────────────────── */}

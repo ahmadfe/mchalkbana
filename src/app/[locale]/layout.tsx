@@ -11,16 +11,44 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
+const SITE_URL = 'https://www.uppsalahalkbana.se';
+
 export const metadata: Metadata = {
   title: {
-    default: 'Uppsala Halkbana – Riskutbildning',
+    default: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
     template: '%s | Uppsala Halkbana',
   },
-  description: 'Boka Risk 1 och Risk 2-utbildning för bil och motorcykel i Uppsala.',
-  keywords: ['riskutbildning', 'risk 1', 'risk 2', 'halkbana', 'uppsalahalkbana', 'körskola'],
+  description:
+    'Boka riskutbildning Risk 1 och Risk 2 för bil och motorcykel i Uppsala, Stockholm och Gävle. Godkänd av Transportstyrelsen. Enkelt att boka online.',
+  keywords: [
+    'riskutbildning', 'risk 1', 'risk 2', 'halkbana', 'uppsalahalkbana',
+    'riskutbildning Uppsala', 'riskutbildning Stockholm', 'riskutbildning Gävle',
+    'riskutbildning Enköping', 'riskutbildning Västerås',
+    'halkbana Uppsala', 'körskola Uppsala', 'körkort riskutbildning',
+    'risk 1 bil', 'risk 2 bil', 'risk 1 motorcykel', 'risk 2 motorcykel',
+    'boka riskutbildning', 'riskutbildning online',
+  ],
+  authors: [{ name: 'Uppsala Halkbana' }],
+  creator: 'Uppsala Halkbana',
+  publisher: 'Uppsala Halkbana',
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: '/' },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   openGraph: {
+    type: 'website',
     siteName: 'Uppsala Halkbana',
     locale: 'sv_SE',
+    url: SITE_URL,
+    title: 'Uppsala Halkbana – Riskutbildning Risk 1 & Risk 2',
+    description:
+      'Boka riskutbildning Risk 1 och Risk 2 för bil och motorcykel i Uppsala, Stockholm och Gävle. Godkänd av Transportstyrelsen.',
+    images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Uppsala Halkbana logotyp' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Uppsala Halkbana – Riskutbildning',
+    description: 'Boka riskutbildning Risk 1 & Risk 2 i Uppsala, Stockholm och Gävle.',
+    images: ['/logo.png'],
   },
 };
 

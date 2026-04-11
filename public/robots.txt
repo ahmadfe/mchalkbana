@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /sv/admin
+Disallow: /sv/school
+Disallow: /sv/dashboard
+Disallow: /sv/checkout
+Disallow: /api/
+
+Sitemap: https://www.uppsalahalkbana.se/sitemap.xml
