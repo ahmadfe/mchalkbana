@@ -143,8 +143,27 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-700 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-gray-500">
+        <div className="border-t border-gray-700 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gray-500">
           <p>© {new Date().getFullYear()} Uppsala Halkbana. Alla rättigheter förbehållna.</p>
+
+          {/* Payment method */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">Betalning via</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#4A2683] rounded-lg">
+              {/* Swish wave/arc mark */}
+              <svg viewBox="0 0 20 14" fill="none" className="w-5 h-3.5" aria-hidden="true">
+                <path
+                  d="M1 10 C4 4, 7 1, 10 3 C13 5, 14 9, 17 8 C18.5 7.5, 19 6, 19 4"
+                  stroke="white"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </svg>
+              <span className="text-white font-bold tracking-wide text-xs">swish</span>
+            </div>
+          </div>
+
           <p>Uppsala/Stockholm Region, Sverige</p>
         </div>
       </div>
