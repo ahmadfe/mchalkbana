@@ -1,0 +1,342 @@
+{
+  "name": "Uppsala Halkbana – WhatsApp Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "WAHA Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "notes": "Set this URL in WAHA as the webhook endpoint. WAHA will POST every incoming message here."
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst phone = body.payload?.from ?? body.from ?? '';\nconst text = (body.payload?.body ?? body.body ?? '').trim();\nconst pushName = body.payload?.notifyName ?? body.notifyName ?? '';\nreturn [{ json: { phone, text, pushName } }];"
+      },
+      "id": "extract-message",
+      "name": "Extract Phone + Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/identify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" },
+                          { "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "phone", "value": "={{ $json.phone }}" }]
+        },
+        "options": {}
+      },
+      "id": "identify-user",
+      "name": "Identify User Role",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/conversation?phone={{ encodeURIComponent($('Extract Phone + Text').item.json.phone) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "get-conversation",
+      "name": "Get Conversation State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/sessions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "get-sessions",
+      "name": "Get Available Sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "modelId": { "__rl": true, "value": "claude-opus-4-6", "mode": "id" },
+        "messages": {
+          "messageValues": [
+            {
+              "role": "system",
+              "message": "You are the booking assistant for Uppsala Halkbana, a Swedish driving risk training center.\n\nYour job is to help users book courses via WhatsApp.\n\nCurrent user info:\n- Phone: {{ $('Extract Phone + Text').item.json.phone }}\n- Name (from WhatsApp): {{ $('Extract Phone + Text').item.json.pushName }}\n- Role: {{ $('Identify User Role').item.json.role }}\n- Conversation state: {{ $('Get Conversation State').item.json.state }}\n- Conversation data: {{ JSON.stringify($('Get Conversation State').item.json.data) }}\n\nAvailable sessions:\n{{ JSON.stringify($('Get Available Sessions').item.json.sessions) }}\n\nRULES:\n1. Detect language from user message. Reply in Swedish (sv) or English (en).\n2. Always be friendly and concise.\n3. For GUEST users: they must book and pay via Swish.\n4. For ADMIN users: book directly, no payment needed.\n5. Collect in order: course type → session → name + personnummer → email + phone (optional).\n6. Before booking, always show a summary and ask for confirmation.\n7. Swish details: number 0707666661, amount = course price, message = booking ID.\n8. Payment window: 15 minutes.\n9. If user asks about location: Norrlövsta 147, 747 91 Alunda.\n10. If user asks about contact: info@uppsalahalkbana.se / 07 07 66 66 61.\n11. 'mina bokningar' or 'my bookings' → fetch appointments (signal: ACTION:GET_APPOINTMENTS).\n12. When you have all info needed to book → signal: ACTION:CREATE_BOOKING:{json}\n13. When conversation is done or should reset → signal: ACTION:RESET\n14. To save conversation state → signal: STATE:{state_name}:{json_data}\n\nSignal format (add at END of reply on its own line, invisible to user conceptually but n8n reads it):\nACTION:CREATE_BOOKING:{\"sessionId\":3,\"guestName\":\"Anna\",\"personnummer\":\"19900101-1234\",\"guestPhone\":\"+46701111111\",\"guestEmail\":\"anna@gmail.com\",\"role\":\"guest\"}\nSTATE:awaiting_confirmation:{\"sessionId\":3,\"guestName\":\"Anna\",...}"
+            },
+            {
+              "role": "user",
+              "message": "={{ $('Extract Phone + Text').item.json.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "claude-agent",
+      "name": "Claude AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "notes": "Set ANTHROPIC_API_KEY in n8n credentials. Uses claude-opus-4-6."
+    },
+    {
+      "parameters": {
+        "jsCode": "const reply = $input.first().json.content?.[0]?.text ?? $input.first().json.text ?? '';\n\n// Extract action signal\nconst actionMatch = reply.match(/ACTION:([A-Z_]+)(?::(.+))?\\n?/);\nconst stateMatch = reply.match(/STATE:([a-z_]+):(.+)\\n?/);\n\n// Clean reply for user (remove signal lines)\nconst cleanReply = reply\n  .replace(/ACTION:[^\\n]+\\n?/g, '')\n  .replace(/STATE:[^\\n]+\\n?/g, '')\n  .trim();\n\nlet action = null;\nlet actionData = null;\nif (actionMatch) {\n  action = actionMatch[1];\n  try { actionData = actionMatch[2] ? JSON.parse(actionMatch[2]) : null; } catch { actionData = actionMatch[2]; }\n}\n\nlet newState = null;\nlet stateData = null;\nif (stateMatch) {\n  newState = stateMatch[1];\n  try { stateData = JSON.parse(stateMatch[2]); } catch { stateData = {}; }\n}\n\nreturn [{ json: { reply: cleanReply, action, actionData, newState, stateData } }];"
+      },
+      "id": "parse-claude-output",
+      "name": "Parse Claude Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.action }}", "operation": "isNotEmpty" }]
+        }
+      },
+      "id": "has-action",
+      "name": "Has Action?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{ $json.action }}", "value2": "CREATE_BOOKING" }]
+        }
+      },
+      "id": "which-action",
+      "name": "Which Action?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/booking",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" },
+                          { "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Parse Claude Output').item.json.actionData) }}",
+        "options": {}
+      },
+      "id": "create-booking",
+      "name": "Create Booking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/appointments?phone={{ encodeURIComponent($('Extract Phone + Text').item.json.phone) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "get-appointments",
+      "name": "Get Appointments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/conversation",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" },
+                          { "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "phone", "value": "={{ $('Extract Phone + Text').item.json.phone }}" },
+            { "name": "state", "value": "={{ $('Parse Claude Output').item.json.newState ?? 'idle' }}" },
+            { "name": "data", "value": "={{ $('Parse Claude Output').item.json.stateData ?? {} }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-state",
+      "name": "Save Conversation State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2000, 440]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WAHA_URL }}/api/sendText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $env.WAHA_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "={{ $env.WAHA_SESSION ?? 'default' }}" },
+            { "name": "chatId", "value": "={{ $('Extract Phone + Text').item.json.phone.replace(/\\D/g,'') + '@c.us' }}" },
+            { "name": "text", "value": "={{ $('Parse Claude Output').item.json.reply }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [2440, 440]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK"
+      },
+      "id": "respond-200",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2660, 440]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] }
+      },
+      "id": "cron-5min",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 600],
+      "notes": "Runs cancel-expired endpoint every 5 minutes to cancel unpaid bookings"
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SITE_URL }}/api/whatsapp/cancel-expired",
+        "sendMethod": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "x-api-key", "value": "={{ $env.WHATSAPP_API_KEY }}" }]
+        },
+        "options": {}
+      },
+      "id": "cancel-expired",
+      "name": "Cancel Expired Bookings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [460, 600]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [{ "value1": "={{ $json.canceled.length }}", "value2": 0, "operation": "larger" }]
+        }
+      },
+      "id": "has-expired",
+      "name": "Any Expired?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "canceled",
+        "options": {}
+      },
+      "id": "split-expired",
+      "name": "Split Expired",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [900, 580]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.WAHA_URL }}/api/sendText",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Api-Key", "value": "={{ $env.WAHA_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "={{ $env.WAHA_SESSION ?? 'default' }}" },
+            { "name": "chatId", "value": "={{ $json.phone?.replace(/\\D/g,'') + '@c.us' }}" },
+            { "name": "text", "value": "⏱️ Din bokning #{{ $json.bookingId }} har avbokats automatiskt pga utebliven betalning inom 15 minuter.\n\nDu kan boka igen när du vill! 😊\n\n---\n⏱️ Your booking #{{ $json.bookingId }} was automatically cancelled due to no payment within 15 minutes.\n\nFeel free to book again anytime!" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-expired",
+      "name": "Notify Expired Guest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 580]
+    }
+  ],
+  "connections": {
+    "WAHA Webhook": { "main": [[{ "node": "Extract Phone + Text", "type": "main", "index": 0 }]] },
+    "Extract Phone + Text": { "main": [[{ "node": "Identify User Role", "type": "main", "index": 0 }]] },
+    "Identify User Role": { "main": [[{ "node": "Get Conversation State", "type": "main", "index": 0 }]] },
+    "Get Conversation State": { "main": [[{ "node": "Get Available Sessions", "type": "main", "index": 0 }]] },
+    "Get Available Sessions": { "main": [[{ "node": "Claude AI Agent", "type": "main", "index": 0 }]] },
+    "Claude AI Agent": { "main": [[{ "node": "Parse Claude Output", "type": "main", "index": 0 }]] },
+    "Parse Claude Output": { "main": [[{ "node": "Has Action?", "type": "main", "index": 0 }], [{ "node": "Save Conversation State", "type": "main", "index": 0 }]] },
+    "Has Action?": {
+      "main": [
+        [{ "node": "Which Action?", "type": "main", "index": 0 }],
+        [{ "node": "Save Conversation State", "type": "main", "index": 0 }]
+      ]
+    },
+    "Which Action?": {
+      "main": [
+        [{ "node": "Create Booking", "type": "main", "index": 0 }],
+        [{ "node": "Get Appointments", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Booking": { "main": [[{ "node": "Save Conversation State", "type": "main", "index": 0 }]] },
+    "Get Appointments": { "main": [[{ "node": "Save Conversation State", "type": "main", "index": 0 }]] },
+    "Save Conversation State": { "main": [[{ "node": "Send WhatsApp Reply", "type": "main", "index": 0 }]] },
+    "Send WhatsApp Reply": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] },
+    "Every 5 Minutes": { "main": [[{ "node": "Cancel Expired Bookings", "type": "main", "index": 0 }]] },
+    "Cancel Expired Bookings": { "main": [[{ "node": "Any Expired?", "type": "main", "index": 0 }]] },
+    "Any Expired?": { "main": [[{ "node": "Split Expired", "type": "main", "index": 0 }], []] },
+    "Split Expired": { "main": [[{ "node": "Notify Expired Guest", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "instanceId": "uppsalahalkbana-whatsapp-bot",
+    "_readme": "ENVIRONMENT VARIABLES NEEDED IN n8n: SITE_URL (your site, e.g. https://uppsalahalkbana.se), WHATSAPP_API_KEY (same as in .env), WAHA_URL (your WAHA instance URL), WAHA_API_KEY (WAHA API key), WAHA_SESSION (default). Also set ANTHROPIC_API_KEY in Anthropic credentials."
+  }
+}

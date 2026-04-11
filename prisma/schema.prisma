@@ -113,6 +113,21 @@ model CourseGroup {
   createdAt DateTime @default(now())
 }
 
+model WhatsappNumber {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+}
+
+model WhatsappConversation {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  state     String   @default("idle")
+  data      Json?
+  updatedAt DateTime @updatedAt
+}
+
 model InfoCard {
   id                 Int      @id @default(autoincrement())
   badge              String   @default("")

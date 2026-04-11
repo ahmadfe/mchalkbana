@@ -99,6 +99,25 @@ export async function POST(request: Request) {
     }
 
     console.log('[Swish] Booking #' + bookingId + ' marked as Paid');
+
+    // Send WhatsApp confirmation if booked via WhatsApp
+    if (booking.bookedByRole === 'whatsapp' && booking.guestPhone) {
+      const wahaUrl = process.env.WAHA_URL;
+      const wahaSession = process.env.WAHA_SESSION ?? 'default';
+      if (wahaUrl) {
+        const start = new Date(booking.session.startTime);
+        const msgSv = `✅ Betalning mottagen! Bokning #${bookingId} bekräftad.\n📅 ${start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}\n🕐 ${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}\n📍 ${booking.session.school?.name ?? ''}\n\nVi ses där! 🎉`;
+        await fetch(`${wahaUrl}/api/sendText`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Api-Key': process.env.WAHA_API_KEY ?? '' },
+          body: JSON.stringify({
+            session: wahaSession,
+            chatId: `${booking.guestPhone.replace(/\D/g, '')}@c.us`,
+            text: msgSv,
+          }),
+        }).catch((err) => console.error('[Swish] WhatsApp confirm failed:', err));
+      }
+    }
   } else if (
     verifiedStatus === 'DECLINED' ||
     verifiedStatus === 'ERROR' ||

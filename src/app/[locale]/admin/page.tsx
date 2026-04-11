@@ -36,11 +36,13 @@ import {
   KeyRound,
   Clock,
   RefreshCw,
+  MessageCircle,
+  Smartphone,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards' | 'hero';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp';
 
 interface InfoCardRecord {
   id: number;
@@ -146,6 +148,12 @@ export default function AdminPage() {
   const [addStudentError, setAddStudentError] = useState('');
   const [addStudentSaving, setAddStudentSaving] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
+
+  // WhatsApp numbers
+  const [waNumbers, setWaNumbers] = useState<{ id: number; phone: string; role: string; createdAt: string }[]>([]);
+  const [newWaPhone, setNewWaPhone] = useState('');
+  const [waSaving, setWaSaving] = useState(false);
+  const [waError, setWaError] = useState('');
 
   const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
   const [schoolAccounts, setSchoolAccounts] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
@@ -312,6 +320,8 @@ export default function AdminPage() {
     setInfoCards(cardsData.cards || []);
     // Load staff separately (don't block main load)
     fetch('/api/admin/staff').then(r => r.json()).then(d => setStaffList(d.staff || []));
+    // Load WhatsApp numbers
+    fetch('/api/admin/whatsapp-numbers').then(r => r.json()).then(d => setWaNumbers(d.numbers || []));
     setLoading(false);
   }, []);
 
@@ -374,6 +384,7 @@ export default function AdminPage() {
     { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
     { id: 'hero', label: 'Hero-media', icon: <MonitorPlay className="w-4 h-4" /> },
+    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
   ];
 
   const handleSaveCard = async () => {
@@ -589,6 +600,31 @@ export default function AdminPage() {
     });
     setPricesSaving(false);
     setPricesSaved(true);
+  };
+
+  const handleAddWaNumber = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaError('');
+    setWaSaving(true);
+    const res = await fetch('/api/admin/whatsapp-numbers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: newWaPhone }),
+    });
+    setWaSaving(false);
+    if (res.ok) {
+      const data = await res.json();
+      setWaNumbers((prev) => [data.number, ...prev]);
+      setNewWaPhone('');
+    } else {
+      const data = await res.json();
+      setWaError(data.error || 'Fel vid sparning');
+    }
+  };
+
+  const handleDeleteWaNumber = async (id: number) => {
+    await fetch(`/api/admin/whatsapp-numbers/${id}`, { method: 'DELETE' });
+    setWaNumbers((prev) => prev.filter((n) => n.id !== id));
   };
 
   const openResetPwd = (id: number, name: string, type: 'school' | 'staff') => {
@@ -1784,6 +1820,105 @@ export default function AdminPage() {
                   {heroSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   {heroSaving ? 'Sparar...' : 'Spara hero-media'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* WhatsApp Numbers */}
+          {tab === 'whatsapp' && (
+            <div className="max-w-2xl space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900">WhatsApp Admin-nummer</h2>
+                  <p className="text-sm text-gray-500">Registrerade nummer kan boka direkt utan betalning</p>
+                </div>
+              </div>
+
+              {/* Add number form */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-green-600" />
+                  Lägg till admin-nummer
+                </h3>
+                {waError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{waError}</div>
+                )}
+                <form onSubmit={handleAddWaNumber} className="flex gap-3">
+                  <input
+                    type="text"
+                    className="input-field flex-1"
+                    placeholder="+46701234567"
+                    value={newWaPhone}
+                    onChange={(e) => setNewWaPhone(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={waSaving}
+                    className="btn-primary px-5 flex items-center gap-2 disabled:opacity-60 shrink-0"
+                  >
+                    {waSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Lägg till
+                  </button>
+                </form>
+                <p className="text-xs text-gray-400 mt-2">Ange nummer med landskod, t.ex. +46701234567</p>
+              </div>
+
+              {/* Registered numbers list */}
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h3 className="font-semibold text-gray-900 mb-4">
+                  Registrerade nummer ({waNumbers.length})
+                </h3>
+                {waNumbers.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">
+                    <Smartphone className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                    <p className="text-sm">Inga admin-nummer registrerade ännu.</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {waNumbers.map((n) => (
+                      <li key={n.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                            <MessageCircle className="w-4 h-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-mono font-semibold text-gray-900 text-sm">{n.phone}</p>
+                            <p className="text-xs text-gray-400">Registrerad {new Date(n.createdAt).toLocaleDateString('sv-SE')}</p>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 mr-2">
+                          Admin
+                        </span>
+                        <button
+                          onClick={() => handleDeleteWaNumber(n.id)}
+                          className="text-gray-300 hover:text-red-500 transition p-1"
+                          title="Ta bort nummer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* API info box for n8n */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">n8n API-information</p>
+                <div className="space-y-2 text-xs font-mono text-gray-600">
+                  <p><span className="text-gray-400">Header:</span> x-api-key: <span className="text-swedish-blue">WHATSAPP_API_KEY</span></p>
+                  <p><span className="text-gray-400">POST</span> /api/whatsapp/identify</p>
+                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/sessions</p>
+                  <p><span className="text-gray-400">POST</span> /api/whatsapp/booking</p>
+                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/appointments?phone=</p>
+                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/conversation?phone=</p>
+                  <p><span className="text-gray-400">POST</span> /api/whatsapp/conversation</p>
+                  <p><span className="text-gray-400">POST</span> /api/whatsapp/cancel-expired</p>
+                </div>
               </div>
             </div>
           )}
