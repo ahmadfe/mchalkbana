@@ -252,6 +252,8 @@ export default function AdminPage() {
   const [assigningSchoolSession, setAssigningSchoolSession] = useState<number | null>(null);
   const [assignAllocations, setAssignAllocations] = useState<Record<number, number>>({});
   const [assignAllocError, setAssignAllocError] = useState('');
+  const [assignPickSchoolId, setAssignPickSchoolId] = useState<number | ''>('');
+  const [assignPickSeats, setAssignPickSeats] = useState(1);
   const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
@@ -1123,43 +1125,94 @@ export default function AdminPage() {
                           <button onClick={() => handleViewStudents(s.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition">
                             <Eye className="w-3.5 h-3.5" />Visa elever
                           </button>
-                          {assigningSchoolSession === s.id ? (
-                            <div className="flex flex-col gap-1.5 min-w-[230px]">
-                              <div className="border border-gray-200 rounded-lg bg-white max-h-48 overflow-y-auto p-2 space-y-2">
-                                {schoolAccounts.map((acc) => (
-                                  <div key={acc.id} className="flex items-center justify-between gap-2">
-                                    <span className="text-xs text-gray-700 truncate flex-1">{acc.name}</span>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max={s.seatLimit}
-                                        value={assignAllocations[acc.id] ?? 0}
-                                        onChange={(e) => setAssignAllocations((prev) => ({ ...prev, [acc.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                                        className="w-12 text-center border border-gray-300 rounded-md px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
-                                      />
-                                      <span className="text-xs text-gray-400">pl</span>
-                                    </div>
+                          {assigningSchoolSession === s.id ? (() => {
+                            const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
+                            const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
+                            const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
+                            return (
+                              <div className="flex flex-col gap-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
+                                {/* Add row */}
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={assignPickSchoolId}
+                                    onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')}
+                                    className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white"
+                                  >
+                                    <option value="">Välj skola...</option>
+                                    {availableSchools.map((acc) => (
+                                      <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max={s.seatLimit}
+                                    value={assignPickSeats}
+                                    onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-12 text-center border border-gray-300 rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
+                                  />
+                                  <span className="text-xs text-gray-400 shrink-0">pl</span>
+                                  <button
+                                    disabled={!assignPickSchoolId}
+                                    onClick={() => {
+                                      if (!assignPickSchoolId) return;
+                                      setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats }));
+                                      setAssignPickSchoolId('');
+                                      setAssignPickSeats(1);
+                                      setAssignAllocError('');
+                                    }}
+                                    className="shrink-0 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed"
+                                  >
+                                    + Lägg till
+                                  </button>
+                                </div>
+
+                                {/* Assigned list */}
+                                {assignedEntries.length > 0 && (
+                                  <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-40 overflow-y-auto">
+                                    {assignedEntries.map(([schoolUserId, seats]) => {
+                                      const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
+                                      return (
+                                        <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-1.5 text-xs">
+                                          <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
+                                          <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
+                                          <button
+                                            onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })}
+                                            className="text-gray-300 hover:text-red-500 transition"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                ))}
-                                {schoolAccounts.length === 0 && <span className="text-xs text-gray-400">Inga skolor</span>}
+                                )}
+                                {assignedEntries.length === 0 && (
+                                  <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>
+                                )}
+
+                                {/* Footer */}
+                                <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                                  <span className="text-xs text-gray-500">
+                                    Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser
+                                  </span>
+                                  <div className="flex gap-1.5">
+                                    <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
+                                    <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
                               </div>
-                              <div className="text-xs text-right text-gray-500">
-                                Totalt: <span className={Object.values(assignAllocations).reduce((a, b) => a + b, 0) > s.seatLimit ? 'text-red-500 font-bold' : 'font-semibold'}>
-                                  {Object.values(assignAllocations).reduce((a, b) => a + b, 0)}
-                                </span>/{s.seatLimit} platser
-                              </div>
-                              {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
-                              <div className="flex gap-1.5">
-                                <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
-                                <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); }} className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"><X className="w-3.5 h-3.5" /></button>
-                              </div>
-                            </div>
-                          ) : (
+                            );
+                          })() : (
                             <button
                               onClick={() => {
                                 setAssigningSchoolSession(s.id);
                                 setAssignAllocError('');
+                                setAssignPickSchoolId('');
+                                setAssignPickSeats(1);
                                 const allocMap: Record<number, number> = {};
                                 ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; });
                                 setAssignAllocations(allocMap);
