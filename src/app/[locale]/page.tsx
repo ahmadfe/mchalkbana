@@ -43,12 +43,11 @@ const jsonLd = {
     addressCountry: 'SE',
   },
   areaServed: [
-    { '@type': 'City', name: 'Uppsala' },
-    { '@type': 'City', name: 'Stockholm' },
-    { '@type': 'City', name: 'Gävle' },
-    { '@type': 'City', name: 'Enköping' },
-    { '@type': 'City', name: 'Västerås' },
-  ],
+    'Uppsala','Stockholm','Västerås','Enköping','Sigtuna','Märsta',
+    'Norrtälje','Tierp','Knivsta','Bålsta','Sala','Östhammar',
+    'Älvkarleby','Gävle','Arlanda','Upplands Väsby','Täby',
+    'Sollentuna','Håbo','Heby',
+  ].map((name) => ({ '@type': 'City', name })),
   sameAs: ['https://www.facebook.com/UppsalaHalkbanaOfficial'],
   description:
     'Professionell riskutbildning Risk 1 och Risk 2 för bil och motorcykel. Godkänd av Transportstyrelsen.',
