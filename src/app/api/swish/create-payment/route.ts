@@ -2,6 +2,31 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createPaymentRequest } from '@/lib/swish';
 
+const SWISH_ERROR_MESSAGES: Record<string, string> = {
+  ACMT03: 'Mobilnumret är inte anslutet till Swish. Kontrollera att du angett rätt nummer och att Swish är aktiverat.',
+  ACMT07: 'Swish-kontot är inte aktivt. Kontakta din bank.',
+  BE18:   'Ogiltigt mobilnummer. Kontrollera att du angett rätt format (t.ex. 070-123 45 67).',
+  RF07:   'Betalningen avvisades av Swish. Försök igen.',
+  FF10:   'Betalningen avvisades av din bank. Kontakta din bank för mer information.',
+  TM01:   'Tidsgräns nådd – du godkände inte betalningen i tid. Försök igen.',
+  BANKIDCL: 'BankID-verifiering avbröts. Försök igen.',
+};
+
+function swishFriendlyError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  try {
+    const match = msg.match(/\[(\[.+\])\]$/) ?? msg.match(/(\[.+\])$/);
+    if (match) {
+      const codes = JSON.parse(match[1]) as Array<{ errorCode?: string }>;
+      const code = codes[0]?.errorCode;
+      if (code && SWISH_ERROR_MESSAGES[code]) return SWISH_ERROR_MESSAGES[code];
+    }
+  } catch {
+    // fall through to generic message
+  }
+  return 'Swish-betalning misslyckades. Försök igen eller kontakta oss på 07 07 66 66 61.';
+}
+
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
@@ -44,7 +69,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Swish-fel' },
+      { error: swishFriendlyError(err) },
       { status: 500 },
     );
   }
