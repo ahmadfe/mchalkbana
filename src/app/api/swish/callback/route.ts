@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getPaymentRequest } from '@/lib/swish';
-import { sendReceiptEmail } from '@/lib/email';
+import { sendReceiptEmail, sendPaymentFailedEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -154,6 +154,22 @@ export async function POST(request: Request) {
     ]);
 
     console.log('[Swish] Booking #' + bookingId + ' canceled — Swish status:', verifiedStatus);
+
+    // Send payment failed email
+    const failedEmail = booking.guestEmail ?? booking.user?.email ?? null;
+    const failedName = booking.guestName ?? booking.user?.name ?? 'Kund';
+    if (failedEmail) {
+      const start = new Date(booking.session.startTime);
+      const end = new Date(booking.session.endTime);
+      await sendPaymentFailedEmail({
+        recipientEmail: failedEmail,
+        recipientName: failedName,
+        bookingId,
+        courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
+        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
+      });
+    }
   }
 
   // Always respond 200 to Swish

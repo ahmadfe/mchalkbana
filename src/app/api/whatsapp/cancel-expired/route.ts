@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { validateWhatsappApiKey } from '@/lib/whatsapp-auth';
+import { sendPaymentFailedEmail } from '@/lib/email';
 
 // POST — called by n8n cron every 5 minutes
 // Cancels Pending whatsapp bookings older than 15 minutes and restores seats
@@ -17,7 +18,14 @@ export async function POST(request: Request) {
       bookedByRole: 'whatsapp',
       bookingTime: { lt: cutoff },
     },
-    select: { id: true, sessionId: true, guestPhone: true, guestName: true },
+    select: {
+      id: true,
+      sessionId: true,
+      guestPhone: true,
+      guestName: true,
+      guestEmail: true,
+      session: { include: { course: true } },
+    },
   });
 
   if (expired.length === 0) {
@@ -37,6 +45,24 @@ export async function POST(request: Request) {
       })
     ),
   ]);
+
+  // Send payment-failed emails to guests who provided an email
+  await Promise.allSettled(
+    expired
+      .filter((b) => b.guestEmail)
+      .map((b) => {
+        const start = new Date(b.session.startTime);
+        const end = new Date(b.session.endTime);
+        return sendPaymentFailedEmail({
+          recipientEmail: b.guestEmail!,
+          recipientName: b.guestName ?? 'Kund',
+          bookingId: b.id,
+          courseName: b.session.course.titleSv,
+          courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+          courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
+        });
+      })
+  );
 
   // Return list so n8n can send WhatsApp timeout messages to each guest
   return NextResponse.json({
