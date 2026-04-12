@@ -123,6 +123,8 @@ export default function AdminPage() {
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [bookingYear, setBookingYear] = useState(() => String(new Date().getFullYear()));
   const [bookingMonth, setBookingMonth] = useState(() => String(new Date().getMonth() + 1));
+  const [bookingSearch, setBookingSearch] = useState('');
+  const [bookingSort, setBookingSort] = useState<{ col: 'id' | 'name' | 'courseDate' | 'status'; dir: 'asc' | 'desc' }>({ col: 'id', dir: 'desc' });
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
@@ -811,6 +813,14 @@ export default function AdminPage() {
     setStudentsData(updatedData);
   };
 
+  const handleDeleteBooking = async (bookingId: number) => {
+    if (!confirm(`Ta bort bokning #${bookingId}? Platsen återställs om bokningen inte är avbokad.`)) return;
+    const res = await fetch(`/api/admin/bookings/${bookingId}`, { method: 'DELETE' });
+    if (res.ok) {
+      setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    }
+  };
+
   const handleViewStudents = async (sessionId: number) => {
     setStudentsLoading(true);
     setStudentsData(null);
@@ -1235,15 +1245,34 @@ export default function AdminPage() {
               { v: '10', l: 'Oktober' }, { v: '11', l: 'November' }, { v: '12', l: 'December' },
             ];
             const availableYears = Array.from(new Set(bookings.map(b => String(new Date(b.bookingTime).getFullYear())))).sort((a, b) => Number(b) - Number(a));
+            const q = bookingSearch.trim().toLowerCase();
             const filtered = bookings.filter(b => {
               const d = new Date(b.bookingTime);
               const yearMatch = String(d.getFullYear()) === bookingYear;
               const monthMatch = bookingMonth === 'all' || String(d.getMonth() + 1) === bookingMonth;
               const statusMatch = bookingStatusFilter === 'all' || b.status === bookingStatusFilter;
-              return yearMatch && monthMatch && statusMatch;
+              const searchMatch = !q || (b.guestName ?? '').toLowerCase().includes(q) || (b.personnummer ?? '').includes(q) || String(b.id) === q;
+              return yearMatch && monthMatch && statusMatch && searchMatch;
             });
+
+            const sortFn = (a: Booking, b: Booking) => {
+              const dir = bookingSort.dir === 'asc' ? 1 : -1;
+              if (bookingSort.col === 'id') return (a.id - b.id) * dir;
+              if (bookingSort.col === 'name') return (a.guestName ?? '').localeCompare(b.guestName ?? '', 'sv') * dir;
+              if (bookingSort.col === 'courseDate') return (new Date(a.session?.startTime ?? 0).getTime() - new Date(b.session?.startTime ?? 0).getTime()) * dir;
+              if (bookingSort.col === 'status') return (a.status ?? '').localeCompare(b.status ?? '') * dir;
+              return 0;
+            };
+            const toggleSort = (col: typeof bookingSort.col) =>
+              setBookingSort(prev => ({ col, dir: prev.col === col && prev.dir === 'asc' ? 'desc' : 'asc' }));
+            const SortIcon = ({ col }: { col: typeof bookingSort.col }) => (
+              <span className="ml-1 inline-block opacity-50">
+                {bookingSort.col === col ? (bookingSort.dir === 'asc' ? '↑' : '↓') : '↕'}
+              </span>
+            );
+
             const groups: Record<string, Booking[]> = {};
-            [...filtered].sort((a, b) => new Date(b.bookingTime).getTime() - new Date(a.bookingTime).getTime()).forEach((b) => {
+            [...filtered].sort(sortFn).forEach((b) => {
               const key = new Date(b.bookingTime).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
               if (!groups[key]) groups[key] = [];
               groups[key].push(b);
@@ -1251,9 +1280,22 @@ export default function AdminPage() {
             const monthKeys = Object.keys(groups);
             return (
               <div>
-                <div className="flex justify-between items-center mb-5">
-                  <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex flex-col gap-3 mb-5">
+                  <div className="flex justify-between items-center flex-wrap gap-3">
                     <h2 className="font-bold text-gray-900">Alla bokningar ({filtered.length})</h2>
+                    <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
+                      <Download className="w-4 h-4" />
+                      {t('export_csv')}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="text"
+                      placeholder="Sök namn, personnummer eller ID..."
+                      value={bookingSearch}
+                      onChange={(e) => setBookingSearch(e.target.value)}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue w-64"
+                    />
                     <select
                       value={bookingStatusFilter}
                       onChange={(e) => setBookingStatusFilter(e.target.value)}
@@ -1281,10 +1323,6 @@ export default function AdminPage() {
                       {MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
                     </select>
                   </div>
-                  <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
-                    <Download className="w-4 h-4" />
-                    {t('export_csv')}
-                  </button>
                 </div>
                 {monthKeys.length === 0 && (
                   <div className="text-center py-16 text-gray-400 text-sm">Inga bokningar för vald period.</div>
@@ -1300,14 +1338,14 @@ export default function AdminPage() {
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                           <tr>
-                            <th className="text-left py-3 px-4">ID</th>
-                            <th className="text-left py-3 px-4">Namn</th>
+                            <th className="text-left py-3 px-4 cursor-pointer select-none hover:text-gray-800" onClick={() => toggleSort('id')}>ID<SortIcon col="id" /></th>
+                            <th className="text-left py-3 px-4 cursor-pointer select-none hover:text-gray-800" onClick={() => toggleSort('name')}>Namn<SortIcon col="name" /></th>
                             <th className="text-left py-3 px-4">Personnummer</th>
                             <th className="text-left py-3 px-4">Telefon</th>
                             <th className="text-left py-3 px-4">E-post</th>
-                            <th className="text-left py-3 px-4">Kurs & Pass</th>
+                            <th className="text-left py-3 px-4 cursor-pointer select-none hover:text-gray-800" onClick={() => toggleSort('courseDate')}>Kurs & Pass<SortIcon col="courseDate" /></th>
                             <th className="text-left py-3 px-4">Bokad av</th>
-                            <th className="text-left py-3 px-4">Status</th>
+                            <th className="text-left py-3 px-4 cursor-pointer select-none hover:text-gray-800" onClick={() => toggleSort('status')}>Status<SortIcon col="status" /></th>
                             <th className="py-3 px-4" />
                           </tr>
                         </thead>
@@ -1354,7 +1392,7 @@ export default function AdminPage() {
                                     <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera">
                                       <Pencil className="w-3.5 h-3.5" />
                                     </button>
-                                    <button onClick={() => handleDeleteStudent(b.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Ta bort">
+                                    <button onClick={() => handleDeleteBooking(b.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50" title="Ta bort">
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
