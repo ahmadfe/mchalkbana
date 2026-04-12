@@ -32,6 +32,12 @@ export interface Course {
   receiptMessage?: string;
 }
 
+export interface SessionSchoolAllocation {
+  schoolUserId: number;
+  allocatedSeats: number;
+  schoolUser?: { name: string };
+}
+
 export interface Session {
   id: number;
   courseId: number;
@@ -44,6 +50,8 @@ export interface Session {
   seatsAvailable: number;
   visibility: string;
   assignedSchoolUsers?: { id: number; name: string }[];
+  schoolAllocations?: SessionSchoolAllocation[];
+  myAllocation?: number | null; // for school users: their allocated seats on this session
 }
 
 export type BookingStatus = 'Pending' | 'Paid' | 'Canceled' | 'Confirmed';

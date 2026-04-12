@@ -52,6 +52,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Inga platser kvar' }, { status: 409 });
   }
 
+  // Enforce per-school seat allocation if one exists
+  const allocation = await prisma.sessionSchoolAllocation.findUnique({
+    where: { sessionId_schoolUserId: { sessionId, schoolUserId: authUser.userId } },
+  });
+  if (allocation) {
+    const usedSeats = await prisma.booking.count({
+      where: { sessionId, bookedBySchoolUserId: authUser.userId, status: { not: 'Canceled' } },
+    });
+    if (usedSeats >= allocation.allocatedSeats) {
+      return NextResponse.json(
+        { error: `Din skola har nått sin platskvot (${usedSeats}/${allocation.allocatedSeats} platser bokade)` },
+        { status: 409 },
+      );
+    }
+  }
+
   // Duplicate check
   const existing = await prisma.booking.findFirst({
     where: { sessionId, personnummer, status: { not: 'Canceled' } },

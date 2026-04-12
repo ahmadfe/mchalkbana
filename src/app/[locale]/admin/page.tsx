@@ -250,7 +250,8 @@ export default function AdminPage() {
 
   // Session assign school (multi-select)
   const [assigningSchoolSession, setAssigningSchoolSession] = useState<number | null>(null);
-  const [assignSchoolIds, setAssignSchoolIds] = useState<number[]>([]);
+  const [assignAllocations, setAssignAllocations] = useState<Record<number, number>>({});
+  const [assignAllocError, setAssignAllocError] = useState('');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
@@ -743,25 +744,32 @@ export default function AdminPage() {
     }
   };
 
-  const handleAssignSchool = async (sessionId: number) => {
-    const visibility = assignSchoolIds.length > 0 ? 'school' : 'public';
+  const handleAssignSchool = async (sessionId: number, seatLimit: number) => {
+    const allocations = Object.entries(assignAllocations)
+      .filter(([, seats]) => seats > 0)
+      .map(([schoolUserId, seats]) => ({ schoolUserId: parseInt(schoolUserId), seats }));
+
+    const total = allocations.reduce((sum, a) => sum + a.seats, 0);
+    if (total > seatLimit) {
+      setAssignAllocError(`Totalt ${total} platser > ${seatLimit} (maxgräns). Minska antalet.`);
+      return;
+    }
+
+    const visibility = allocations.length > 0 ? 'school' : 'public';
+    const assignedSchoolUserIds = allocations.map((a) => a.schoolUserId);
+
     const res = await fetch(`/api/admin/sessions/${sessionId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visibility, assignedSchoolUserIds: assignSchoolIds }),
+      body: JSON.stringify({ visibility, assignedSchoolUserIds, schoolAllocations: allocations }),
     });
     if (res.ok) {
       const { session: updated } = await res.json();
       setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, ...updated } : s));
     }
     setAssigningSchoolSession(null);
-    setAssignSchoolIds([]);
-  };
-
-  const toggleAssignSchool = (id: number) => {
-    setAssignSchoolIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setAssignAllocations({});
+    setAssignAllocError('');
   };
 
   const handleConfirmRefund = async () => {
@@ -1116,25 +1124,52 @@ export default function AdminPage() {
                             <Eye className="w-3.5 h-3.5" />Visa elever
                           </button>
                           {assigningSchoolSession === s.id ? (
-                            <div className="flex flex-col gap-1.5 min-w-[180px]">
-                              <div className="border border-gray-200 rounded-lg bg-white max-h-36 overflow-y-auto p-1.5 space-y-1">
+                            <div className="flex flex-col gap-1.5 min-w-[230px]">
+                              <div className="border border-gray-200 rounded-lg bg-white max-h-48 overflow-y-auto p-2 space-y-2">
                                 {schoolAccounts.map((acc) => (
-                                  <label key={acc.id} className="flex items-center gap-2 px-1.5 py-1 rounded cursor-pointer hover:bg-gray-50 text-xs">
-                                    <input type="checkbox" checked={assignSchoolIds.includes(acc.id)} onChange={() => toggleAssignSchool(acc.id)} className="accent-swedish-blue" />
-                                    {acc.name}
-                                  </label>
+                                  <div key={acc.id} className="flex items-center justify-between gap-2">
+                                    <span className="text-xs text-gray-700 truncate flex-1">{acc.name}</span>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={s.seatLimit}
+                                        value={assignAllocations[acc.id] ?? 0}
+                                        onChange={(e) => setAssignAllocations((prev) => ({ ...prev, [acc.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                        className="w-12 text-center border border-gray-300 rounded-md px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
+                                      />
+                                      <span className="text-xs text-gray-400">pl</span>
+                                    </div>
+                                  </div>
                                 ))}
-                                {schoolAccounts.length === 0 && <span className="text-xs text-gray-400 px-1">Inga skolor</span>}
+                                {schoolAccounts.length === 0 && <span className="text-xs text-gray-400">Inga skolor</span>}
                               </div>
+                              <div className="text-xs text-right text-gray-500">
+                                Totalt: <span className={Object.values(assignAllocations).reduce((a, b) => a + b, 0) > s.seatLimit ? 'text-red-500 font-bold' : 'font-semibold'}>
+                                  {Object.values(assignAllocations).reduce((a, b) => a + b, 0)}
+                                </span>/{s.seatLimit} platser
+                              </div>
+                              {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
                               <div className="flex gap-1.5">
-                                <button onClick={() => handleAssignSchool(s.id)} className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
-                                <button onClick={() => { setAssigningSchoolSession(null); setAssignSchoolIds([]); }} className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"><X className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="flex-1 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
+                                <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); }} className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-800"><X className="w-3.5 h-3.5" /></button>
                               </div>
                             </div>
                           ) : (
-                            <button onClick={() => { setAssigningSchoolSession(s.id); setAssignSchoolIds((s.assignedSchoolUsers || []).map((u: any) => u.id)); }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition text-orange-600 border-orange-300 hover:bg-orange-50">
+                            <button
+                              onClick={() => {
+                                setAssigningSchoolSession(s.id);
+                                setAssignAllocError('');
+                                const allocMap: Record<number, number> = {};
+                                ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; });
+                                setAssignAllocations(allocMap);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition text-orange-600 border-orange-300 hover:bg-orange-50"
+                            >
                               <School className="w-3.5 h-3.5" />
-                              {(s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Tilldela skola'}
+                              {(s as any).schoolAllocations?.length > 0
+                                ? (s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')
+                                : 'Tilldela skola'}
                             </button>
                           )}
                           <button onClick={() => handleDeleteSession(s.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">

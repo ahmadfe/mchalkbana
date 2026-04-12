@@ -3,17 +3,22 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 
+const SESSION_INCLUDE = {
+  course: true,
+  school: true,
+  assignedSchoolUsers: { select: { id: true, name: true } },
+  schoolAllocations: {
+    select: { schoolUserId: true, allocatedSeats: true, schoolUser: { select: { name: true } } },
+  },
+} as const;
+
 export async function GET(request: Request) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'admin') {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const sessions = await prisma.session.findMany({
-    include: {
-      course: true,
-      school: true,
-      assignedSchoolUsers: { select: { id: true, name: true } },
-    },
+    include: SESSION_INCLUDE,
     orderBy: { startTime: 'asc' },
   });
   return NextResponse.json({ sessions });
@@ -48,7 +53,7 @@ export async function POST(request: Request) {
         ? { assignedSchoolUsers: { connect: ids.map((id) => ({ id })) } }
         : {}),
     },
-    include: { course: true, school: true, assignedSchoolUsers: { select: { id: true, name: true } } },
+    include: SESSION_INCLUDE,
   });
   return NextResponse.json({ session }, { status: 201 });
 }

@@ -240,9 +240,12 @@ export default function SchoolPage() {
                   const title = locale === 'sv' ? s.course?.titleSv : s.course?.titleEn;
                   const start = new Date(s.startTime);
                   const end = new Date(s.endTime);
-                  const full = s.seatsAvailable === 0;
-                  const isOpen = expanded.has(s.id);
                   const sessionStudents = bookingsBySession[s.id] || [];
+                  const myAllocation = (s as any).myAllocation as number | null ?? null;
+                  const usedByMe = sessionStudents.length;
+                  const remainingMySeats = myAllocation !== null ? myAllocation - usedByMe : s.seatsAvailable;
+                  const full = myAllocation !== null ? usedByMe >= myAllocation : s.seatsAvailable === 0;
+                  const isOpen = expanded.has(s.id);
                   const courseId = s.course?.id;
                   const customPrice = courseId !== undefined ? priceMap[courseId] : undefined;
                   const displayPrice = customPrice ?? s.course?.price;
@@ -267,9 +270,15 @@ export default function SchoolPage() {
                               <span>📅 {start.toLocaleDateString('sv-SE')}</span>
                               <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
                               <span>📍 {s.course?.location || s.school?.name}</span>
-                              <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
-                                👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
-                              </span>
+                              {myAllocation !== null ? (
+                                <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
+                                  👤 {remainingMySeats}/{myAllocation} platser kvar (din kvot)
+                                </span>
+                              ) : (
+                                <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
+                                  👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
+                                </span>
+                              )}
                               {displayPrice !== undefined && (
                                 <span className="text-gray-700 font-semibold">
                                   {displayPrice.toLocaleString('sv-SE')} kr/elev

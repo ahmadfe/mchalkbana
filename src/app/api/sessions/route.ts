@@ -47,9 +47,24 @@ export async function GET(request: Request) {
         ...(vehicle ? { vehicle } : {}),
       },
     },
-    include: { course: true, school: true },
+    include: {
+      course: true,
+      school: true,
+      ...(isSchool
+        ? { schoolAllocations: { where: { schoolUserId: authUser!.userId }, select: { allocatedSeats: true } } }
+        : {}),
+    },
     orderBy: { startTime: 'asc' },
   });
 
-  return NextResponse.json({ sessions });
+  // For school users, flatten myAllocation onto each session
+  const result = isSchool
+    ? sessions.map((s) => {
+        const alloc = (s as any).schoolAllocations?.[0]?.allocatedSeats ?? null;
+        const { schoolAllocations: _, ...rest } = s as any;
+        return { ...rest, myAllocation: alloc };
+      })
+    : sessions;
+
+  return NextResponse.json({ sessions: result });
 }

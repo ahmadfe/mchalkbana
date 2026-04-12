@@ -21,6 +21,7 @@ model User {
   schoolBookings   Booking[] @relation("BookingSchoolUser")
   assignedSessions Session[] @relation("AssignedSchoolSessions")
   schoolCoursePrices SchoolCoursePrice[]
+  schoolAllocations  SessionSchoolAllocation[] @relation("SchoolAllocations")
   createdAt        DateTime  @default(now())
 }
 
@@ -70,6 +71,17 @@ model Session {
   visibility           String    @default("public")
   assignedSchoolUsers  User[]    @relation("AssignedSchoolSessions")
   bookings             Booking[]
+  schoolAllocations    SessionSchoolAllocation[]
+}
+
+model SessionSchoolAllocation {
+  id             Int     @id @default(autoincrement())
+  sessionId      Int
+  session        Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  schoolUserId   Int
+  schoolUser     User    @relation("SchoolAllocations", fields: [schoolUserId], references: [id], onDelete: Cascade)
+  allocatedSeats Int
+  @@unique([sessionId, schoolUserId])
 }
 
 model Booking {
