@@ -275,7 +275,7 @@ export default function AdminPage() {
   const [testEmailError, setTestEmailError] = useState('');
 
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] as number[] });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[] });
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('12:00');
@@ -531,7 +531,7 @@ export default function AdminPage() {
     const created = results.filter(Boolean).map((d: any) => d.session);
     setSessions((prev) => [...prev, ...created]);
     setShowAddSession(false);
-    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '20', visibility: 'public', assignedSchoolUserIds: [] });
+    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] });
     setSessionDate('');
     setStartHour('09:00');
     setEndHour('12:00');
@@ -2826,7 +2826,11 @@ export default function AdminPage() {
               {/* Course */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Kurs</label>
-                <select className="input-field" value={newSession.courseId} onChange={(e) => setNewSession({ ...newSession, courseId: e.target.value })} required>
+                <select className="input-field" value={newSession.courseId} onChange={(e) => {
+                  const selected = courses.find((c) => String(c.id) === e.target.value);
+                  const defaultSeats = selected?.vehicle === 'Motorcycle' ? '4' : '8';
+                  setNewSession({ ...newSession, courseId: e.target.value, seatLimit: defaultSeats });
+                }} required>
                   <option value="">Välj kurs...</option>
                   {courses.map((c) => {
                     const vehicleLabel = c.vehicle === 'Car' ? 'Bil 🚗' : c.vehicle === 'Motorcycle' ? 'MC 🏍️' : c.vehicle;
