@@ -38,6 +38,8 @@ import {
   RefreshCw,
   MessageCircle,
   Smartphone,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -249,6 +251,8 @@ export default function AdminPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   // Session assign school (multi-select)
+  const [collapsedSessionDays, setCollapsedSessionDays] = useState<Set<string>>(new Set());
+  const [collapsedBookingDays, setCollapsedBookingDays] = useState<Set<string>>(new Set());
   const [assigningSchoolSession, setAssigningSchoolSession] = useState<number | null>(null);
   const [assignAllocations, setAssignAllocations] = useState<Record<number, number>>({});
   const [assignAllocError, setAssignAllocError] = useState('');
@@ -1293,31 +1297,45 @@ export default function AdminPage() {
                       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                     });
                     const monthCount = Object.values(monthGroups[mKey]).flat().length;
+                    const isCollapsed = collapsedSessionDays.has(mKey);
+                    const toggleCollapse = () => setCollapsedSessionDays((prev) => {
+                      const next = new Set(prev);
+                      next.has(mKey) ? next.delete(mKey) : next.add(mKey);
+                      return next;
+                    });
                     return (
                       <div key={mKey}>
                         {/* Day divider */}
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-sm font-semibold text-gray-600 capitalize">{dayLabel}</h3>
+                        <button
+                          onClick={toggleCollapse}
+                          className="w-full flex items-center gap-3 mb-3 group text-left"
+                        >
+                          <h3 className="text-sm font-semibold text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{dayLabel}</h3>
                           <div className="flex-1 h-px bg-gray-200" />
                           <span className="text-xs text-gray-400">{monthCount} pass</span>
-                        </div>
+                          {isCollapsed
+                            ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                            : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />}
+                        </button>
                         {/* Vehicle sub-groups */}
-                        <div className="space-y-4">
-                          {Object.keys(monthGroups[mKey]).sort().map((vehicle) => {
-                            const vSessions = monthGroups[mKey][vehicle];
-                            const vLabel = vehicle === 'Car' ? '🚗 Bil' : vehicle === 'Motorcycle' ? '🏍️ MC' : vehicle;
-                            return (
-                              <div key={vehicle}>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <span className={clsx('text-xs font-bold px-2.5 py-1 rounded-full', vehicle === 'Car' ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
-                                    {vLabel} · {vSessions.length} pass
-                                  </span>
+                        {!isCollapsed && (
+                          <div className="space-y-4">
+                            {Object.keys(monthGroups[mKey]).sort().map((vehicle) => {
+                              const vSessions = monthGroups[mKey][vehicle];
+                              const vLabel = vehicle === 'Car' ? '🚗 Bil' : vehicle === 'Motorcycle' ? '🏍️ MC' : vehicle;
+                              return (
+                                <div key={vehicle}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className={clsx('text-xs font-bold px-2.5 py-1 rounded-full', vehicle === 'Car' ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
+                                      {vLabel} · {vSessions.length} pass
+                                    </span>
+                                  </div>
+                                  <div className="space-y-2">{vSessions.map(renderCard)}</div>
                                 </div>
-                                <div className="space-y-2">{vSessions.map(renderCard)}</div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1422,14 +1440,19 @@ export default function AdminPage() {
                   const dayLabel = new Date(dayKey + 'T12:00:00').toLocaleDateString('sv-SE', {
                     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                   });
+                  const isCollapsedBooking = collapsedBookingDays.has(dayKey);
                   return (
                   <div key={dayKey} className="mb-8">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-sm font-semibold text-gray-500 capitalize">{dayLabel}</h3>
+                    <button
+                      className="w-full flex items-center gap-3 mb-3 group"
+                      onClick={() => setCollapsedBookingDays(prev => { const n = new Set(prev); n.has(dayKey) ? n.delete(dayKey) : n.add(dayKey); return n; })}
+                    >
+                      <h3 className="text-sm font-semibold text-gray-500 capitalize group-hover:text-gray-700">{dayLabel}</h3>
                       <div className="flex-1 h-px bg-gray-200" />
                       <span className="text-xs text-gray-400">{groups[dayKey].length} bokningar</span>
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                      {isCollapsedBooking ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
+                    </button>
+                    {!isCollapsedBooking && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                           <tr>
@@ -1497,7 +1520,7 @@ export default function AdminPage() {
                           })}
                         </tbody>
                       </table>
-                    </div>
+                    </div>}
                   </div>
                   );
                 })}
