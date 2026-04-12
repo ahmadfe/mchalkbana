@@ -9,6 +9,7 @@ import type { CourseType, VehicleType, Session } from '@/lib/types';
 import { Filter } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
+import { fbq } from '@/components/MetaPixel';
 
 export default function CoursesPage() {
   const t = useTranslations('courses');
@@ -30,7 +31,11 @@ export default function CoursesPage() {
     setLoading(true);
     fetch(`/api/sessions?${params}`)
       .then((r) => r.json())
-      .then((data) => { setSessions(data.sessions || []); setLoading(false); })
+      .then((data) => {
+        setSessions(data.sessions || []);
+        setLoading(false);
+        fbq('track', 'ViewContent', { content_name: 'Kurser & Kurstillfällen', content_category: 'Riskutbildning' });
+      })
       .catch(() => setLoading(false));
   }, [typeFilter, vehicleFilter, showAvailableOnly]);
 

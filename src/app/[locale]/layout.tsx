@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import CookieBanner from '@/components/CookieBanner';
 import { AuthProvider } from '@/context/AuthContext';
+import MetaPixel from '@/components/MetaPixel';
 
 const locales = ['sv'];
 
@@ -72,6 +73,7 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
+            <MetaPixel />
             {children}
             <CookieBanner />
           </AuthProvider>

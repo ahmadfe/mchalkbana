@@ -10,6 +10,7 @@ import type { Session } from '@/lib/types';
 import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, QrCode } from 'lucide-react';
 import clsx from 'clsx';
 import { QRCodeSVG } from 'qrcode.react';
+import { fbq } from '@/components/MetaPixel';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
@@ -54,6 +55,12 @@ function CheckoutContent() {
         const data = await res.json();
         if (data.status === 'Paid') {
           clearInterval(pollRef.current!);
+          // Track: successful purchase
+          fbq('track', 'Purchase', {
+            content_name: session?.course?.titleSv ?? 'Riskutbildning',
+            value: session?.course?.price ?? 0,
+            currency: 'SEK',
+          });
           setStep('success');
         } else if (data.status === 'Canceled') {
           clearInterval(pollRef.current!);
@@ -113,6 +120,13 @@ function CheckoutContent() {
     if (!validate()) return;
     setSubmitting(true);
     setError('');
+
+    // Track: user started checkout
+    fbq('track', 'InitiateCheckout', {
+      content_name: session?.course?.titleSv ?? 'Riskutbildning',
+      value: session?.course?.price ?? 0,
+      currency: 'SEK',
+    });
 
     // 1. Create booking
     const bookRes = await fetch('/api/bookings', {
