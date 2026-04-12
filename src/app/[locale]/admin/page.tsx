@@ -1047,11 +1047,12 @@ export default function AdminPage() {
               })
               .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-            // Group by month → vehicle (year already filtered by dropdown)
+            // Group by day → vehicle
             const monthGroups: Record<string, Record<string, typeof filtered>> = {};
             for (const s of filtered) {
               const d = new Date(s.startTime);
-              const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              // Key = YYYY-MM-DD so each day gets its own header
+              const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
               const vehicle = s.course?.vehicle === 'Car' ? 'Car' : s.course?.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Other';
               if (!monthGroups[mKey]) monthGroups[mKey] = {};
               if (!monthGroups[mKey][vehicle]) monthGroups[mKey][vehicle] = [];
@@ -1288,14 +1289,15 @@ export default function AdminPage() {
                 {/* Month → Vehicle grouping */}
                 <div className="space-y-6">
                   {monthKeys.map((mKey) => {
-                    const [yr, mo] = mKey.split('-');
-                    const monthLabel = SESSION_MONTHS.find(m => m.v === String(Number(mo)))?.l ?? mo;
+                    const dayLabel = new Date(mKey + 'T12:00:00').toLocaleDateString('sv-SE', {
+                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                    });
                     const monthCount = Object.values(monthGroups[mKey]).flat().length;
                     return (
                       <div key={mKey}>
-                        {/* Month divider */}
+                        {/* Day divider */}
                         <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-sm font-semibold text-gray-600 capitalize">{monthLabel} {yr}</h3>
+                          <h3 className="text-sm font-semibold text-gray-600 capitalize">{dayLabel}</h3>
                           <div className="flex-1 h-px bg-gray-200" />
                           <span className="text-xs text-gray-400">{monthCount} pass</span>
                         </div>
@@ -1361,7 +1363,8 @@ export default function AdminPage() {
 
             const groups: Record<string, Booking[]> = {};
             [...filtered].sort(sortFn).forEach((b) => {
-              const key = new Date(b.bookingTime).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
+              const d = new Date(b.bookingTime);
+              const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
               if (!groups[key]) groups[key] = [];
               groups[key].push(b);
             });
@@ -1415,12 +1418,16 @@ export default function AdminPage() {
                 {monthKeys.length === 0 && (
                   <div className="text-center py-16 text-gray-400 text-sm">Inga bokningar för vald period.</div>
                 )}
-                {monthKeys.map((month) => (
-                  <div key={month} className="mb-8">
+                {monthKeys.map((dayKey) => {
+                  const dayLabel = new Date(dayKey + 'T12:00:00').toLocaleDateString('sv-SE', {
+                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                  });
+                  return (
+                  <div key={dayKey} className="mb-8">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide capitalize">{month}</h3>
+                      <h3 className="text-sm font-semibold text-gray-500 capitalize">{dayLabel}</h3>
                       <div className="flex-1 h-px bg-gray-200" />
-                      <span className="text-xs text-gray-400">{groups[month].length} bokningar</span>
+                      <span className="text-xs text-gray-400">{groups[dayKey].length} bokningar</span>
                     </div>
                     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                       <table className="w-full text-sm">
@@ -1438,7 +1445,7 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                          {groups[month].map((b) => {
+                          {groups[dayKey].map((b) => {
                             const name = getStudentName(b);
                             const phone = b.guestPhone ?? '–';
                             const email = b.guestEmail ?? (b.user as { email?: string } | null | undefined)?.email ?? '–';
@@ -1492,7 +1499,8 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             );
           })()}
