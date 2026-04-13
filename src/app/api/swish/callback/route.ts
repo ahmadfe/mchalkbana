@@ -85,16 +85,16 @@ export async function POST(request: Request) {
         transactionId,
         courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
         courseDate: start.toLocaleDateString('sv-SE', {
-          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm',
         }),
-        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
-        location: booking.session.school?.name ?? '',
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+        location: booking.session.course.location || booking.session.school?.name || '',
         price: booking.session.course.price,
         startTimeIso: new Date(booking.session.startTime).toISOString(),
         endTimeIso: new Date(booking.session.endTime).toISOString(),
         personnummer: booking.personnummer,
         phone: booking.guestPhone,
-        customMessage: booking.session.course.receiptMessage ?? '',
+        customMessage: booking.session.receiptMessage || booking.session.course.receiptMessage || '',
       });
     }
 
@@ -107,8 +107,8 @@ export async function POST(request: Request) {
       const wahaSession = process.env.WAHA_SESSION ?? 'default';
       if (wahaUrl) {
         const start = new Date(booking.session.startTime);
-        const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-        const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
+        const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
         const location = booking.session.course?.location || booking.session.school?.name || '';
         const msg =
           `✅ *Betalning bekräftad!*\n` +
@@ -166,8 +166,8 @@ export async function POST(request: Request) {
         recipientName: failedName,
         bookingId,
         courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
-        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
+        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
       });
     }
   }
