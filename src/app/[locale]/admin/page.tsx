@@ -2796,10 +2796,6 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
                 <input type="text" className="input-field" value={editCourseForm.location} onChange={(e) => setEditCourseForm({ ...editCourseForm, location: e.target.value })} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande på kvitto</label>
-                <textarea className="input-field" rows={3} value={editCourseForm.receiptMessage} onChange={(e) => setEditCourseForm({ ...editCourseForm, receiptMessage: e.target.value })} />
-              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditCourse(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
                   Avbryt
