@@ -162,7 +162,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       location,
       personnummer,
       phone: guestPhone || null,
-      customMessage: session.course.receiptMessage || '',
+      customMessage: session.receiptMessage || session.course.receiptMessage || '',
     });
   }
 
