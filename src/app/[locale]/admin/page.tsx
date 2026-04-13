@@ -1135,6 +1135,7 @@ export default function AdminPage() {
                               <span>📅 {dateStr}</span>
                               <span>🕐 {startT}–{endT}</span>
                               <span>📍 {s.course?.location || s.school?.name}</span>
+                              {s.course?.price ? <span className="font-semibold text-gray-700">💰 {s.course.price.toLocaleString('sv-SE')} kr</span> : null}
                             </div>
                             {/* Seat bar */}
                             <div className="mt-2 flex items-center gap-2">
