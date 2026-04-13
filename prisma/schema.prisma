@@ -69,6 +69,7 @@ model Session {
   seatLimit            Int
   seatsAvailable       Int
   visibility           String    @default("public")
+  receiptMessage       String    @default("")
   assignedSchoolUsers  User[]    @relation("AssignedSchoolSessions")
   bookings             Booking[]
   schoolAllocations    SessionSchoolAllocation[]

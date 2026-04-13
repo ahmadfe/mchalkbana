@@ -275,7 +275,7 @@ export default function AdminPage() {
   const [testEmailError, setTestEmailError] = useState('');
 
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[] });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[], receiptMessage: '' });
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('12:00');
@@ -534,7 +534,7 @@ export default function AdminPage() {
     const created = results.filter(Boolean).map((d: any) => d.session);
     setSessions((prev) => [...prev, ...created]);
     setShowAddSession(false);
-    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] });
+    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [], receiptMessage: '' });
     setSessionDate('');
     setStartHour('09:00');
     setEndHour('12:00');
@@ -2989,6 +2989,18 @@ export default function AdminPage() {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Receipt message */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Meddelande på kvitto <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  placeholder="T.ex. ta med körkort, samlas vid entrén kl 08:45..."
+                  value={newSession.receiptMessage}
+                  onChange={(e) => setNewSession({ ...newSession, receiptMessage: e.target.value })}
+                />
               </div>
 
               {/* Footer buttons */}

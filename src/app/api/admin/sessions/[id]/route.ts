@@ -31,6 +31,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...(data.seatLimit ? { seatLimit: parseInt(data.seatLimit) } : {}),
       ...(data.seatsAvailable !== undefined ? { seatsAvailable: parseInt(data.seatsAvailable) } : {}),
       ...(data.visibility ? { visibility: data.visibility } : {}),
+      ...(data.receiptMessage !== undefined ? { receiptMessage: data.receiptMessage } : {}),
       ...(data.visibility === 'school'
         ? { assignedSchoolUsers: { set: ids.map((id) => ({ id })) } }
         : data.visibility === 'public' ? { assignedSchoolUsers: { set: [] } } : {}),

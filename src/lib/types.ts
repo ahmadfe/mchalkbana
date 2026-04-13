@@ -49,6 +49,7 @@ export interface Session {
   seatLimit: number;
   seatsAvailable: number;
   visibility: string;
+  receiptMessage?: string;
   assignedSchoolUsers?: { id: number; name: string }[];
   schoolAllocations?: SessionSchoolAllocation[];
   myAllocation?: number | null; // for school users: their allocated seats on this session
