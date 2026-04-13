@@ -49,12 +49,15 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
 
       <div className="p-5">
         {/* Badges */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
           <span className={clsx('text-xs font-semibold px-2.5 py-0.5 rounded-full', typeColor)}>
             {course.type === 'Risk1' ? t('risk1') : t('risk2')}
           </span>
           <span className={clsx('text-xs font-semibold px-2.5 py-0.5 rounded-full', vehicleColor)}>
             {course.vehicle === 'Car' ? t('car') : t('motorcycle')}
+          </span>
+          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-swedish-blue/10 text-swedish-blue">
+            Behörighet {course.behorighet}
           </span>
         </div>
 
