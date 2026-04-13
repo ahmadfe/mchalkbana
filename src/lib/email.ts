@@ -711,6 +711,114 @@ function buildPaymentFailedHtml(data: PaymentFailedEmailData): string {
 </html>`;
 }
 
+// ── Cancellation / Refund email ───────────────────────────────────────────────
+
+interface CancellationEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  bookingId: number;
+  courseName: string;
+  courseDate: string;
+  courseTime: string;
+  location: string;
+  cancelledBy: 'admin' | 'school';
+  refundAmount?: number | null; // if set, show refund info
+}
+
+function buildCancellationHtml(data: CancellationEmailData): string {
+  const isRefund = data.refundAmount != null && data.refundAmount > 0;
+  const bannerText = isRefund ? '✗ &nbsp;BOKNING AVBOKAD &amp; ÅTERBETALNING' : '✗ &nbsp;BOKNING AVBOKAD';
+  const cancelReason =
+    data.cancelledBy === 'school'
+      ? 'Din bokning har avbokats av din trafikskola.'
+      : 'Din bokning har avbokats av Uppsala Halkbana.';
+
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+
+    <!-- Header -->
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://www.uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+
+    <!-- Status banner -->
+    <div style="background:#dc2626;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">${bannerText}</p>
+    </div>
+
+    <!-- Body -->
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">${cancelReason}</p>
+
+      <!-- Course details -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <p style="color:#dc2626;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Avbokad kurs</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Bokning</td><td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td></tr>
+        </table>
+      </div>
+
+      ${isRefund ? `
+      <!-- Refund info -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <p style="color:#15803d;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Återbetalning</p>
+        <p style="color:#111827;font-size:14px;margin:0 0 8px;">Din betalning på <strong>${data.refundAmount!.toLocaleString('sv-SE')} kr</strong> återbetalas till det kort eller nummer du betalade med.</p>
+        <p style="color:#6b7280;font-size:13px;margin:0;">Pengarna syns normalt inom <strong>2–5 bankdagar</strong>.</p>
+      </div>` : ''}
+
+      <p style="color:#6b7280;font-size:13px;margin:0;">Frågor? Kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#dc2626;">info@uppsalahalkbana.se</a> eller ring <a href="tel:+46707666661" style="color:#dc2626;">07 07 66 66 61</a>.</p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendCancellationEmail(data: CancellationEmailData): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — skipping cancellation email for booking #' + data.bookingId);
+    return;
+  }
+  const subject = data.refundAmount
+    ? `Bokning #${data.bookingId} avbokad – återbetalning på väg`
+    : `Bokning #${data.bookingId} har avbokats`;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        to: [data.recipientEmail],
+        subject,
+        html: buildCancellationHtml(data),
+      }),
+    });
+    if (!res.ok) console.error('[Email] Resend error (cancellation):', await res.text());
+    else console.log('[Email] Cancellation email sent to', data.recipientEmail, 'for booking #' + data.bookingId);
+  } catch (err) {
+    console.error('[Email] Failed to send cancellation email:', err);
+  }
+}
+
 export async function sendPaymentFailedEmail(data: PaymentFailedEmailData): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

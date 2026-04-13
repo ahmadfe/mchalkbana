@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendBookingConfirmationEmail } from '@/lib/email';
+import { sendBookingConfirmationEmail, sendCancellationEmail } from '@/lib/email';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
@@ -11,6 +11,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const bookingId = parseInt(params.id);
   const { guestName, personnummer, guestPhone, guestEmail, status } = await request.json();
+
+  // Fetch current booking before update to detect status change
+  const before = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { status: true },
+  });
 
   const updated = await prisma.booking.update({
     where: { id: bookingId },
@@ -23,6 +29,26 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     },
     include: { session: { include: { course: true, school: true } }, user: { select: { name: true, email: true } } },
   });
+
+  // Send cancellation email if status just changed to Canceled
+  if (status === 'Canceled' && before?.status !== 'Canceled') {
+    const recipientEmail = updated.guestEmail || updated.user?.email || null;
+    const recipientName = updated.guestName || updated.user?.name || 'Kund';
+    if (recipientEmail && updated.session) {
+      const start = new Date(updated.session.startTime);
+      const end = new Date(updated.session.endTime);
+      await sendCancellationEmail({
+        recipientEmail,
+        recipientName,
+        bookingId,
+        courseName: `${updated.session.course.titleSv} (${updated.session.course.behorighet})`,
+        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+        location: updated.session.course.location || updated.session.school?.name || '',
+        cancelledBy: 'admin',
+      });
+    }
+  }
 
   return NextResponse.json({ booking: updated });
 }
@@ -99,8 +125,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
-  const courseDate = start.toLocaleDateString('sv-SE');
-  const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+  const courseDate = start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+  const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
   const location = session.course.location || session.school.name;
 
   // Send confirmation email if email provided

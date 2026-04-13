@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
+import { sendCancellationEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -16,7 +17,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },
-    include: { booking: true },
+    include: {
+      booking: {
+        include: {
+          session: { include: { course: true, school: true } },
+          user: { select: { name: true, email: true } },
+        },
+      },
+    },
   });
 
   if (!payment) return NextResponse.json({ error: 'Betalning hittades inte' }, { status: 404 });
@@ -46,6 +54,26 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: { seatsAvailable: { increment: 1 } },
     }),
   ]);
+
+  // Send cancellation + refund confirmation email
+  const booking = payment.booking;
+  const recipientEmail = booking.guestEmail || booking.user?.email || null;
+  const recipientName = booking.guestName || booking.user?.name || 'Kund';
+  if (recipientEmail && booking.session) {
+    const start = new Date(booking.session.startTime);
+    const end = new Date(booking.session.endTime);
+    sendCancellationEmail({
+      recipientEmail,
+      recipientName,
+      bookingId: payment.bookingId,
+      courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
+      courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+      courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+      location: booking.session.course.location || booking.session.school?.name || '',
+      cancelledBy: 'admin',
+      refundAmount: payment.amount,
+    }).catch((err) => console.error('[Refund] Email failed:', err));
+  }
 
   return NextResponse.json({ payment: updated });
 }
