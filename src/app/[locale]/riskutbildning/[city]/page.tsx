@@ -358,11 +358,11 @@ export default async function CityPage({ params }: { params: { city: string; loc
                   <p className="text-xs font-bold text-swedish-blue uppercase tracking-wide mb-1">{s.course?.behorighet}</p>
                   <p className="font-bold text-gray-900 text-sm mb-2 leading-snug">{s.course?.titleSv}</p>
                   <p className="text-xs text-gray-500 mb-1">
-                    {new Date(s.startTime).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })}
+                    {new Date(s.startTime).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' })}
                   </p>
                   <p className="text-xs text-gray-500 mb-3">
-                    {new Date(s.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} –{' '}
-                    {new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(s.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} –{' '}
+                    {new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">{s.seatsAvailable} platser kvar</span>

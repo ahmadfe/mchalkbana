@@ -26,9 +26,10 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: 'Europe/Stockholm',
   });
 
-  const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+  const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
 
   const typeColor = course.type === 'Risk1'
     ? 'bg-brand-100 text-brand-800'

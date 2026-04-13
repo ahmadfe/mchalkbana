@@ -95,10 +95,10 @@ function CheckoutContent() {
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm',
   });
-  const startStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-  const endStr = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  const startStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
+  const endStr = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
   const timeStr = `${startStr} – ${endStr}`;
 
   const validate = (): boolean => {

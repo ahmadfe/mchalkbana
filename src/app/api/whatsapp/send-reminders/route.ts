@@ -44,8 +44,8 @@ export async function POST(request: Request) {
   for (const booking of bookings) {
     const phone = booking.guestPhone!;
     const start = new Date(booking.session.startTime);
-    const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
-    const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
+    const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
     const location = booking.session.course.location || booking.session.school.name;
 
     const msg =

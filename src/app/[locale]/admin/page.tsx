@@ -891,7 +891,7 @@ export default function AdminPage() {
         b.personnummer || '–',
         b.guestEmail || b.user?.email || '–',
         locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn,
-        b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–',
+        b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }) : '–',
         b.status,
         b.session?.course?.price || 0,
       ]),
@@ -1086,9 +1086,9 @@ export default function AdminPage() {
               const isCar = s.course?.vehicle === 'Car';
               const typeLabel = s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type?.slice(0, 2) || '?';
               const d = new Date(s.startTime);
-              const dateStr = d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-              const startT = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-              const endT = new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+              const dateStr = d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
+              const startT = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
+              const endT = new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
               const seatsUsed = s.seatLimit - s.seatsAvailable;
               const seatPct = Math.round((seatsUsed / s.seatLimit) * 100);
               const full = s.seatsAvailable === 0;
@@ -1491,8 +1491,8 @@ export default function AdminPage() {
                             const phone = b.guestPhone ?? '–';
                             const email = b.guestEmail ?? (b.user as { email?: string } | null | undefined)?.email ?? '–';
                             const courseTitle = locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn;
-                            const sessionDate = b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE') : '–';
-                            const sessionTime = b.session ? new Date(b.session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }) : '';
+                            const sessionDate = b.session ? new Date(b.session.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }) : '–';
+                            const sessionTime = b.session ? new Date(b.session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' }) : '';
                             const schoolName = b.session?.school?.name ?? '';
                             return (
                               <tr key={b.id} className="hover:bg-gray-50">
@@ -1821,7 +1821,7 @@ export default function AdminPage() {
                         <tbody className="divide-y divide-gray-50">
                           {groups[month].map((p) => {
                             const name = p.booking.guestName ?? p.booking.user?.name ?? '–';
-                            const courseDate = new Date(p.booking.session.startTime).toLocaleDateString('sv-SE');
+                            const courseDate = new Date(p.booking.session.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
                             return (
                               <tr key={p.id} className="hover:bg-gray-50">
                                 <td className="py-3 px-4 text-gray-400">#{p.id}</td>
@@ -2425,7 +2425,7 @@ export default function AdminPage() {
                 </h3>
                 {studentsData && (
                   <p className="text-sm text-gray-500 mt-0.5">
-                    {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE')} · {studentsData.session.school.name} · {studentsData.students.length}/{studentsData.session.seatLimit} platser
+                    {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {studentsData.session.school.name} · {studentsData.students.length}/{studentsData.session.seatLimit} platser
                   </p>
                 )}
               </div>

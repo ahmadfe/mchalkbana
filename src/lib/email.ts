@@ -22,7 +22,7 @@ function toGCalDate(iso: string): string {
 
 function buildReceiptHtml(data: ReceiptEmailData): string {
   const receiptNumber = `UH-${new Date().getFullYear()}-${String(data.bookingId).padStart(5, '0')}`;
-  const issuedDate = new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' });
+  const issuedDate = new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
 
   // VAT breakdown (price is total inkl. 25% moms)
   const priceExVat = Math.round(data.price / 1.25);

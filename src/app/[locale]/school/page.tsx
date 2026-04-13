@@ -267,8 +267,8 @@ export default function SchoolPage() {
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900">{title}</p>
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
-                              <span>📅 {start.toLocaleDateString('sv-SE')}</span>
-                              <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
+                              <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
                               <span>📍 {s.course?.location || s.school?.name}</span>
                               {myAllocation !== null ? (
                                 <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
@@ -426,7 +426,7 @@ export default function SchoolPage() {
               <div>
                 <h3 className="font-bold text-lg">Lägg till elever</h3>
                 <p className="text-sm text-gray-500">
-                  {locale === 'sv' ? activeSession.course?.titleSv : activeSession.course?.titleEn} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE')} · {activeSession.seatsAvailable} platser kvar
+                  {locale === 'sv' ? activeSession.course?.titleSv : activeSession.course?.titleEn} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {activeSession.seatsAvailable} platser kvar
                 </p>
               </div>
               <button onClick={() => setActiveSession(null)} className="text-gray-400 hover:text-gray-600">

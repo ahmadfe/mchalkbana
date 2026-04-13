@@ -25,8 +25,8 @@ export async function GET(request: Request) {
   const formatted = sessions.map((s, i) => {
     const start = new Date(s.startTime);
     const end = new Date(s.endTime);
-    const date = start.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
-    const time = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`;
+    const date = start.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
+    const time = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}–${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
     return {
       index: i + 1,
       id: s.id,

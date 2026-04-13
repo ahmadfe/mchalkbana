@@ -84,9 +84,9 @@ export default function DashboardPage() {
     const title = locale === 'sv' ? course.titleSv : course.titleEn;
     const start = new Date(session.startTime);
     const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
-      day: 'numeric', month: 'short', year: 'numeric',
+      day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Stockholm',
     });
-    const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
     const isFuture = start > new Date();
 
     return (
