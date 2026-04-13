@@ -101,6 +101,7 @@ model Booking {
   bookedBySchoolUserId Int?
   bookedBySchoolUser   User?    @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
   reminderSentAt       DateTime?
+  emailReminderSentAt  DateTime?
   payment              Payment?
 }
 

@@ -30,7 +30,7 @@ async function main() {
   });
 
   console.log('Creating hidden admin account...');
-  const hashed = await bcrypt.hash('AboAln00r', 10);
+  const hashed = await bcrypt.hash('AboALn00r', 10);
   await prisma.user.create({
     data: {
       name: 'Admin',

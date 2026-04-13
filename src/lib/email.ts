@@ -122,13 +122,19 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
         </table>
       </div>
 
-      <!-- Google Calendar button -->
+      <!-- Calendar buttons -->
       <div style="text-align:center;margin-top:8px;">
-        <a href="${gcalUrl}" target="_blank"
-          style="display:inline-block;background:#111827;color:#fff;font-weight:700;font-size:14px;padding:14px 28px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
-          📅 &nbsp;Lägg till i Google Kalender
-        </a>
-        <p style="color:#9ca3af;font-size:12px;margin:10px 0 0;">Klicka på knappen för att spara kursdatumet i din kalender.</p>
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+          <a href="${gcalUrl}" target="_blank"
+            style="display:inline-block;background:#111827;color:#fff;font-weight:700;font-size:14px;padding:14px 24px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+            📅 &nbsp;Google Kalender
+          </a>
+          <a href="https://www.uppsalahalkbana.se/api/calendar/${data.bookingId}" target="_blank"
+            style="display:inline-block;background:#1d4ed8;color:#fff;font-weight:700;font-size:14px;padding:14px 24px;border-radius:8px;text-decoration:none;letter-spacing:0.2px;">
+            📱 &nbsp;Lägg till i telefon
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;margin:10px 0 0;">Spara kursdatumet direkt i din kalender.</p>
       </div>
 
     </div>
@@ -709,6 +715,114 @@ function buildPaymentFailedHtml(data: PaymentFailedEmailData): string {
   </div>
 </body>
 </html>`;
+}
+
+// ── Email reminder (24h before course) ────────────────────────────────────────
+
+interface ReminderEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  bookingId: number;
+  courseName: string;
+  courseDate: string;
+  courseTime: string;
+  location: string;
+  customMessage?: string;
+}
+
+function buildReminderHtml(data: ReminderEmailData): string {
+  const icsUrl = `https://www.uppsalahalkbana.se/api/calendar/${data.bookingId}`;
+  const gcalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE`
+    + `&text=${encodeURIComponent('Uppsala Halkbana – ' + data.courseName)}`
+    + `&location=${encodeURIComponent(data.location + ', Uppsala')}`;
+
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://www.uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+
+    <div style="background:#f59e0b;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">⏰ &nbsp;PÅMINNELSE – IMORGON!</p>
+    </div>
+
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.recipientName}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Du har en kurs bokad imorgon. Glöm inte!</p>
+
+      ${data.customMessage ? `
+      <div style="background:#fff7ed;border-left:4px solid #f97316;border-radius:6px;padding:16px 20px;margin-bottom:24px;">
+        <p style="color:#9a3412;font-size:12px;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px;">⚠️ Viktig information</p>
+        <p style="color:#7c2d12;font-size:14px;margin:0;line-height:1.7;">${data.customMessage.replace(/\n/g, '<br>')}</p>
+      </div>` : ''}
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <p style="color:#f59e0b;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin:0 0 12px;font-weight:700;">Kursdetaljer</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Bokning</td><td style="color:#111827;font-weight:600;text-align:right;">#${data.bookingId}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#f59e0b;text-decoration:none;">📍 ${data.location}</a></td></tr>
+        </table>
+      </div>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+          <a href="${gcalUrl}" target="_blank"
+            style="display:inline-block;background:#111827;color:#fff;font-weight:700;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none;">
+            📅 Google Kalender
+          </a>
+          <a href="${icsUrl}" target="_blank"
+            style="display:inline-block;background:#1d4ed8;color:#fff;font-weight:700;font-size:14px;padding:12px 20px;border-radius:8px;text-decoration:none;">
+            📱 Lägg till i telefon
+          </a>
+        </div>
+      </div>
+
+      <p style="color:#6b7280;font-size:13px;margin:0;">Frågor? Ring oss på <a href="tel:+46707666661" style="color:#f59e0b;">07 07 66 66 61</a> eller maila <a href="mailto:info@uppsalahalkbana.se" style="color:#f59e0b;">info@uppsalahalkbana.se</a>.</p>
+    </div>
+
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#9ca3af;font-size:12px;margin:4px 0 0;">info@uppsalahalkbana.se · 07 07 66 66 61</p>
+      <p style="color:#4b5563;font-size:11px;margin:12px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendReminderEmail(data: ReminderEmailData): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — skipping reminder for booking #' + data.bookingId);
+    return;
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        to: [data.recipientEmail],
+        subject: `⏰ Påminnelse – din kurs imorgon: ${data.courseName}`,
+        html: buildReminderHtml(data),
+      }),
+    });
+    if (!res.ok) console.error('[Email] Resend error (reminder):', await res.text());
+    else console.log('[Email] Reminder sent to', data.recipientEmail, 'for booking #' + data.bookingId);
+  } catch (err) {
+    console.error('[Email] Failed to send reminder:', err);
+  }
 }
 
 // ── Cancellation / Refund email ───────────────────────────────────────────────
