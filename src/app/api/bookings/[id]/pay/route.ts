@@ -46,8 +46,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const recipientName = booking.guestName || booking.user?.name || 'Kund';
 
   if (recipientEmail) {
-    const setting = await prisma.settings.findUnique({ where: { key: 'receipt_message' } });
-    const customMessage = setting?.value || '';
+    // Session-level receiptMessage takes priority over global setting
+    let customMessage = booking.session.receiptMessage || '';
+    if (!customMessage) {
+      const setting = await prisma.settings.findUnique({ where: { key: 'receipt_message' } });
+      customMessage = setting?.value || '';
+    }
 
     const start = new Date(booking.session.startTime);
     const end = new Date(booking.session.endTime);
@@ -60,7 +64,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
       courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
       courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-      location: booking.session.school?.name || '',
+      location: booking.session.course.location || booking.session.school?.name || '',
       price: booking.session.course.price,
       startTimeIso: new Date(booking.session.startTime).toISOString(),
       endTimeIso: new Date(booking.session.endTime).toISOString(),
