@@ -1120,7 +1120,7 @@ export default function AdminPage() {
                                 'px-2 py-0.5 rounded-full text-xs font-bold',
                                 isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700'
                               )}>
-                                {isCar ? '🚗 Bil · B' : '🏍️ MC · A'}
+                                {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
                               </span>
                               {/* Visibility */}
                               <span className={clsx(
