@@ -288,11 +288,16 @@ export default function AdminPage() {
     const meet = adjustHour(start, -1);
     const drop = adjustHour(end, 1);
     const place = location?.trim() || 'platsen';
-    return `Vi möts kl ${meet} vid ${place}. Passet avslutas kl ${drop} och vi återvänder till samma plats. Ta gärna mat med dig och glöm inte ditt ID-kort.`;
+    return `Viktig information inför din utbildning:\n\n1- Mötesplats: Vi möts kl ${meet} vid ${place}.\n\n2- Återsamling: Passet avslutas kl ${drop} och vi återvänder till samma plats.\n\n3- Övrigt: Ta gärna mat med dig och glöm inte ditt ID-kort.`;
   };
+  const MC_RECEIPT_MESSAGE = `Viktig information inför din utbildning:\n\n1- Utrustning: Eleven ansvarar själv för att ha med godkänd skyddsutrustning och hjälm.\n\n2- Ankomst: Var på plats senast 15 minuter före kursstart för legitimationskontroll.\n\n3- Legitimation: Giltig legitimation krävs för att delta i kursen.`;
   const isRisk2Bil = (courseId: string) => {
     const c = courses.find((x) => String(x.id) === courseId);
     return c?.type === 'Risk2' && c?.vehicle === 'Car';
+  };
+  const isRisk2MC = (courseId: string) => {
+    const c = courses.find((x) => String(x.id) === courseId);
+    return c?.type === 'Risk2' && c?.vehicle === 'Motorcycle';
   };
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
@@ -2844,7 +2849,8 @@ export default function AdminPage() {
                   const selected = courses.find((c) => String(c.id) === e.target.value);
                   const defaultSeats = selected?.vehicle === 'Motorcycle' ? '4' : '8';
                   const risk2Bil = selected?.type === 'Risk2' && selected?.vehicle === 'Car';
-                  const msg = risk2Bil ? buildReceiptMessage(startHour, endHour, selected?.location || '') : '';
+                  const risk2MC = selected?.type === 'Risk2' && selected?.vehicle === 'Motorcycle';
+                  const msg = risk2Bil ? buildReceiptMessage(startHour, endHour, selected?.location || '') : risk2MC ? MC_RECEIPT_MESSAGE : '';
                   setNewSession({ ...newSession, courseId: e.target.value, seatLimit: defaultSeats, receiptMessage: msg });
                 }} required>
                   <option value="">Välj kurs...</option>
@@ -3032,9 +3038,9 @@ export default function AdminPage() {
                   value={newSession.receiptMessage}
                   onChange={(e) => setNewSession({ ...newSession, receiptMessage: e.target.value })}
                 />
-                {isRisk2Bil(newSession.courseId) && newSession.receiptMessage && (
+                {(isRisk2Bil(newSession.courseId) || isRisk2MC(newSession.courseId)) && newSession.receiptMessage && (
                   <p className="text-xs text-swedish-blue mt-1.5 flex items-center gap-1">
-                    ⚡ Auto-genererat från Risk 2 Bil — du kan redigera texten ovan
+                    ⚡ Auto-genererat från {isRisk2MC(newSession.courseId) ? 'Risk 2 MC' : 'Risk 2 Bil'} — du kan redigera texten ovan
                   </p>
                 )}
               </div>
