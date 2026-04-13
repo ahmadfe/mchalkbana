@@ -279,6 +279,21 @@ export default function AdminPage() {
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('12:00');
+
+  const adjustHour = (time: string, delta: number) => {
+    const [h, m] = time.split(':').map(Number);
+    return `${String(h + delta).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+  const buildReceiptMessage = (start: string, end: string, location: string) => {
+    const meet = adjustHour(start, -1);
+    const drop = adjustHour(end, 1);
+    const place = location?.trim() || 'platsen';
+    return `Vi möts kl ${meet} vid ${place}. Passet avslutas kl ${drop} och vi återvänder till samma plats. Ta gärna mat med dig och glöm inte ditt ID-kort.`;
+  };
+  const isRisk2Bil = (courseId: string) => {
+    const c = courses.find((x) => String(x.id) === courseId);
+    return c?.type === 'Risk2' && c?.vehicle === 'Car';
+  };
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly'>('none');
   const [recurrenceCount, setRecurrenceCount] = useState(4);
 
@@ -2828,7 +2843,9 @@ export default function AdminPage() {
                 <select className="input-field" value={newSession.courseId} onChange={(e) => {
                   const selected = courses.find((c) => String(c.id) === e.target.value);
                   const defaultSeats = selected?.vehicle === 'Motorcycle' ? '4' : '8';
-                  setNewSession({ ...newSession, courseId: e.target.value, seatLimit: defaultSeats });
+                  const risk2Bil = selected?.type === 'Risk2' && selected?.vehicle === 'Car';
+                  const msg = risk2Bil ? buildReceiptMessage(startHour, endHour, selected?.location || '') : '';
+                  setNewSession({ ...newSession, courseId: e.target.value, seatLimit: defaultSeats, receiptMessage: msg });
                 }} required>
                   <option value="">Välj kurs...</option>
                   {courses.map((c) => {
@@ -2870,14 +2887,26 @@ export default function AdminPage() {
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Starttid</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    <input type="time" className="input-field pl-9" value={startHour} onChange={(e) => setStartHour(e.target.value)} required />
+                    <input type="time" className="input-field pl-9" value={startHour} onChange={(e) => {
+                      setStartHour(e.target.value);
+                      if (isRisk2Bil(newSession.courseId)) {
+                        const c = courses.find((x) => String(x.id) === newSession.courseId);
+                        setNewSession((prev) => ({ ...prev, receiptMessage: buildReceiptMessage(e.target.value, endHour, c?.location || '') }));
+                      }
+                    }} required />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sluttid</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    <input type="time" className="input-field pl-9" value={endHour} onChange={(e) => setEndHour(e.target.value)} required />
+                    <input type="time" className="input-field pl-9" value={endHour} onChange={(e) => {
+                      setEndHour(e.target.value);
+                      if (isRisk2Bil(newSession.courseId)) {
+                        const c = courses.find((x) => String(x.id) === newSession.courseId);
+                        setNewSession((prev) => ({ ...prev, receiptMessage: buildReceiptMessage(startHour, e.target.value, c?.location || '') }));
+                      }
+                    }} required />
                   </div>
                 </div>
               </div>
@@ -2993,14 +3022,21 @@ export default function AdminPage() {
 
               {/* Receipt message */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Meddelande på kvitto <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Meddelande på kvitto <span className="text-gray-400 font-normal">(valfri)</span>
+                </label>
                 <textarea
                   className="input-field"
-                  rows={3}
+                  rows={4}
                   placeholder="T.ex. ta med körkort, samlas vid entrén kl 08:45..."
                   value={newSession.receiptMessage}
                   onChange={(e) => setNewSession({ ...newSession, receiptMessage: e.target.value })}
                 />
+                {isRisk2Bil(newSession.courseId) && newSession.receiptMessage && (
+                  <p className="text-xs text-swedish-blue mt-1.5 flex items-center gap-1">
+                    ⚡ Auto-genererat från Risk 2 Bil — du kan redigera texten ovan
+                  </p>
+                )}
               </div>
 
               {/* Footer buttons */}
