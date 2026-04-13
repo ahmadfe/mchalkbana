@@ -12,7 +12,7 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-const SITE_URL = 'https://www.uppsalahalkbana.se';
+const SITE_URL = 'https://uppsalahalkbana.se';
 
 export const metadata: Metadata = {
   title: {

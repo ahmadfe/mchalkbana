@@ -21,7 +21,7 @@ export async function generateMetadata() {
       title: 'Uppsalahalkbana',
       description:
         'Professionell riskutbildning godkänd av Transportstyrelsen. Boka online – snabbt och enkelt.',
-      url: 'https://www.uppsalahalkbana.se/sv',
+      url: 'https://uppsalahalkbana.se/sv',
       images: [{ url: '/logo.png', width: 512, height: 512, alt: 'Uppsala Halkbana' }],
     },
   };
@@ -31,8 +31,8 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'DrivingSchool',
   name: 'Uppsala Halkbana',
-  url: 'https://www.uppsalahalkbana.se',
-  logo: 'https://www.uppsalahalkbana.se/logo.png',
+  url: 'https://uppsalahalkbana.se',
+  logo: 'https://uppsalahalkbana.se/logo.png',
   telephone: '+46707666661',
   email: 'info@uppsalahalkbana.se',
   address: {
