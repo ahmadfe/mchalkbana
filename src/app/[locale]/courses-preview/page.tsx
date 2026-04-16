@@ -47,17 +47,21 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
 
           {/* ── Left: course info ── */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            {/* Date badge */}
-            <div className={clsx(
-              'w-8 h-8 rounded-lg flex flex-col items-center justify-center shrink-0',
-              course.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
-              course.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
-              'bg-orange-100 text-orange-700',
-            )}>
-              <span className="text-xs font-bold leading-none">{start.getDate()}</span>
-              <span className="text-[9px] font-semibold leading-none capitalize">
-                {start.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
-              </span>
+            {/* Calendar badge */}
+            <div className="w-9 h-10 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
+              <div className={clsx(
+                'h-3.5 flex items-center justify-center',
+                course.type === 'Risk1' ? 'bg-swedish-blue' :
+                course.type === 'Combo' ? 'bg-purple-600' :
+                'bg-orange-400',
+              )}>
+                <span className="text-[8px] font-bold text-white uppercase tracking-wide">
+                  {start.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
+                </span>
+              </div>
+              <div className="flex-1 bg-white flex items-center justify-center">
+                <span className="text-sm font-bold text-gray-900 leading-none">{start.getDate()}</span>
+              </div>
             </div>
 
             <div className="min-w-0 flex-1">
