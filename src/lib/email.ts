@@ -946,17 +946,26 @@ interface InternalBookingNotificationData {
   courseTime: string;
   location: string;
   bookedBy: 'guest' | 'user' | 'admin' | 'school';
-  status: 'Paid' | 'Confirmed';
+  status: 'Paid' | 'Confirmed' | 'Canceled';
+  cancelledBy?: 'user' | 'admin' | 'school';
+  refundAmount?: number;
 }
 
 function buildInternalNotificationHtml(data: InternalBookingNotificationData): string {
-  const statusLabel = data.status === 'Paid' ? 'BETALD' : 'BEKRÄFTAD';
-  const statusColor = data.status === 'Paid' ? '#00C4D4' : '#16a34a';
+  const isCanceled = data.status === 'Canceled';
+  const statusLabel = data.status === 'Paid' ? 'BETALD' : data.status === 'Confirmed' ? 'BEKRÄFTAD' : 'AVBOKAD';
+  const statusColor = data.status === 'Paid' ? '#00C4D4' : data.status === 'Confirmed' ? '#16a34a' : '#dc2626';
+  const statusIcon = isCanceled ? '✕' : '✓';
   const bookedByLabel =
     data.bookedBy === 'admin' ? 'Admin'
     : data.bookedBy === 'school' ? 'Trafikskola'
     : data.bookedBy === 'user' ? 'Inloggad användare'
     : 'Gäst (ej inloggad)';
+  const cancelledByLabel =
+    data.cancelledBy === 'admin' ? 'Admin'
+    : data.cancelledBy === 'school' ? 'Trafikskola'
+    : data.cancelledBy === 'user' ? 'Eleven (självavbokning)'
+    : '–';
 
   return `
 <!DOCTYPE html>
@@ -965,10 +974,10 @@ function buildInternalNotificationHtml(data: InternalBookingNotificationData): s
 <body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
   <div style="max-width:600px;margin:32px auto;">
     <div style="background:#111827;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center;">
-      <h1 style="color:#ffffff;margin:0;font-size:18px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA – NY BOKNING</h1>
+      <h1 style="color:#ffffff;margin:0;font-size:18px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA – ${isCanceled ? 'AVBOKNING' : 'NY BOKNING'}</h1>
     </div>
     <div style="background:${statusColor};padding:12px 32px;text-align:center;">
-      <p style="color:#fff;margin:0;font-size:14px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BOKNING ${statusLabel} – #${data.bookingId}</p>
+      <p style="color:#fff;margin:0;font-size:14px;font-weight:700;letter-spacing:0.5px;">${statusIcon} &nbsp;BOKNING ${statusLabel} – #${data.bookingId}</p>
     </div>
     <div style="background:#fff;padding:32px;border-radius:0 0 12px 12px;">
       <h2 style="color:#111827;font-size:15px;margin:0 0 20px;">Elevuppgifter</h2>
@@ -1009,10 +1018,20 @@ function buildInternalNotificationHtml(data: InternalBookingNotificationData): s
           <td style="padding:10px 0;color:#6b7280;">Plats</td>
           <td style="padding:10px 0;color:#111827;">${data.location}</td>
         </tr>
-        <tr>
+        <tr style="${isCanceled ? 'border-bottom:1px solid #f3f4f6;' : ''}">
           <td style="padding:10px 0;color:#6b7280;">Bokad av</td>
           <td style="padding:10px 0;color:#111827;">${bookedByLabel}</td>
         </tr>
+        ${isCanceled ? `
+        <tr style="${data.refundAmount ? 'border-bottom:1px solid #f3f4f6;' : ''}">
+          <td style="padding:10px 0;color:#6b7280;">Avbokad av</td>
+          <td style="padding:10px 0;color:#dc2626;font-weight:600;">${cancelledByLabel}</td>
+        </tr>
+        ${data.refundAmount ? `
+        <tr>
+          <td style="padding:10px 0;color:#6b7280;">Återbetalning</td>
+          <td style="padding:10px 0;color:#111827;font-weight:600;">${data.refundAmount} kr</td>
+        </tr>` : ''}` : ''}
       </table>
     </div>
   </div>
@@ -1026,6 +1045,10 @@ export async function sendInternalBookingNotification(data: InternalBookingNotif
     console.log('[Email] No RESEND_API_KEY — skipping internal notification for booking #' + data.bookingId);
     return;
   }
+  const isCanceled = data.status === 'Canceled';
+  const subject = isCanceled
+    ? `Avbokning #${data.bookingId} – ${data.studentName} (${data.courseName})`
+    : `Ny bokning #${data.bookingId} – ${data.studentName} (${data.courseName})`;
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -1033,7 +1056,7 @@ export async function sendInternalBookingNotification(data: InternalBookingNotif
       body: JSON.stringify({
         from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: ['info@uppsalahalkbana.se'],
-        subject: `Ny bokning #${data.bookingId} – ${data.studentName} (${data.courseName})`,
+        subject,
         html: buildInternalNotificationHtml(data),
       }),
     });

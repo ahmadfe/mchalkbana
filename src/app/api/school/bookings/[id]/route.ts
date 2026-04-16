@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendCancellationEmail } from '@/lib/email';
+import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 // DELETE: school removes a student from a session
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
@@ -28,22 +28,42 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     data: { seatsAvailable: { increment: 1 } },
   });
 
-  // Send cancellation email if we have a contact address
-  const recipientEmail = booking.guestEmail || booking.user?.email || null;
-  const recipientName = booking.guestName || booking.user?.name || 'Kund';
-  if (recipientEmail && booking.session) {
+  // Send cancellation email + internal notification
+  if (booking.session) {
+    const recipientEmail = booking.guestEmail || booking.user?.email || null;
+    const recipientName = booking.guestName || booking.user?.name || 'Kund';
     const start = new Date(booking.session.startTime);
     const end = new Date(booking.session.endTime);
-    sendCancellationEmail({
-      recipientEmail,
-      recipientName,
+    const scCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
+    const scCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+    const scCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+    const scLocation = booking.session.course.location || booking.session.school?.name || '';
+    if (recipientEmail) {
+      sendCancellationEmail({
+        recipientEmail,
+        recipientName,
+        bookingId,
+        courseName: scCourseName,
+        courseDate: scCourseDate,
+        courseTime: scCourseTime,
+        location: scLocation,
+        cancelledBy: 'school',
+      }).catch((err) => console.error('[School cancel] Email failed:', err));
+    }
+    sendInternalBookingNotification({
       bookingId,
-      courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
-      courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
-      courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-      location: booking.session.course.location || booking.session.school?.name || '',
+      studentName: booking.guestName || booking.user?.name || 'Okänd',
+      personnummer: booking.personnummer ?? '–',
+      phone: booking.guestPhone,
+      email: booking.guestEmail || booking.user?.email,
+      courseName: scCourseName,
+      courseDate: scCourseDate,
+      courseTime: scCourseTime,
+      location: scLocation,
+      bookedBy: 'school',
+      status: 'Canceled',
       cancelledBy: 'school',
-    }).catch((err) => console.error('[School cancel] Email failed:', err));
+    }).catch((err) => console.error('[School cancel] Internal cancel notification failed:', err));
   }
 
   return NextResponse.json({ success: true });

@@ -174,6 +174,26 @@ export async function POST(request: Request) {
 
     console.log('[Swish] Booking #' + bookingId + ' canceled — Swish status:', verifiedStatus);
 
+    // Internal staff notification for payment failure / cancellation
+    {
+      const start = new Date(booking.session.startTime);
+      const end = new Date(booking.session.endTime);
+      sendInternalBookingNotification({
+        bookingId,
+        studentName: booking.guestName ?? booking.user?.name ?? 'Okänd',
+        personnummer: booking.personnummer ?? '–',
+        phone: booking.guestPhone,
+        email: booking.guestEmail ?? booking.user?.email,
+        courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
+        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+        location: booking.session.course.location || booking.session.school?.name || '',
+        bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
+        status: 'Canceled',
+        cancelledBy: 'user',
+      }).catch((err) => console.error('[Swish] Internal cancel notification failed:', err));
+    }
+
     // Send payment failed email
     const failedEmail = booking.guestEmail ?? booking.user?.email ?? null;
     const failedName = booking.guestName ?? booking.user?.name ?? 'Kund';

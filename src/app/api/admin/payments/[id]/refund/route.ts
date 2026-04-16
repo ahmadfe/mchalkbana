@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
-import { sendCancellationEmail } from '@/lib/email';
+import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -55,24 +55,45 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }),
   ]);
 
-  // Send cancellation + refund confirmation email
+  // Send cancellation + refund confirmation email + internal notification
   const booking = payment.booking;
-  const recipientEmail = booking.guestEmail || booking.user?.email || null;
-  const recipientName = booking.guestName || booking.user?.name || 'Kund';
-  if (recipientEmail && booking.session) {
+  if (booking.session) {
+    const recipientEmail = booking.guestEmail || booking.user?.email || null;
+    const recipientName = booking.guestName || booking.user?.name || 'Kund';
     const start = new Date(booking.session.startTime);
     const end = new Date(booking.session.endTime);
-    sendCancellationEmail({
-      recipientEmail,
-      recipientName,
+    const rfCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
+    const rfCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+    const rfCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+    const rfLocation = booking.session.course.location || booking.session.school?.name || '';
+    if (recipientEmail) {
+      sendCancellationEmail({
+        recipientEmail,
+        recipientName,
+        bookingId: payment.bookingId,
+        courseName: rfCourseName,
+        courseDate: rfCourseDate,
+        courseTime: rfCourseTime,
+        location: rfLocation,
+        cancelledBy: 'admin',
+        refundAmount: payment.amount,
+      }).catch((err) => console.error('[Refund] Email failed:', err));
+    }
+    sendInternalBookingNotification({
       bookingId: payment.bookingId,
-      courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
-      courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
-      courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-      location: booking.session.course.location || booking.session.school?.name || '',
+      studentName: booking.guestName || booking.user?.name || 'Okänd',
+      personnummer: booking.personnummer ?? '–',
+      phone: booking.guestPhone,
+      email: booking.guestEmail || booking.user?.email,
+      courseName: rfCourseName,
+      courseDate: rfCourseDate,
+      courseTime: rfCourseTime,
+      location: rfLocation,
+      bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
+      status: 'Canceled',
       cancelledBy: 'admin',
       refundAmount: payment.amount,
-    }).catch((err) => console.error('[Refund] Email failed:', err));
+    }).catch((err) => console.error('[Refund] Internal cancel notification failed:', err));
   }
 
   return NextResponse.json({ payment: updated });

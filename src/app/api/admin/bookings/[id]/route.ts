@@ -34,19 +34,40 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (status === 'Canceled' && before?.status !== 'Canceled') {
     const recipientEmail = updated.guestEmail || updated.user?.email || null;
     const recipientName = updated.guestName || updated.user?.name || 'Kund';
-    if (recipientEmail && updated.session) {
+    if (updated.session) {
       const start = new Date(updated.session.startTime);
       const end = new Date(updated.session.endTime);
-      await sendCancellationEmail({
-        recipientEmail,
-        recipientName,
+      const cancelCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+      const cancelCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+      const cancelLocation = updated.session.course.location || updated.session.school?.name || '';
+      const cancelCourseName = `${updated.session.course.titleSv} (${updated.session.course.behorighet})`;
+      if (recipientEmail) {
+        await sendCancellationEmail({
+          recipientEmail,
+          recipientName,
+          bookingId,
+          courseName: cancelCourseName,
+          courseDate: cancelCourseDate,
+          courseTime: cancelCourseTime,
+          location: cancelLocation,
+          cancelledBy: 'admin',
+        });
+      }
+      // Internal staff notification
+      sendInternalBookingNotification({
         bookingId,
-        courseName: `${updated.session.course.titleSv} (${updated.session.course.behorighet})`,
-        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
-        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-        location: updated.session.course.location || updated.session.school?.name || '',
+        studentName: updated.guestName || updated.user?.name || 'Okänd',
+        personnummer: updated.personnummer ?? '–',
+        phone: updated.guestPhone,
+        email: updated.guestEmail || updated.user?.email,
+        courseName: cancelCourseName,
+        courseDate: cancelCourseDate,
+        courseTime: cancelCourseTime,
+        location: cancelLocation,
+        bookedBy: (updated.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
+        status: 'Canceled',
         cancelledBy: 'admin',
-      });
+      }).catch((err) => console.error('[Admin PATCH] Internal cancel notification failed:', err));
     }
   }
 
@@ -83,22 +104,42 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     });
   }
 
-  // Send cancellation email if we have a contact address
-  const recipientEmail = booking.guestEmail || booking.user?.email || null;
-  const recipientName = booking.guestName || booking.user?.name || 'Kund';
-  if (recipientEmail && booking.session) {
+  // Send cancellation email + internal notification
+  if (booking.session) {
+    const recipientEmail = booking.guestEmail || booking.user?.email || null;
+    const recipientName = booking.guestName || booking.user?.name || 'Kund';
     const start = new Date(booking.session.startTime);
     const end = new Date(booking.session.endTime);
-    sendCancellationEmail({
-      recipientEmail,
-      recipientName,
+    const delCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
+    const delCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+    const delCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+    const delLocation = booking.session.course.location || booking.session.school?.name || '';
+    if (recipientEmail) {
+      sendCancellationEmail({
+        recipientEmail,
+        recipientName,
+        bookingId,
+        courseName: delCourseName,
+        courseDate: delCourseDate,
+        courseTime: delCourseTime,
+        location: delLocation,
+        cancelledBy: 'admin',
+      }).catch((err) => console.error('[Admin delete] Email failed:', err));
+    }
+    sendInternalBookingNotification({
       bookingId,
-      courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
-      courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
-      courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-      location: booking.session.course.location || booking.session.school?.name || '',
+      studentName: booking.guestName || booking.user?.name || 'Okänd',
+      personnummer: booking.personnummer ?? '–',
+      phone: booking.guestPhone,
+      email: booking.guestEmail || booking.user?.email,
+      courseName: delCourseName,
+      courseDate: delCourseDate,
+      courseTime: delCourseTime,
+      location: delLocation,
+      bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
+      status: 'Canceled',
       cancelledBy: 'admin',
-    }).catch((err) => console.error('[Admin delete] Email failed:', err));
+    }).catch((err) => console.error('[Admin delete] Internal cancel notification failed:', err));
   }
 
   return NextResponse.json({ success: true });
