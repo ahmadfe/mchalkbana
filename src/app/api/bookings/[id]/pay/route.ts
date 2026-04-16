@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendReceiptEmail } from '@/lib/email';
+import { sendReceiptEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const bookingId = parseInt(params.id);
@@ -75,6 +75,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
   } else {
     console.warn('[Pay] No email address found for booking #' + bookingId + ' — skipping invoice email');
   }
+
+  // Send internal staff notification
+  const start = new Date(booking.session.startTime);
+  const end = new Date(booking.session.endTime);
+  sendInternalBookingNotification({
+    bookingId,
+    studentName: booking.guestName ?? booking.user?.name ?? 'Okänd',
+    personnummer: booking.personnummer ?? '–',
+    phone: booking.guestPhone,
+    email: booking.guestEmail ?? booking.user?.email,
+    courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
+    courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+    courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+    location: booking.session.course.location || booking.session.school?.name || '',
+    bookedBy: 'user',
+    status: 'Paid',
+  }).catch((err) => console.error('[Pay] Internal notification failed:', err));
 
   return NextResponse.json({ bookingId, transactionId });
 }

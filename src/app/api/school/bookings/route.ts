@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendBookingConfirmationEmail } from '@/lib/email';
+import { sendBookingConfirmationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 // GET: all bookings made by this school
 export async function GET(request: Request) {
@@ -113,6 +113,23 @@ export async function POST(request: Request) {
       phone: guestPhone || null,
     });
   }
+
+  // Send internal staff notification
+  const courseDate = new Date(session.startTime).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+  const courseTime = `${new Date(session.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${new Date(session.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+  sendInternalBookingNotification({
+    bookingId: booking.id,
+    studentName: guestName,
+    personnummer,
+    phone: guestPhone || null,
+    email: guestEmail || null,
+    courseName: `${session.course.titleSv} (${session.course.behorighet})`,
+    courseDate,
+    courseTime,
+    location: session.course.location || session.school.name,
+    bookedBy: 'school',
+    status: 'Confirmed',
+  }).catch((err) => console.error('[School booking] Internal notification failed:', err));
 
   return NextResponse.json({ booking }, { status: 201 });
 }

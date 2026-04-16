@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendBookingConfirmationEmail, sendCancellationEmail } from '@/lib/email';
+import { sendBookingConfirmationEmail, sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
@@ -165,6 +165,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
       customMessage: session.receiptMessage || session.course.receiptMessage || '',
     });
   }
+
+  // Send internal staff notification
+  sendInternalBookingNotification({
+    bookingId: booking.id,
+    studentName: guestName,
+    personnummer,
+    phone: guestPhone || null,
+    email: guestEmail || null,
+    courseName: `${session.course.titleSv} (${session.course.behorighet})`,
+    courseDate,
+    courseTime,
+    location,
+    bookedBy: 'admin',
+    status: 'Confirmed',
+  }).catch((err) => console.error('[Admin booking] Internal notification failed:', err));
 
   // Send WhatsApp confirmation if phone provided
   if (guestPhone) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getPaymentRequest } from '@/lib/swish';
-import { sendReceiptEmail, sendPaymentFailedEmail } from '@/lib/email';
+import { sendReceiptEmail, sendPaymentFailedEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
@@ -96,6 +96,25 @@ export async function POST(request: Request) {
         phone: booking.guestPhone,
         customMessage: booking.session.receiptMessage || booking.session.course.receiptMessage || '',
       });
+    }
+
+    // Send internal staff notification
+    {
+      const start = new Date(booking.session.startTime);
+      const end = new Date(booking.session.endTime);
+      sendInternalBookingNotification({
+        bookingId,
+        studentName: booking.guestName ?? booking.user?.name ?? 'Okänd',
+        personnummer: booking.personnummer ?? '–',
+        phone: booking.guestPhone,
+        email: booking.guestEmail ?? booking.user?.email,
+        courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
+        courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
+        courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
+        location: booking.session.course.location || booking.session.school?.name || '',
+        bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
+        status: 'Paid',
+      }).catch((err) => console.error('[Swish] Internal notification failed:', err));
     }
 
     console.log('[Swish] Booking #' + bookingId + ' marked as Paid');

@@ -933,6 +933,117 @@ export async function sendCancellationEmail(data: CancellationEmailData): Promis
   }
 }
 
+// ─── Internal staff notification ─────────────────────────────────────────────
+
+interface InternalBookingNotificationData {
+  bookingId: number;
+  studentName: string;
+  personnummer: string;
+  phone?: string | null;
+  email?: string | null;
+  courseName: string;
+  courseDate: string;
+  courseTime: string;
+  location: string;
+  bookedBy: 'guest' | 'user' | 'admin' | 'school';
+  status: 'Paid' | 'Confirmed';
+}
+
+function buildInternalNotificationHtml(data: InternalBookingNotificationData): string {
+  const statusLabel = data.status === 'Paid' ? 'BETALD' : 'BEKRÄFTAD';
+  const statusColor = data.status === 'Paid' ? '#00C4D4' : '#16a34a';
+  const bookedByLabel =
+    data.bookedBy === 'admin' ? 'Admin'
+    : data.bookedBy === 'school' ? 'Trafikskola'
+    : data.bookedBy === 'user' ? 'Inloggad användare'
+    : 'Gäst (ej inloggad)';
+
+  return `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:24px 32px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:18px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA – NY BOKNING</h1>
+    </div>
+    <div style="background:${statusColor};padding:12px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:14px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;BOKNING ${statusLabel} – #${data.bookingId}</p>
+    </div>
+    <div style="background:#fff;padding:32px;border-radius:0 0 12px 12px;">
+      <h2 style="color:#111827;font-size:15px;margin:0 0 20px;">Elevuppgifter</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;width:140px;">Namn</td>
+          <td style="padding:10px 0;color:#111827;font-weight:600;">${data.studentName}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">Personnummer</td>
+          <td style="padding:10px 0;color:#111827;font-weight:600;">${data.personnummer}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">Telefon</td>
+          <td style="padding:10px 0;color:#111827;">${data.phone || '–'}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">E-post</td>
+          <td style="padding:10px 0;color:#111827;">${data.email || '–'}</td>
+        </tr>
+      </table>
+
+      <h2 style="color:#111827;font-size:15px;margin:28px 0 16px;">Passdetaljer</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;width:140px;">Kurs</td>
+          <td style="padding:10px 0;color:#111827;font-weight:600;">${data.courseName}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">Datum</td>
+          <td style="padding:10px 0;color:#111827;">${data.courseDate}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">Tid</td>
+          <td style="padding:10px 0;color:#111827;">${data.courseTime}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:10px 0;color:#6b7280;">Plats</td>
+          <td style="padding:10px 0;color:#111827;">${data.location}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0;color:#6b7280;">Bokad av</td>
+          <td style="padding:10px 0;color:#111827;">${bookedByLabel}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+export async function sendInternalBookingNotification(data: InternalBookingNotificationData): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — skipping internal notification for booking #' + data.bookingId);
+    return;
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        to: ['info@uppsalahalkbana.se'],
+        subject: `Ny bokning #${data.bookingId} – ${data.studentName} (${data.courseName})`,
+        html: buildInternalNotificationHtml(data),
+      }),
+    });
+    if (!res.ok) console.error('[Email] Resend error (internal notification):', await res.text());
+    else console.log('[Email] Internal notification sent for booking #' + data.bookingId);
+  } catch (err) {
+    console.error('[Email] Failed to send internal notification:', err);
+  }
+}
+
 export async function sendPaymentFailedEmail(data: PaymentFailedEmailData): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
