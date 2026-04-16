@@ -189,6 +189,16 @@ export default function CoursesPreviewPage() {
             ))}
           </div>
 
+          {/* Type — toggle, no "all" button */}
+          <div className="flex gap-1">
+            {(['Risk1', 'Risk2'] as const).map(v => (
+              <button key={v} onClick={() => setTypeFilter(p => p === v ? 'all' : v)}
+                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', typeFilter === v ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
+                {v === 'Risk1' ? 'Risk 1' : 'Risk 2'}
+              </button>
+            ))}
+          </div>
+
           {/* Available only */}
           <button onClick={() => setAvailableOnly(p => !p)}
             className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', availableOnly ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
