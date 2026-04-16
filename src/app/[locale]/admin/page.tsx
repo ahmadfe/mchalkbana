@@ -263,8 +263,8 @@ export default function AdminPage() {
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
   const [sessionMonth, setSessionMonth] = useState('all');
   const [editingSession, setEditingSession] = useState<Session | null>(null);
-  const [editForm, setEditForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
-  const [editSaving, setEditSaving] = useState(false);
+  const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
+  const [editSessionSaving, setEditSessionSaving] = useState(false);
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -502,7 +502,7 @@ export default function AdminPage() {
     const date = start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
     const startT = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
     const endT = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
-    setEditForm({
+    setEditSessionForm({
       date,
       startTime: startT,
       endTime: endT,
@@ -517,14 +517,14 @@ export default function AdminPage() {
 
   const handleSaveEditSession = async () => {
     if (!editingSession) return;
-    setEditSaving(true);
-    const [sy, sm, sd] = editForm.date.split('-').map(Number);
-    const [sh, smi] = editForm.startTime.split(':').map(Number);
-    const [eh, emi] = editForm.endTime.split(':').map(Number);
+    setEditSessionSaving(true);
+    const [sy, sm, sd] = editSessionForm.date.split('-').map(Number);
+    const [sh, smi] = editSessionForm.startTime.split(':').map(Number);
+    const [eh, emi] = editSessionForm.endTime.split(':').map(Number);
     const startISO = new Date(sy, sm - 1, sd, sh, smi, 0).toISOString();
     const endISO = new Date(sy, sm - 1, sd, eh, emi, 0).toISOString();
 
-    const priceChanged = (editingSession as any).course && String((editingSession as any).course.price) !== editForm.price;
+    const priceChanged = (editingSession as any).course && String((editingSession as any).course.price) !== editSessionForm.price;
 
     const [sessionRes, priceRes] = await Promise.all([
       fetch(`/api/admin/sessions/${editingSession.id}`, {
@@ -533,17 +533,17 @@ export default function AdminPage() {
         body: JSON.stringify({
           startTime: startISO,
           endTime: endISO,
-          seatLimit: editForm.seatLimit,
-          seatsAvailable: editForm.seatsAvailable,
-          receiptMessage: editForm.receiptMessage,
-          visibility: editForm.visibility,
+          seatLimit: editSessionForm.seatLimit,
+          seatsAvailable: editSessionForm.seatsAvailable,
+          receiptMessage: editSessionForm.receiptMessage,
+          visibility: editSessionForm.visibility,
         }),
       }),
       priceChanged
         ? fetch(`/api/admin/courses/${editingSession.courseId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ price: editForm.price }),
+            body: JSON.stringify({ price: editSessionForm.price }),
           })
         : Promise.resolve(null),
     ]);
@@ -560,7 +560,7 @@ export default function AdminPage() {
           : s
       ));
     }
-    setEditSaving(false);
+    setEditSessionSaving(false);
     setEditingSession(null);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -1359,19 +1359,19 @@ export default function AdminPage() {
                         {/* Date */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Datum</label>
-                          <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                          <input type="date" value={editSessionForm.date} onChange={(e) => setEditSessionForm({ ...editSessionForm, date: e.target.value })}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                         </div>
                         {/* Times */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Starttid</label>
-                            <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                            <input type="time" value={editSessionForm.startTime} onChange={(e) => setEditSessionForm({ ...editSessionForm, startTime: e.target.value })}
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Sluttid</label>
-                            <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                            <input type="time" value={editSessionForm.endTime} onChange={(e) => setEditSessionForm({ ...editSessionForm, endTime: e.target.value })}
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                         </div>
@@ -1379,26 +1379,26 @@ export default function AdminPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Platser totalt</label>
-                            <input type="number" min="1" value={editForm.seatLimit} onChange={(e) => setEditForm({ ...editForm, seatLimit: e.target.value })}
+                            <input type="number" min="1" value={editSessionForm.seatLimit} onChange={(e) => setEditSessionForm({ ...editSessionForm, seatLimit: e.target.value })}
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Lediga platser</label>
-                            <input type="number" min="0" value={editForm.seatsAvailable} onChange={(e) => setEditForm({ ...editForm, seatsAvailable: e.target.value })}
+                            <input type="number" min="0" value={editSessionForm.seatsAvailable} onChange={(e) => setEditSessionForm({ ...editSessionForm, seatsAvailable: e.target.value })}
                               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                         </div>
                         {/* Price */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Pris (kr)</label>
-                          <input type="number" min="0" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                          <input type="number" min="0" value={editSessionForm.price} onChange={(e) => setEditSessionForm({ ...editSessionForm, price: e.target.value })}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           <p className="text-xs text-amber-600 mt-1">⚠️ Prisändring gäller alla pass med samma kurs</p>
                         </div>
                         {/* Receipt message */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">Meddelande (valfritt)</label>
-                          <textarea rows={3} value={editForm.receiptMessage} onChange={(e) => setEditForm({ ...editForm, receiptMessage: e.target.value })}
+                          <textarea rows={3} value={editSessionForm.receiptMessage} onChange={(e) => setEditSessionForm({ ...editSessionForm, receiptMessage: e.target.value })}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue resize-none" />
                         </div>
                       </div>
@@ -1407,9 +1407,9 @@ export default function AdminPage() {
                         <button onClick={() => setEditingSession(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50">
                           Avbryt
                         </button>
-                        <button onClick={handleSaveEditSession} disabled={editSaving}
+                        <button onClick={handleSaveEditSession} disabled={editSessionSaving}
                           className="flex items-center gap-2 px-4 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-50">
-                          {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          {editSessionSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                           Spara
                         </button>
                       </div>
