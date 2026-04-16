@@ -1179,15 +1179,22 @@ export default function AdminPage() {
                     <div className="flex-1 p-4">
                       <div className="flex items-start justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-3">
-                          {/* Type badge */}
-                          <div className={clsx(
-                            'w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                            s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
-                            s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
-                            s.course?.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
-                            'bg-gray-100 text-gray-600'
-                          )}>
-                            {typeLabel}
+                          {/* Calendar badge */}
+                          <div className="w-9 h-10 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
+                            <div className={clsx(
+                              'h-3.5 flex items-center justify-center',
+                              s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
+                              s.course?.type === 'Risk2' ? 'bg-orange-400' :
+                              s.course?.type === 'Combo' ? 'bg-purple-600' :
+                              'bg-gray-400'
+                            )}>
+                              <span className="text-[8px] font-bold text-white uppercase tracking-wide">
+                                {d.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
+                              </span>
+                            </div>
+                            <div className="flex-1 bg-white flex items-center justify-center">
+                              <span className="text-sm font-bold text-gray-900 leading-none">{d.getDate()}</span>
+                            </div>
                           </div>
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">

@@ -89,10 +89,17 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
                     {timeStr}
                   </span>
                 )}
-                <span className="flex items-center gap-1 min-w-0">
-                  <MapPin className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{course.location || session.school?.name}</span>
-                </span>
+                {(course.location || session.school?.name) && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(course.location || session.school?.name || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 min-w-0 text-swedish-blue hover:underline"
+                  >
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{course.location || session.school?.name}</span>
+                  </a>
+                )}
                 <span className={clsx(
                   'flex items-center gap-1 font-semibold',
                   isSoldOut ? 'text-red-500' : isLow ? 'text-orange-500' : 'text-gray-400',
@@ -231,18 +238,6 @@ export default function CoursesPreviewPage() {
                 <button key={v} onClick={() => setVehicleFilter(v)}
                   className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
                   {vehicleLabel(v)}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Course pills — dynamic, only courses that have sessions */}
-          {distinctCourses.length > 1 && (
-            <div className="flex flex-wrap gap-1">
-              {distinctCourses.map(c => (
-                <button key={c.id} onClick={() => setCourseFilter(p => p === c.id ? 'all' : c.id)}
-                  className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', courseFilter === c.id ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
-                  {locale === 'sv' ? c.titleSv : c.titleEn}
                 </button>
               ))}
             </div>
