@@ -1091,10 +1091,11 @@ export default function AdminPage() {
                             'px-2.5 py-1 rounded-full text-xs font-semibold',
                             c.type === 'Risk1' ? 'bg-brand-100 text-brand-800' :
                             c.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
+                            c.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
                             c.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-gray-100 text-gray-700'
                           )}>
-                            {c.type}
+                            {c.type === 'Combo' ? 'Kombo' : c.type}
                           </span>
                         </td>
                         <td className="py-3 px-5 text-gray-500">
@@ -1162,7 +1163,7 @@ export default function AdminPage() {
 
             const renderCard = (s: typeof filtered[0]) => {
               const isCar = s.course?.vehicle === 'Car';
-              const typeLabel = s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type?.slice(0, 2) || '?';
+              const typeLabel = s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'Combo' ? 'K' : s.course?.type?.slice(0, 2) || '?';
               const d = new Date(s.startTime);
               const dateStr = d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
               const startT = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
@@ -1181,7 +1182,10 @@ export default function AdminPage() {
                           {/* Type badge */}
                           <div className={clsx(
                             'w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                            s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' : 'bg-orange-100 text-orange-700'
+                            s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
+                            s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
+                            s.course?.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
+                            'bg-gray-100 text-gray-600'
                           )}>
                             {typeLabel}
                           </div>
@@ -2851,13 +2855,15 @@ export default function AdminPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
-                  <select className="input-field" value={newCourse.type} onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })}>
+                  <input list="course-types-new" className="input-field" value={newCourse.type} onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })} placeholder="Välj eller skriv..." />
+                  <datalist id="course-types-new">
                     <option value="Risk1">Risk 1</option>
                     <option value="Risk2">Risk 2</option>
+                    <option value="Combo">Kombo (Risk 1+2)</option>
                     <option value="AM">AM-kurs (Moped)</option>
                     <option value="Intro">Introduktionskurs</option>
                     <option value="Other">Övrigt</option>
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Fordon</label>
@@ -2931,13 +2937,15 @@ export default function AdminPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
-                  <select className="input-field" value={editCourseForm.type} onChange={(e) => setEditCourseForm({ ...editCourseForm, type: e.target.value })}>
+                  <input list="course-types-edit" className="input-field" value={editCourseForm.type} onChange={(e) => setEditCourseForm({ ...editCourseForm, type: e.target.value })} placeholder="Välj eller skriv..." />
+                  <datalist id="course-types-edit">
                     <option value="Risk1">Risk 1</option>
                     <option value="Risk2">Risk 2</option>
+                    <option value="Combo">Kombo (Risk 1+2)</option>
                     <option value="AM">AM-kurs (Moped)</option>
                     <option value="Intro">Introduktionskurs</option>
                     <option value="Other">Övrigt</option>
-                  </select>
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Fordon</label>

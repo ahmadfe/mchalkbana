@@ -26,7 +26,7 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
   const end = new Date(session.endTime);
   const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
-  const typeLabel = course.type === 'Risk1' ? 'R1' : 'R2';
+  const typeLabel = course.type === 'Risk1' ? 'R1' : course.type === 'Combo' ? 'K' : 'R2';
   const seatsUsed = session.seatLimit - session.seatsAvailable;
   const seatPct = Math.round((seatsUsed / session.seatLimit) * 100);
 
@@ -46,7 +46,9 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
             {/* Type badge */}
             <div className={clsx(
               'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-              course.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' : 'bg-orange-100 text-orange-700',
+              course.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
+              course.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
+              'bg-orange-100 text-orange-700',
             )}>
               {typeLabel}
             </div>
@@ -129,7 +131,7 @@ export default function CoursesPreviewPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'Risk1' | 'Risk2'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'Risk1' | 'Risk2' | 'Combo'>('all');
   const [courseFilter, setCourseFilter] = useState<number | 'all'>('all');
   const [availableOnly, setAvailableOnly] = useState(false);
 
@@ -204,10 +206,15 @@ export default function CoursesPreviewPage() {
 
           {/* Type — toggle, no "all" button */}
           <div className="flex gap-1">
-            {(['Risk1', 'Risk2'] as const).map(v => (
+            {(['Risk1', 'Risk2', 'Combo'] as const).map(v => (
               <button key={v} onClick={() => setTypeFilter(p => p === v ? 'all' : v)}
-                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', typeFilter === v ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
-                {v === 'Risk1' ? 'Risk 1' : 'Risk 2'}
+                className={clsx(
+                  'px-2.5 py-1 text-xs font-semibold rounded-lg border transition',
+                  typeFilter === v
+                    ? v === 'Combo' ? 'bg-purple-600 text-white border-purple-600' : 'bg-swedish-blue text-white border-swedish-blue'
+                    : 'text-gray-500 border-gray-200 hover:border-gray-300'
+                )}>
+                {v === 'Risk1' ? 'Risk 1' : v === 'Risk2' ? 'Risk 2' : 'Kombo'}
               </button>
             ))}
           </div>
