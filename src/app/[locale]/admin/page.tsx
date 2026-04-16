@@ -262,6 +262,9 @@ export default function AdminPage() {
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
   const [sessionMonth, setSessionMonth] = useState('all');
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [editForm, setEditForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
+  const [editSaving, setEditSaving] = useState(false);
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -491,6 +494,76 @@ export default function AdminPage() {
   const handleDeleteSession = async (id: number) => {
     await fetch(`/api/admin/sessions/${id}`, { method: 'DELETE' });
     setSessions((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleOpenEditSession = (s: Session) => {
+    const start = new Date(s.startTime);
+    const end = new Date(s.endTime);
+    const date = start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+    const startT = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
+    const endT = end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
+    setEditForm({
+      date,
+      startTime: startT,
+      endTime: endT,
+      seatLimit: String(s.seatLimit),
+      seatsAvailable: String(s.seatsAvailable),
+      price: String((s as any).course?.price ?? ''),
+      receiptMessage: s.receiptMessage ?? '',
+      visibility: s.visibility,
+    });
+    setEditingSession(s);
+  };
+
+  const handleSaveEditSession = async () => {
+    if (!editingSession) return;
+    setEditSaving(true);
+    const [sy, sm, sd] = editForm.date.split('-').map(Number);
+    const [sh, smi] = editForm.startTime.split(':').map(Number);
+    const [eh, emi] = editForm.endTime.split(':').map(Number);
+    const startISO = new Date(sy, sm - 1, sd, sh, smi, 0).toISOString();
+    const endISO = new Date(sy, sm - 1, sd, eh, emi, 0).toISOString();
+
+    const priceChanged = (editingSession as any).course && String((editingSession as any).course.price) !== editForm.price;
+
+    const [sessionRes, priceRes] = await Promise.all([
+      fetch(`/api/admin/sessions/${editingSession.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startTime: startISO,
+          endTime: endISO,
+          seatLimit: editForm.seatLimit,
+          seatsAvailable: editForm.seatsAvailable,
+          receiptMessage: editForm.receiptMessage,
+          visibility: editForm.visibility,
+        }),
+      }),
+      priceChanged
+        ? fetch(`/api/admin/courses/${editingSession.courseId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ price: editForm.price }),
+          })
+        : Promise.resolve(null),
+    ]);
+
+    if (sessionRes.ok) {
+      const data = await sessionRes.json();
+      setSessions((prev) => prev.map((s) => s.id === editingSession.id ? { ...s, ...data.session } : s));
+    }
+    if (priceRes?.ok) {
+      const priceData = await priceRes.json();
+      setSessions((prev) => prev.map((s) =>
+        s.courseId === editingSession.courseId
+          ? { ...s, course: (s as any).course ? { ...(s as any).course, price: priceData.course.price } : (s as any).course }
+          : s
+      ));
+    }
+    setEditSaving(false);
+    setEditingSession(null);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleToggleVisibility = async (session: Session) => {
@@ -1254,6 +1327,9 @@ export default function AdminPage() {
                                 : 'Tilldela skola'}
                             </button>
                           )}
+                          <button onClick={() => handleOpenEditSession(s)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera pass">
+                            <Pencil className="w-4 h-4" />
+                          </button>
                           <button onClick={() => handleDeleteSession(s.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -1267,6 +1343,80 @@ export default function AdminPage() {
 
             return (
               <div>
+                {/* Edit session modal */}
+                {editingSession && (
+                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingSession(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between mb-5">
+                        <h3 className="font-bold text-gray-900 text-base">Redigera pass #{editingSession.id}</h3>
+                        <button onClick={() => setEditingSession(null)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-4 font-medium">{(editingSession as any).course?.titleSv} · {(editingSession as any).course?.behorighet}</p>
+
+                      <div className="space-y-4">
+                        {/* Date */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Datum</label>
+                          <input type="date" value={editForm.date} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                        </div>
+                        {/* Times */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Starttid</label>
+                            <input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Sluttid</label>
+                            <input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          </div>
+                        </div>
+                        {/* Seats */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Platser totalt</label>
+                            <input type="number" min="1" value={editForm.seatLimit} onChange={(e) => setEditForm({ ...editForm, seatLimit: e.target.value })}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Lediga platser</label>
+                            <input type="number" min="0" value={editForm.seatsAvailable} onChange={(e) => setEditForm({ ...editForm, seatsAvailable: e.target.value })}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          </div>
+                        </div>
+                        {/* Price */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Pris (kr)</label>
+                          <input type="number" min="0" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          <p className="text-xs text-amber-600 mt-1">⚠️ Prisändring gäller alla pass med samma kurs</p>
+                        </div>
+                        {/* Receipt message */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Meddelande (valfritt)</label>
+                          <textarea rows={3} value={editForm.receiptMessage} onChange={(e) => setEditForm({ ...editForm, receiptMessage: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue resize-none" />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 mt-6">
+                        <button onClick={() => setEditingSession(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50">
+                          Avbryt
+                        </button>
+                        <button onClick={handleSaveEditSession} disabled={editSaving}
+                          className="flex items-center gap-2 px-4 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-50">
+                          {editSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Spara
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Toolbar */}
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                   <div className="flex flex-wrap items-center gap-2">
