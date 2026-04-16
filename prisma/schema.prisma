@@ -70,6 +70,12 @@ model Session {
   seatsAvailable       Int
   visibility           String    @default("public")
   receiptMessage       String    @default("")
+  comboRisk1SessionId  Int?
+  comboRisk2SessionId  Int?
+  comboRisk1Session    Session?  @relation("ComboR1", fields: [comboRisk1SessionId], references: [id])
+  comboRisk2Session    Session?  @relation("ComboR2", fields: [comboRisk2SessionId], references: [id])
+  usedAsComboR1        Session[] @relation("ComboR1")
+  usedAsComboR2        Session[] @relation("ComboR2")
   assignedSchoolUsers  User[]    @relation("AssignedSchoolSessions")
   bookings             Booking[]
   schoolAllocations    SessionSchoolAllocation[]

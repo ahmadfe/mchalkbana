@@ -50,6 +50,8 @@ export async function GET(request: Request) {
     include: {
       course: true,
       school: true,
+      comboRisk1Session: { select: { id: true, startTime: true, endTime: true, course: { select: { titleSv: true, titleEn: true } } } },
+      comboRisk2Session: { select: { id: true, startTime: true, endTime: true, course: { select: { titleSv: true, titleEn: true } } } },
       ...(isSchool
         ? { schoolAllocations: { where: { schoolUserId: authUser!.userId }, select: { allocatedSeats: true } } }
         : {}),

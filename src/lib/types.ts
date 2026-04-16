@@ -50,9 +50,13 @@ export interface Session {
   seatsAvailable: number;
   visibility: string;
   receiptMessage?: string;
+  comboRisk1SessionId?: number | null;
+  comboRisk2SessionId?: number | null;
+  comboRisk1Session?: { id: number; startTime: string; endTime: string; course?: { titleSv: string; titleEn: string } } | null;
+  comboRisk2Session?: { id: number; startTime: string; endTime: string; course?: { titleSv: string; titleEn: string } } | null;
   assignedSchoolUsers?: { id: number; name: string }[];
   schoolAllocations?: SessionSchoolAllocation[];
-  myAllocation?: number | null; // for school users: their allocated seats on this session
+  myAllocation?: number | null;
 }
 
 export type BookingStatus = 'Pending' | 'Paid' | 'Canceled' | 'Confirmed';

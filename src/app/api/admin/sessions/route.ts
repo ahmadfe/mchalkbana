@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserIds, receiptMessage } = await request.json();
+  const { courseId, schoolId, startTime, endTime, seatLimit, visibility, assignedSchoolUserIds, receiptMessage, comboRisk1SessionId, comboRisk2SessionId } = await request.json();
   if (!courseId || !schoolId || !startTime || !endTime || !seatLimit) {
     return NextResponse.json({ error: 'Obligatoriska fält saknas' }, { status: 400 });
   }
@@ -50,6 +50,8 @@ export async function POST(request: Request) {
       seatsAvailable: seats,
       visibility: visibility || 'public',
       receiptMessage: receiptMessage || '',
+      ...(comboRisk1SessionId ? { comboRisk1SessionId: parseInt(comboRisk1SessionId) } : {}),
+      ...(comboRisk2SessionId ? { comboRisk2SessionId: parseInt(comboRisk2SessionId) } : {}),
       ...(visibility === 'school' && ids.length > 0
         ? { assignedSchoolUsers: { connect: ids.map((id) => ({ id })) } }
         : {}),

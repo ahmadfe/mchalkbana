@@ -25,6 +25,10 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+  const r1 = session.comboRisk1Session;
+  const r2 = session.comboRisk2Session;
+  const r1TimeStr = r1 ? `${new Date(r1.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${new Date(r1.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : null;
+  const r2TimeStr = r2 ? `${new Date(r2.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${new Date(r2.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : null;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const typeLabel = course.type === 'Risk1' ? 'R1' : course.type === 'Combo' ? 'K' : 'R2';
   const seatsUsed = session.seatLimit - session.seatsAvailable;
@@ -67,10 +71,17 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
 
               {/* Meta row */}
               <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 shrink-0" />
-                  {timeStr}
-                </span>
+                {course.type === 'Combo' && (r1TimeStr || r2TimeStr) ? (
+                  <span className="flex flex-col gap-0.5">
+                    {r1TimeStr && <span className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0" /><span className="text-blue-600 font-medium">R1</span> {r1TimeStr}</span>}
+                    {r2TimeStr && <span className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0" /><span className="text-orange-500 font-medium">R2</span> {r2TimeStr}</span>}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    {timeStr}
+                  </span>
+                )}
                 <span className="flex items-center gap-1 min-w-0">
                   <MapPin className="w-3 h-3 shrink-0" />
                   <span className="truncate">{course.location || session.school?.name}</span>

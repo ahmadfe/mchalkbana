@@ -278,7 +278,7 @@ export default function AdminPage() {
   const [testEmailError, setTestEmailError] = useState('');
 
   const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
-  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[], receiptMessage: '' });
+  const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[], receiptMessage: '', comboRisk1SessionId: '', comboRisk2SessionId: '' });
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
   const [endHour, setEndHour] = useState('12:00');
@@ -627,7 +627,7 @@ export default function AdminPage() {
     const created = results.filter(Boolean).map((d: any) => d.session);
     setSessions((prev) => [...prev, ...created]);
     setShowAddSession(false);
-    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [], receiptMessage: '' });
+    setNewSession({ courseId: '', schoolId: schools.length > 0 ? String(schools[0].id) : '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [], receiptMessage: '', comboRisk1SessionId: '', comboRisk2SessionId: '' });
     setSessionDate('');
     setStartHour('09:00');
     setEndHour('12:00');
@@ -3019,6 +3019,41 @@ export default function AdminPage() {
                   })}
                 </select>
               </div>
+
+              {/* Combo sub-sessions — only shown when Combo course is selected */}
+              {courses.find((c) => String(c.id) === newSession.courseId)?.type === 'Combo' && (
+                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">Kombo — välj ingående pass</p>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Risk 1 pass (valfritt)</label>
+                    <select className="input-field" value={newSession.comboRisk1SessionId} onChange={(e) => setNewSession({ ...newSession, comboRisk1SessionId: e.target.value })}>
+                      <option value="">Inget kopplat R1-pass</option>
+                      {sessions
+                        .filter((s) => s.course?.type === 'Risk1')
+                        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                        .map((s) => {
+                          const d = new Date(s.startTime);
+                          const label = `${d.toLocaleDateString('sv-SE')} ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} — ${s.course?.titleSv}`;
+                          return <option key={s.id} value={s.id}>{label}</option>;
+                        })}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Risk 2 pass (valfritt)</label>
+                    <select className="input-field" value={newSession.comboRisk2SessionId} onChange={(e) => setNewSession({ ...newSession, comboRisk2SessionId: e.target.value })}>
+                      <option value="">Inget kopplat R2-pass</option>
+                      {sessions
+                        .filter((s) => s.course?.type === 'Risk2')
+                        .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                        .map((s) => {
+                          const d = new Date(s.startTime);
+                          const label = `${d.toLocaleDateString('sv-SE')} ${d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} — ${s.course?.titleSv}`;
+                          return <option key={s.id} value={s.id}>{label}</option>;
+                        })}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* School venue */}
               <div>
