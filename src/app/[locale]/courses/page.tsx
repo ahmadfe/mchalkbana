@@ -1,170 +1,266 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useTranslations, useLocale } from 'next-intl';
+import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import SessionCard from '@/components/SessionCard';
-import type { CourseType, VehicleType, Session } from '@/lib/types';
-import { Filter } from 'lucide-react';
+import Link from 'next/link';
+import { useLocale } from 'next-intl';
+import { MapPin, Clock, Users, SlidersHorizontal } from 'lucide-react';
+import type { Session } from '@/lib/types';
 import clsx from 'clsx';
-import { useAuth } from '@/context/AuthContext';
 import { fbq } from '@/components/MetaPixel';
 
-export default function CoursesPage() {
-  const t = useTranslations('courses');
-  const locale = useLocale();
-  const { user } = useAuth();
+function dayLabel(key: string) {
+  return new Date(key + 'T12:00:00').toLocaleDateString('sv-SE', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+}
 
+function SessionRow({ session, locale }: { session: Session; locale: string }) {
+  const course = session.course!;
+  const isCar = course.vehicle === 'Car';
+  const isSoldOut = session.seatsAvailable === 0;
+  const isLow = !isSoldOut && session.seatsAvailable <= 3;
+  const start = new Date(session.startTime);
+  const end = new Date(session.endTime);
+  const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+  const r1 = session.comboRisk1Session;
+  const r2 = session.comboRisk2Session;
+  const r1TimeStr = r1 ? `${new Date(r1.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${new Date(r1.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : null;
+  const r2TimeStr = r2 ? `${new Date(r2.startTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${new Date(r2.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : null;
+  const title = locale === 'sv' ? course.titleSv : course.titleEn;
+  const seatsUsed = session.seatLimit - session.seatsAvailable;
+  const seatPct = Math.round((seatsUsed / session.seatLimit) * 100);
+
+  return (
+    <div className={clsx(
+      'bg-white rounded-xl border overflow-hidden flex transition hover:shadow-md',
+      isSoldOut ? 'border-gray-100 opacity-70' : 'border-gray-100 hover:border-gray-200',
+    )}>
+      <div className={clsx('w-1 shrink-0', isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
+
+      <div className="flex-1 px-4 py-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            {/* Calendar badge */}
+            <div className="w-9 h-10 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
+              <div className={clsx(
+                'h-3.5 flex items-center justify-center',
+                course.type === 'Risk1' ? 'bg-swedish-blue' :
+                course.type === 'Combo' ? 'bg-purple-600' :
+                'bg-orange-400',
+              )}>
+                <span className="text-[8px] font-bold text-white uppercase tracking-wide">
+                  {start.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
+                </span>
+              </div>
+              <div className="flex-1 bg-white flex items-center justify-center">
+                <span className="text-sm font-bold text-gray-900 leading-none">{start.getDate()}</span>
+              </div>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <p className="font-semibold text-gray-900 text-sm leading-tight">{title}</p>
+                <span className={clsx(
+                  'text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
+                  isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700',
+                )}>
+                  {isCar ? '🚗 Bil' : '🏍️ MC'} · {course.behorighet}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                {course.type === 'Combo' && (r1TimeStr || r2TimeStr) ? (
+                  <span className="flex flex-col gap-0.5">
+                    {r1TimeStr && <span className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0" /><span className="text-blue-600 font-medium">R1</span> {r1TimeStr}</span>}
+                    {r2TimeStr && <span className="flex items-center gap-1"><Clock className="w-3 h-3 shrink-0" /><span className="text-orange-500 font-medium">R2</span> {r2TimeStr}</span>}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    {timeStr}
+                  </span>
+                )}
+                {(course.location || session.school?.name) && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(course.location || session.school?.name || '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 min-w-0 text-swedish-blue hover:underline"
+                  >
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{course.location || session.school?.name}</span>
+                  </a>
+                )}
+                <span className={clsx(
+                  'flex items-center gap-1 font-semibold',
+                  isSoldOut ? 'text-red-500' : isLow ? 'text-orange-500' : 'text-gray-400',
+                )}>
+                  <Users className="w-3 h-3 shrink-0" />
+                  {isSoldOut
+                    ? 'Fullbokad'
+                    : isLow
+                      ? `${session.seatsAvailable} platser kvar`
+                      : `${session.seatsAvailable}/${session.seatLimit} kvar`}
+                </span>
+              </div>
+
+              <div className="mt-1.5 w-20 h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={clsx('h-full rounded-full', isSoldOut ? 'bg-red-400' : isLow ? 'bg-orange-400' : 'bg-swedish-blue')}
+                  style={{ width: `${seatPct}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="text-right">
+              <p className="font-bold text-gray-900 text-sm leading-tight">
+                {course.price.toLocaleString('sv-SE')} kr
+              </p>
+              <p className="text-xs text-gray-400">per person</p>
+            </div>
+            {isSoldOut ? (
+              <span className="px-3 py-1.5 text-xs font-semibold text-gray-400 bg-gray-100 rounded-lg whitespace-nowrap">
+                Fullbokad
+              </span>
+            ) : (
+              <Link
+                href={`/${locale}/checkout?session=${session.id}`}
+                className="px-4 py-1.5 text-xs font-bold bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark transition whitespace-nowrap"
+              >
+                Boka
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CoursesPage() {
+  const locale = useLocale();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typeFilter, setTypeFilter] = useState<CourseType | 'All'>('All');
-  const [vehicleFilter, setVehicleFilter] = useState<VehicleType | 'All'>('All');
-  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+  const [vehicleFilter, setVehicleFilter] = useState<string>('all');
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (typeFilter !== 'All') params.set('type', typeFilter);
-    if (vehicleFilter !== 'All') params.set('vehicle', vehicleFilter);
-    if (showAvailableOnly) params.set('availableOnly', 'true');
-
-    setLoading(true);
-    fetch(`/api/sessions?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
+    fetch('/api/sessions')
+      .then(r => r.json())
+      .then(data => {
         setSessions(data.sessions || []);
         setLoading(false);
         fbq('track', 'ViewContent', { content_name: 'Kurser & Kurstillfällen', content_category: 'Riskutbildning' });
       })
       .catch(() => setLoading(false));
-  }, [typeFilter, vehicleFilter, showAvailableOnly]);
+  }, []);
 
-  const FilterBtn = ({
-    active,
-    onClick,
-    children,
-  }: {
-    active: boolean;
-    onClick: () => void;
-    children: React.ReactNode;
-  }) => (
-    <button
-      onClick={onClick}
-      className={clsx(
-        'px-4 py-2 text-sm font-medium rounded-xl border transition',
-        active
-          ? 'bg-swedish-blue text-white border-swedish-blue'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-swedish-blue hover:text-swedish-blue'
-      )}
-    >
-      {children}
-    </button>
-  );
+  const availableVehicles = useMemo(() => {
+    const seen = new Set<string>();
+    sessions.forEach(s => { if (s.course?.vehicle) seen.add(s.course.vehicle); });
+    return Array.from(seen);
+  }, [sessions]);
+
+  const filtered = useMemo(() => sessions.filter(s => {
+    if (vehicleFilter !== 'all' && s.course?.vehicle !== vehicleFilter) return false;
+    if (availableOnly && s.seatsAvailable === 0) return false;
+    return true;
+  }), [sessions, vehicleFilter, availableOnly]);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, Session[]> = {};
+    filtered.forEach(s => {
+      const d = new Date(s.startTime);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  const vehicleLabel = (v: string) => v === 'Car' ? '🚗 Bil' : v === 'Motorcycle' ? '🏍️ MC' : v;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
 
-      {/* Header */}
-      <section className="bg-gradient-to-r from-swedish-blue to-brand-700 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{t('title')}</h1>
-          <p className="text-brand-100 text-lg">{t('subtitle')}</p>
+      <section className="bg-gradient-to-r from-swedish-blue to-brand-700 text-white py-10">
+        <div className="max-w-3xl mx-auto px-4">
+          <p className="text-brand-200 text-xs font-bold uppercase tracking-widest mb-1">Uppsala Halkbana</p>
+          <h1 className="text-3xl font-extrabold mb-1">Kommande kurstillfällen</h1>
+          {!loading && (
+            <p className="text-brand-100 text-sm">
+              {filtered.length} {filtered.length === 1 ? 'kurstillfälle' : 'kurstillfällen'}
+            </p>
+          )}
         </div>
       </section>
 
-      <main className="flex-1 py-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Filters */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-8">
-            <div className="flex items-center gap-2 text-gray-600 mb-4">
-              <Filter className="w-4 h-4" />
-              <span className="font-medium text-sm">Filter</span>
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-3xl mx-auto px-4 py-2.5 flex flex-wrap gap-2 items-center">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+
+          {availableVehicles.length > 1 && (
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button onClick={() => setVehicleFilter('all')}
+                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                Alla fordon
+              </button>
+              {availableVehicles.map(v => (
+                <button key={v} onClick={() => setVehicleFilter(v)}
+                  className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                  {vehicleLabel(v)}
+                </button>
+              ))}
             </div>
-            <div className="flex flex-wrap gap-3">
-              {/* Type filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                  {t('filter_type')}:
-                </span>
-                <FilterBtn active={typeFilter === 'All'} onClick={() => setTypeFilter('All')}>
-                  {t('all')}
-                </FilterBtn>
-                <FilterBtn active={typeFilter === 'Risk1'} onClick={() => setTypeFilter('Risk1')}>
-                  {t('risk1')}
-                </FilterBtn>
-                <FilterBtn active={typeFilter === 'Risk2'} onClick={() => setTypeFilter('Risk2')}>
-                  {t('risk2')}
-                </FilterBtn>
-              </div>
+          )}
 
-              <div className="w-px bg-gray-200 self-stretch hidden sm:block" />
+          <button onClick={() => setAvailableOnly(p => !p)}
+            className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', availableOnly ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
+            Lediga platser
+          </button>
+        </div>
+      </div>
 
-              {/* Vehicle filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">
-                  {t('filter_vehicle')}:
-                </span>
-                <FilterBtn active={vehicleFilter === 'All'} onClick={() => setVehicleFilter('All')}>
-                  {t('all')}
-                </FilterBtn>
-                <FilterBtn active={vehicleFilter === 'Car'} onClick={() => setVehicleFilter('Car')}>
-                  {t('car')} 🚗
-                </FilterBtn>
-                <FilterBtn active={vehicleFilter === 'Motorcycle'} onClick={() => setVehicleFilter('Motorcycle')}>
-                  {t('motorcycle')} 🏍️
-                </FilterBtn>
-              </div>
+      <main className="flex-1 py-6">
+        <div className="max-w-3xl mx-auto px-4">
 
-              <div className="w-px bg-gray-200 self-stretch hidden sm:block" />
-
-              {/* Available only toggle */}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <div
-                  onClick={() => setShowAvailableOnly(!showAvailableOnly)}
-                  className={clsx(
-                    'relative w-10 h-5 rounded-full transition cursor-pointer',
-                    showAvailableOnly ? 'bg-swedish-blue' : 'bg-gray-200'
-                  )}
-                >
-                  <div
-                    className={clsx(
-                      'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all',
-                      showAvailableOnly ? 'left-5' : 'left-0.5'
-                    )}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">Tillgängliga platser</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Results */}
           {loading ? (
             <div className="text-center py-20">
               <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-gray-400 text-sm">Laddar kurser...</p>
             </div>
-          ) : (
-            <>
-              <p className="text-sm text-gray-500 mb-6">
-                {sessions.length === 0 ? 'Inga kurser hittades' : `${sessions.length} pass hittades`}
-              </p>
 
-              {sessions.length === 0 ? (
-                <div className="text-center py-20">
-                  <div className="text-5xl mb-4">📅</div>
-                  <h3 className="text-xl font-bold text-gray-700 mb-2">Inga kurser hittades</h3>
-                  <p className="text-gray-400">Prova att ändra dina filterinställningar.</p>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-20">
+              <div className="text-5xl mb-4">📅</div>
+              <p className="text-gray-500 font-medium">Inga pass för vald period</p>
+              <button onClick={() => { setVehicleFilter('all'); setAvailableOnly(false); }}
+                className="mt-4 text-sm text-swedish-blue hover:underline">
+                Rensa filter
+              </button>
+            </div>
+
+          ) : (
+            <div className="space-y-6">
+              {grouped.map(([dk, ds]) => (
+                <div key={dk}>
+                  <div className="flex items-center gap-3 mb-2.5">
+                    <h2 className="text-sm font-semibold text-gray-600 capitalize whitespace-nowrap">{dayLabel(dk)}</h2>
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{ds.length} pass</span>
+                  </div>
+                  <div className="space-y-2">
+                    {ds.map(s => <SessionRow key={s.id} session={s} locale={locale} />)}
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {sessions.map((session) => (
-                    <SessionCard key={session.id} session={session} isLoggedIn={!!user} />
-                  ))}
-                </div>
-              )}
-            </>
+              ))}
+            </div>
           )}
         </div>
       </main>
