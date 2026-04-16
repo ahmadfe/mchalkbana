@@ -222,7 +222,7 @@ export default function CoursesPreviewPage() {
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📅</div>
               <p className="text-gray-500 font-medium">Inga pass för vald period</p>
-              <button onClick={() => { setVehicleFilter('all'); setTypeFilter('all'); setAvailableOnly(false); setActiveMonth('all'); }}
+              <button onClick={() => { setVehicleFilter('all'); setTypeFilter('all'); setAvailableOnly(false); }}
                 className="mt-4 text-sm text-swedish-blue hover:underline">
                 Rensa filter
               </button>
