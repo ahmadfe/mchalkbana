@@ -130,8 +130,7 @@ export default function CoursesPreviewPage() {
   const locale = useLocale();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'Risk1' | 'Risk2' | 'Combo'>('all');
+  const [vehicleFilter, setVehicleFilter] = useState<string>('all');
   const [courseFilter, setCourseFilter] = useState<number | 'all'>('all');
   const [availableOnly, setAvailableOnly] = useState(false);
 
@@ -141,6 +140,13 @@ export default function CoursesPreviewPage() {
       .then(data => { setSessions(data.sessions || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  // Distinct vehicles that actually exist in sessions
+  const availableVehicles = useMemo(() => {
+    const seen = new Set<string>();
+    sessions.forEach(s => { if (s.course?.vehicle) seen.add(s.course.vehicle); });
+    return Array.from(seen);
+  }, [sessions]);
 
   // Distinct courses for the course filter pills
   const distinctCourses = useMemo(() => {
@@ -155,11 +161,10 @@ export default function CoursesPreviewPage() {
 
   const filtered = useMemo(() => sessions.filter(s => {
     if (vehicleFilter !== 'all' && s.course?.vehicle !== vehicleFilter) return false;
-    if (typeFilter !== 'all' && s.course?.type !== typeFilter) return false;
     if (courseFilter !== 'all' && s.courseId !== courseFilter) return false;
     if (availableOnly && s.seatsAvailable === 0) return false;
     return true;
-  }), [sessions, vehicleFilter, typeFilter, courseFilter, availableOnly]);
+  }), [sessions, vehicleFilter, courseFilter, availableOnly]);
 
   const grouped = useMemo(() => {
     const map: Record<string, Session[]> = {};
@@ -171,6 +176,9 @@ export default function CoursesPreviewPage() {
     });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
   }, [filtered]);
+
+  // Vehicle label helper
+  const vehicleLabel = (v: string) => v === 'Car' ? '🚗 Bil' : v === 'Motorcycle' ? '🏍️ MC' : v;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -194,32 +202,23 @@ export default function CoursesPreviewPage() {
         <div className="max-w-3xl mx-auto px-4 py-2.5 flex flex-wrap gap-2 items-center">
           <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 shrink-0" />
 
-          {/* Vehicle */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            {(['all', 'Car', 'Motorcycle'] as const).map(v => (
-              <button key={v} onClick={() => setVehicleFilter(v)}
-                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
-                {v === 'all' ? 'Alla fordon' : v === 'Car' ? '🚗 Bil' : '🏍️ MC'}
+          {/* Vehicle — only shown if more than one vehicle type exists */}
+          {availableVehicles.length > 1 && (
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              <button onClick={() => setVehicleFilter('all')}
+                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                Alla fordon
               </button>
-            ))}
-          </div>
+              {availableVehicles.map(v => (
+                <button key={v} onClick={() => setVehicleFilter(v)}
+                  className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                  {vehicleLabel(v)}
+                </button>
+              ))}
+            </div>
+          )}
 
-          {/* Type — toggle, no "all" button */}
-          <div className="flex gap-1">
-            {(['Risk1', 'Risk2', 'Combo'] as const).map(v => (
-              <button key={v} onClick={() => setTypeFilter(p => p === v ? 'all' : v)}
-                className={clsx(
-                  'px-2.5 py-1 text-xs font-semibold rounded-lg border transition',
-                  typeFilter === v
-                    ? v === 'Combo' ? 'bg-purple-600 text-white border-purple-600' : 'bg-swedish-blue text-white border-swedish-blue'
-                    : 'text-gray-500 border-gray-200 hover:border-gray-300'
-                )}>
-                {v === 'Risk1' ? 'Risk 1' : v === 'Risk2' ? 'Risk 2' : 'Kombo'}
-              </button>
-            ))}
-          </div>
-
-          {/* Course type */}
+          {/* Course pills — dynamic, only courses that have sessions */}
           {distinctCourses.length > 1 && (
             <div className="flex flex-wrap gap-1">
               {distinctCourses.map(c => (
@@ -254,7 +253,7 @@ export default function CoursesPreviewPage() {
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📅</div>
               <p className="text-gray-500 font-medium">Inga pass för vald period</p>
-              <button onClick={() => { setVehicleFilter('all'); setTypeFilter('all'); setCourseFilter('all'); setAvailableOnly(false); }}
+              <button onClick={() => { setVehicleFilter('all'); setCourseFilter('all'); setAvailableOnly(false); }}
                 className="mt-4 text-sm text-swedish-blue hover:underline">
                 Rensa filter
               </button>
