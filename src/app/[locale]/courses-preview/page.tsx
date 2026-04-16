@@ -130,6 +130,7 @@ export default function CoursesPreviewPage() {
   const [loading, setLoading] = useState(true);
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'Risk1' | 'Risk2'>('all');
+  const [courseFilter, setCourseFilter] = useState<number | 'all'>('all');
   const [availableOnly, setAvailableOnly] = useState(false);
 
   useEffect(() => {
@@ -139,12 +140,24 @@ export default function CoursesPreviewPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Distinct courses for the course filter pills
+  const distinctCourses = useMemo(() => {
+    const seen = new Map<number, { id: number; titleSv: string; titleEn: string }>();
+    sessions.forEach(s => {
+      if (s.course && !seen.has(s.courseId)) {
+        seen.set(s.courseId, { id: s.courseId, titleSv: s.course.titleSv, titleEn: s.course.titleEn });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => a.titleSv.localeCompare(b.titleSv, 'sv'));
+  }, [sessions]);
+
   const filtered = useMemo(() => sessions.filter(s => {
     if (vehicleFilter !== 'all' && s.course?.vehicle !== vehicleFilter) return false;
     if (typeFilter !== 'all' && s.course?.type !== typeFilter) return false;
+    if (courseFilter !== 'all' && s.courseId !== courseFilter) return false;
     if (availableOnly && s.seatsAvailable === 0) return false;
     return true;
-  }), [sessions, vehicleFilter, typeFilter, availableOnly]);
+  }), [sessions, vehicleFilter, typeFilter, courseFilter, availableOnly]);
 
   const grouped = useMemo(() => {
     const map: Record<string, Session[]> = {};
@@ -199,6 +212,18 @@ export default function CoursesPreviewPage() {
             ))}
           </div>
 
+          {/* Course type */}
+          {distinctCourses.length > 1 && (
+            <div className="flex flex-wrap gap-1">
+              {distinctCourses.map(c => (
+                <button key={c.id} onClick={() => setCourseFilter(p => p === c.id ? 'all' : c.id)}
+                  className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', courseFilter === c.id ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
+                  {locale === 'sv' ? c.titleSv : c.titleEn}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Available only */}
           <button onClick={() => setAvailableOnly(p => !p)}
             className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', availableOnly ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
@@ -222,7 +247,7 @@ export default function CoursesPreviewPage() {
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📅</div>
               <p className="text-gray-500 font-medium">Inga pass för vald period</p>
-              <button onClick={() => { setVehicleFilter('all'); setTypeFilter('all'); setAvailableOnly(false); }}
+              <button onClick={() => { setVehicleFilter('all'); setTypeFilter('all'); setCourseFilter('all'); setAvailableOnly(false); }}
                 className="mt-4 text-sm text-swedish-blue hover:underline">
                 Rensa filter
               </button>
