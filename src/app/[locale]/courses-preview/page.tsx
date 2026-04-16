@@ -189,16 +189,6 @@ export default function CoursesPreviewPage() {
             ))}
           </div>
 
-          {/* Type */}
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            {(['all', 'Risk1', 'Risk2'] as const).map(v => (
-              <button key={v} onClick={() => setTypeFilter(v)}
-                className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', typeFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
-                {v === 'all' ? 'Risk 1 & 2' : v === 'Risk1' ? 'Risk 1' : 'Risk 2'}
-              </button>
-            ))}
-          </div>
-
           {/* Available only */}
           <button onClick={() => setAvailableOnly(p => !p)}
             className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', availableOnly ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
