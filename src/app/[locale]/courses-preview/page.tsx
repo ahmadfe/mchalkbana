@@ -5,19 +5,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { MapPin, Clock, Users, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { MapPin, Clock, Users, SlidersHorizontal } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import clsx from 'clsx';
-
-const PAGE_SIZE = 20;
-
-// ── Month label helper ───────────────────────────────────────────────────────
-function monthLabel(ym: string) {
-  const [y, m] = ym.split('-');
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('sv-SE', {
-    month: 'long', year: 'numeric',
-  });
-}
 
 // ── Day label helper ─────────────────────────────────────────────────────────
 function dayLabel(key: string) {
@@ -141,8 +131,6 @@ export default function CoursesPreviewPage() {
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'Risk1' | 'Risk2'>('all');
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [activeMonth, setActiveMonth] = useState<string>('all');
-  const [showCount, setShowCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     fetch('/api/sessions')
@@ -151,9 +139,6 @@ export default function CoursesPreviewPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Reset show count when filters change
-  useEffect(() => { setShowCount(PAGE_SIZE); }, [vehicleFilter, typeFilter, availableOnly, activeMonth]);
-
   const filtered = useMemo(() => sessions.filter(s => {
     if (vehicleFilter !== 'all' && s.course?.vehicle !== vehicleFilter) return false;
     if (typeFilter !== 'all' && s.course?.type !== typeFilter) return false;
@@ -161,40 +146,16 @@ export default function CoursesPreviewPage() {
     return true;
   }), [sessions, vehicleFilter, typeFilter, availableOnly]);
 
-  const months = useMemo(() => {
-    const seen = new Set<string>();
-    filtered.forEach(s => {
-      const d = new Date(s.startTime);
-      seen.add(`${d.getFullYear()}-${d.getMonth() + 1}`);
-    });
-    return Array.from(seen).sort((a, b) => {
-      const [ay, am] = a.split('-').map(Number);
-      const [by, bm] = b.split('-').map(Number);
-      return ay !== by ? ay - by : am - bm;
-    });
-  }, [filtered]);
-
-  const monthFiltered = useMemo(() => {
-    if (activeMonth === 'all') return filtered;
-    const [y, m] = activeMonth.split('-').map(Number);
-    return filtered.filter(s => {
-      const d = new Date(s.startTime);
-      return d.getFullYear() === y && d.getMonth() + 1 === m;
-    });
-  }, [filtered, activeMonth]);
-
-  const visible = monthFiltered.slice(0, showCount);
-
   const grouped = useMemo(() => {
     const map: Record<string, Session[]> = {};
-    visible.forEach(s => {
+    filtered.forEach(s => {
       const d = new Date(s.startTime);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (!map[key]) map[key] = [];
       map[key].push(s);
     });
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
-  }, [visible]);
+  }, [filtered]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -207,7 +168,7 @@ export default function CoursesPreviewPage() {
           <h1 className="text-3xl font-extrabold mb-1">Kommande kurstillfällen</h1>
           {!loading && (
             <p className="text-brand-100 text-sm">
-              {filtered.length} pass {availableOnly ? 'med lediga platser' : 'totalt'}
+              {filtered.length} {filtered.length === 1 ? 'kurstillfälle' : 'kurstillfällen'}
             </p>
           )}
         </div>
@@ -249,22 +210,6 @@ export default function CoursesPreviewPage() {
       <main className="flex-1 py-6">
         <div className="max-w-3xl mx-auto px-4">
 
-          {/* ── Month tabs ── */}
-          {!loading && months.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-5" style={{ scrollbarWidth: 'none' }}>
-              <button onClick={() => setActiveMonth('all')}
-                className={clsx('shrink-0 px-4 py-1.5 text-sm font-semibold rounded-full border transition capitalize', activeMonth === 'all' ? 'bg-swedish-blue text-white border-swedish-blue' : 'border-gray-200 text-gray-600 bg-white hover:border-swedish-blue hover:text-swedish-blue')}>
-                Alla månader
-              </button>
-              {months.map(ym => (
-                <button key={ym} onClick={() => setActiveMonth(ym)}
-                  className={clsx('shrink-0 px-4 py-1.5 text-sm font-semibold rounded-full border capitalize transition', activeMonth === ym ? 'bg-swedish-blue text-white border-swedish-blue' : 'border-gray-200 text-gray-600 bg-white hover:border-swedish-blue hover:text-swedish-blue')}>
-                  {monthLabel(ym)}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* ── Loading ── */}
           {loading ? (
             <div className="text-center py-20">
@@ -273,7 +218,7 @@ export default function CoursesPreviewPage() {
             </div>
 
           /* ── Empty ── */
-          ) : monthFiltered.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📅</div>
               <p className="text-gray-500 font-medium">Inga pass för vald period</p>
@@ -301,16 +246,6 @@ export default function CoursesPreviewPage() {
                 </div>
               ))}
 
-              {/* Show more */}
-              {showCount < monthFiltered.length && (
-                <div className="flex justify-center pt-2">
-                  <button onClick={() => setShowCount(c => c + PAGE_SIZE)}
-                    className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-full hover:border-swedish-blue hover:text-swedish-blue transition shadow-sm">
-                    <ChevronDown className="w-4 h-4" />
-                    Visa fler ({monthFiltered.length - showCount} kvar)
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
