@@ -153,6 +153,12 @@ export default function AdminPage() {
   const [addStudentSaving, setAddStudentSaving] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
 
+  // Email actions per booking (bookingId → 'receipt' | 'reminder' | null)
+  const [emailSending, setEmailSending] = useState<Record<number, 'receipt' | 'reminder' | null>>({});
+  const [emailDone, setEmailDone] = useState<Record<number, 'receipt' | 'reminder' | null>>({});
+  const [sendingAllReminders, setSendingAllReminders] = useState(false);
+  const [allRemindersDone, setAllRemindersDone] = useState(false);
+
   // WhatsApp numbers
   const [waNumbers, setWaNumbers] = useState<{ id: number; phone: string; role: string; createdAt: string }[]>([]);
   const [newWaPhone, setNewWaPhone] = useState('');
@@ -913,6 +919,32 @@ export default function AdminPage() {
     setStudentsData(updatedData);
     setAddStudentForm({ name: '', personnummer: '', phone: '', email: '' });
     setShowAddStudent(false);
+  };
+
+  const handleResendReceipt = async (bookingId: number) => {
+    setEmailSending((p) => ({ ...p, [bookingId]: 'receipt' }));
+    await fetch(`/api/admin/bookings/${bookingId}/resend-receipt`, { method: 'POST' });
+    setEmailSending((p) => ({ ...p, [bookingId]: null }));
+    setEmailDone((p) => ({ ...p, [bookingId]: 'receipt' }));
+    setTimeout(() => setEmailDone((p) => ({ ...p, [bookingId]: null })), 3000);
+  };
+
+  const handleSendReminder = async (bookingId: number) => {
+    setEmailSending((p) => ({ ...p, [bookingId]: 'reminder' }));
+    await fetch(`/api/admin/bookings/${bookingId}/send-reminder`, { method: 'POST' });
+    setEmailSending((p) => ({ ...p, [bookingId]: null }));
+    setEmailDone((p) => ({ ...p, [bookingId]: 'reminder' }));
+    setTimeout(() => setEmailDone((p) => ({ ...p, [bookingId]: null })), 3000);
+  };
+
+  const handleSendAllReminders = async () => {
+    if (!studentsData) return;
+    setSendingAllReminders(true);
+    setAllRemindersDone(false);
+    await fetch(`/api/admin/sessions/${studentsData.session.id}/send-reminders`, { method: 'POST' });
+    setSendingAllReminders(false);
+    setAllRemindersDone(true);
+    setTimeout(() => setAllRemindersDone(false), 4000);
   };
 
   const handleDeleteStudent = async (bookingId: number) => {
@@ -2602,6 +2634,23 @@ export default function AdminPage() {
                     <Download className="w-4 h-4" />Exportera XML
                   </button>
                 )}
+                {studentsData && studentsData.students.some((s) => (s.status === 'Paid' || s.status === 'Confirmed') && s.email !== '–') && (
+                  <button
+                    onClick={handleSendAllReminders}
+                    disabled={sendingAllReminders}
+                    className={clsx('flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg transition',
+                      allRemindersDone ? 'bg-green-600 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-60'
+                    )}
+                  >
+                    {sendingAllReminders ? (
+                      <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Skickar...</>
+                    ) : allRemindersDone ? (
+                      <><CheckCircle2 className="w-4 h-4" />Skickat!</>
+                    ) : (
+                      <><Clock className="w-4 h-4" />Påminnelse till alla</>
+                    )}
+                  </button>
+                )}
                 {studentsData && (
                   <button
                     onClick={() => { setShowAddStudent(!showAddStudent); setAddStudentError(''); }}
@@ -2610,7 +2659,7 @@ export default function AdminPage() {
                     <Plus className="w-4 h-4" />Lägg till elev
                   </button>
                 )}
-                <button onClick={() => { setStudentsData(null); setStudentsLoading(false); setShowAddStudent(false); }} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => { setStudentsData(null); setStudentsLoading(false); setShowAddStudent(false); setEmailSending({}); setEmailDone({}); setAllRemindersDone(false); }} className="text-gray-400 hover:text-gray-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -2703,9 +2752,49 @@ export default function AdminPage() {
                             )}>{s.status}</span>
                           </td>
                           <td className="py-2.5 px-4">
-                            <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-gray-300 hover:text-red-500 transition" title="Ta bort">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              {s.email !== '–' && (s.status === 'Paid' || s.status === 'Confirmed') && (
+                                <>
+                                  <button
+                                    onClick={() => handleResendReceipt(s.bookingId)}
+                                    disabled={!!emailSending[s.bookingId]}
+                                    title="Skicka om kvitto"
+                                    className={clsx('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition',
+                                      emailDone[s.bookingId] === 'receipt' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50'
+                                    )}
+                                  >
+                                    {emailSending[s.bookingId] === 'receipt' ? (
+                                      <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : emailDone[s.bookingId] === 'receipt' ? (
+                                      <CheckCircle2 className="w-3 h-3" />
+                                    ) : (
+                                      <RotateCcw className="w-3 h-3" />
+                                    )}
+                                    Kvitto
+                                  </button>
+                                  <button
+                                    onClick={() => handleSendReminder(s.bookingId)}
+                                    disabled={!!emailSending[s.bookingId]}
+                                    title="Skicka påminnelse"
+                                    className={clsx('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition',
+                                      emailDone[s.bookingId] === 'reminder' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50'
+                                    )}
+                                  >
+                                    {emailSending[s.bookingId] === 'reminder' ? (
+                                      <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : emailDone[s.bookingId] === 'reminder' ? (
+                                      <CheckCircle2 className="w-3 h-3" />
+                                    ) : (
+                                      <Clock className="w-3 h-3" />
+                                    )}
+                                    Påminnelse
+                                  </button>
+                                </>
+                              )}
+                              <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-gray-300 hover:text-red-500 transition ml-1" title="Ta bort">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
