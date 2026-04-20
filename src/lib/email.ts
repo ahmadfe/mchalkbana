@@ -814,7 +814,7 @@ export async function sendReminderEmail(data: ReminderEmailData): Promise<void> 
       body: JSON.stringify({
         from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
         to: [data.recipientEmail],
-        subject: `⏰ Påminnelse – din kurs imorgon: ${data.courseName}`,
+        subject: `⏰ Påminnelse – ${data.courseName}`,
         html: buildReminderHtml(data),
       }),
     });
