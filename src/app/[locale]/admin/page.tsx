@@ -1886,7 +1886,7 @@ export default function AdminPage() {
                       placeholder="Sök elev..."
                       value={studentSearch}
                       onChange={e => setStudentSearch(e.target.value)}
-                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-swedish-yellow transition-all"
+                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-swedish-blue transition-all"
                     />
                   </div>
 
@@ -1908,13 +1908,13 @@ export default function AdminPage() {
                         className={clsx(
                           'w-full text-left p-4 rounded-[1.25rem] border transition-all hover:scale-[1.01]',
                           selectedStudentKey === s.key
-                            ? 'border-swedish-yellow/40 bg-swedish-yellow/10'
+                            ? 'border-swedish-blue/50 bg-swedish-blue/10'
                             : 'border-white/5 bg-white/[0.02] hover:border-white/20',
                         )}
                       >
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-swedish-yellow/40 to-swedish-yellow/10 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-black text-swedish-yellow">{s.name.charAt(0).toUpperCase()}</span>
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-swedish-blue/40 to-swedish-blue/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-black text-swedish-blue">{s.name.charAt(0).toUpperCase()}</span>
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-black text-sm text-white truncate">{s.name}</p>
@@ -1924,7 +1924,7 @@ export default function AdminPage() {
                         {s.behorighetList.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {s.behorighetList.map(b => (
-                              <span key={b} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/5 text-swedish-yellow border border-swedish-yellow/20">
+                              <span key={b} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-swedish-blue/10 text-swedish-blue border border-swedish-blue/20">
                                 {b}
                               </span>
                             ))}
@@ -1952,8 +1952,8 @@ export default function AdminPage() {
                     {/* Profile header */}
                     <div className="bg-gradient-to-r from-brand-950 to-brand-900 rounded-2xl p-6 mb-4 text-white">
                       <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-swedish-yellow/20 border border-swedish-yellow/30 flex items-center justify-center shrink-0">
-                          <span className="text-2xl font-black text-swedish-yellow">{selected.name.charAt(0).toUpperCase()}</span>
+                        <div className="w-16 h-16 rounded-2xl bg-swedish-blue/20 border border-swedish-blue/30 flex items-center justify-center shrink-0">
+                          <span className="text-2xl font-black text-swedish-blue">{selected.name.charAt(0).toUpperCase()}</span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <h2 className="text-xl font-black text-white truncate">{selected.name}</h2>
@@ -1973,7 +1973,7 @@ export default function AdminPage() {
                           { label: 'Behörighet', value: selected.behorighetList.join(', ') || '–' },
                         ].map(stat => (
                           <div key={stat.label} className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                            <p className="text-base font-black text-swedish-yellow">{stat.value}</p>
+                            <p className="text-base font-black text-swedish-blue">{stat.value}</p>
                             <p className="text-[9px] uppercase tracking-widest text-white/30 mt-0.5 font-bold">{stat.label}</p>
                           </div>
                         ))}
@@ -2007,7 +2007,7 @@ export default function AdminPage() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <p className="text-sm font-semibold text-gray-900 truncate">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</p>
                                     {b.session?.course?.behorighet && (
-                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-swedish-yellow/10 text-yellow-700 border border-swedish-yellow/20">{b.session.course.behorighet}</span>
+                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-swedish-blue/10 text-swedish-blue border border-swedish-blue/20">{b.session.course.behorighet}</span>
                                     )}
                                     <span className={clsx(
                                       'ml-auto text-[9px] font-bold uppercase px-2 py-0.5 rounded-full',
