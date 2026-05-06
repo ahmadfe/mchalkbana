@@ -223,6 +223,17 @@ export default function AdminPage() {
   const [studentView, setStudentView] = useState<'active' | 'archived'>('active');
   const [selectedStudentKey, setSelectedStudentKey] = useState<string | null>(null);
 
+  // Add payment (for Confirmed bookings)
+  const [addPaymentBookingId, setAddPaymentBookingId] = useState<number | null>(null);
+  const [addPaymentForm, setAddPaymentForm] = useState({ amount: '', provider: 'Swish', transactionId: '' });
+  const [addPaymentSaving, setAddPaymentSaving] = useState(false);
+  const [addPaymentError, setAddPaymentError] = useState('');
+
+  // Student notes
+  const [studentNote, setStudentNote] = useState('');
+  const [studentNoteSaving, setStudentNoteSaving] = useState(false);
+  const [studentNoteSaved, setStudentNoteSaved] = useState(false);
+
   // Info Cards
   const [infoCards, setInfoCards] = useState<InfoCardRecord[]>([]);
   const [showAddCard, setShowAddCard] = useState(false);
@@ -387,6 +398,15 @@ export default function AdminPage() {
     if (!authLoading && user?.role !== 'admin') { router.push(`/${locale}/dashboard`); return; }
     if (user?.role === 'admin') loadData();
   }, [user, authLoading, locale, router, loadData]);
+
+  useEffect(() => {
+    if (!selectedStudentKey) { setStudentNote(''); return; }
+    setStudentNote('');
+    fetch(`/api/admin/student-notes?key=${encodeURIComponent(selectedStudentKey)}`)
+      .then(r => r.json())
+      .then(data => setStudentNote(data.note ?? ''))
+      .catch(() => setStudentNote(''));
+  }, [selectedStudentKey]);
 
   const handleSendTestEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -942,6 +962,37 @@ export default function AdminPage() {
     setAssigningSchoolSession(null);
     setAssignAllocations({});
     setAssignAllocError('');
+  };
+
+  const handleAddPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addPaymentBookingId) return;
+    setAddPaymentSaving(true);
+    setAddPaymentError('');
+    const res = await fetch(`/api/admin/bookings/${addPaymentBookingId}/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addPaymentForm),
+    });
+    const data = await res.json();
+    setAddPaymentSaving(false);
+    if (!res.ok) { setAddPaymentError(data.error || 'Något gick fel'); return; }
+    setAddPaymentBookingId(null);
+    setAddPaymentForm({ amount: '', provider: 'Swish', transactionId: '' });
+    await loadData();
+  };
+
+  const handleSaveStudentNote = async () => {
+    if (!selectedStudentKey) return;
+    setStudentNoteSaving(true);
+    await fetch('/api/admin/student-notes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: selectedStudentKey, note: studentNote }),
+    });
+    setStudentNoteSaving(false);
+    setStudentNoteSaved(true);
+    setTimeout(() => setStudentNoteSaved(false), 2000);
   };
 
   const handleConfirmRefund = async () => {
@@ -2018,6 +2069,20 @@ export default function AdminPage() {
                                   </div>
                                   <p className="text-xs text-gray-500 mt-0.5">{dateStr} · {timeStr}</p>
                                   {b.session?.school?.name && <p className="text-xs text-gray-400">{b.session.school.name}</p>}
+                                  {/* Add payment button for confirmed bookings with no payment */}
+                                  {!payment && b.status === 'Confirmed' && (
+                                    <button
+                                      onClick={() => {
+                                        const price = b.session?.course?.price ?? 0;
+                                        setAddPaymentBookingId(b.id);
+                                        setAddPaymentForm({ amount: String(price), provider: 'Swish', transactionId: '' });
+                                        setAddPaymentError('');
+                                      }}
+                                      className="mt-1.5 flex items-center gap-1.5 text-[10px] font-bold text-swedish-blue hover:text-swedish-dark border border-swedish-blue/30 hover:border-swedish-blue bg-brand-50 px-2.5 py-1 rounded-lg transition"
+                                    >
+                                      <CreditCard className="w-3 h-3" /> Lägg till betalning
+                                    </button>
+                                  )}
                                   {payment && (
                                     <div className="flex items-center justify-between gap-2 mt-1.5">
                                       <div>
@@ -2084,7 +2149,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Quick actions */}
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mb-4">
                       {selected.email && (
                         <a href={`mailto:${selected.email}`}
                           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
@@ -2097,6 +2162,43 @@ export default function AdminPage() {
                           <Phone className="w-4 h-4" /> Ring
                         </a>
                       )}
+                    </div>
+
+                    {/* Notes */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                          <FileText className="w-4 h-4 text-swedish-blue" />
+                          Anteckningar
+                        </h3>
+                        {studentNoteSaved && (
+                          <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Sparat
+                          </span>
+                        )}
+                      </div>
+                      <textarea
+                        rows={4}
+                        value={studentNote}
+                        onChange={e => setStudentNote(e.target.value)}
+                        onBlur={handleSaveStudentNote}
+                        placeholder="Lägg till anteckningar om eleven..."
+                        className="w-full text-sm text-gray-700 placeholder-gray-300 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-swedish-blue/30 focus:border-swedish-blue transition"
+                      />
+                      <div className="flex justify-end mt-2">
+                        <button
+                          onClick={handleSaveStudentNote}
+                          disabled={studentNoteSaving}
+                          className="flex items-center gap-1.5 text-xs font-semibold text-white bg-swedish-blue hover:bg-swedish-dark px-3 py-1.5 rounded-lg transition disabled:opacity-60"
+                        >
+                          {studentNoteSaving ? (
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Save className="w-3 h-3" />
+                          )}
+                          Spara
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -2937,6 +3039,76 @@ export default function AdminPage() {
                 {editSaving ? 'Sparar...' : 'Spara ändringar'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Payment Modal */}
+      {addPaymentBookingId !== null && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-swedish-blue" /> Lägg till betalning
+              </h3>
+              <button onClick={() => setAddPaymentBookingId(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddPayment} className="space-y-4">
+              {addPaymentError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addPaymentError}</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Belopp (kr) *</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={addPaymentForm.amount}
+                  onChange={e => setAddPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                  className="input-field"
+                  placeholder="2500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Betalningsmetod *</label>
+                <select
+                  value={addPaymentForm.provider}
+                  onChange={e => setAddPaymentForm(f => ({ ...f, provider: e.target.value }))}
+                  className="input-field"
+                >
+                  <option value="Swish">Swish</option>
+                  <option value="Kontant">Kontant</option>
+                  <option value="Faktura">Faktura</option>
+                  <option value="Kort">Kort</option>
+                  <option value="Bankgiro">Bankgiro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Referensnummer <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <input
+                  type="text"
+                  value={addPaymentForm.transactionId}
+                  onChange={e => setAddPaymentForm(f => ({ ...f, transactionId: e.target.value }))}
+                  className="input-field"
+                  placeholder="t.ex. Swish-ref eller fakturanr"
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setAddPaymentBookingId(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium">
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  disabled={addPaymentSaving || !addPaymentForm.amount}
+                  className="flex-1 bg-swedish-blue text-white py-2.5 rounded-xl hover:bg-swedish-dark text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {addPaymentSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {addPaymentSaving ? 'Sparar...' : 'Registrera betalning'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
