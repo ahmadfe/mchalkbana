@@ -40,6 +40,8 @@ import {
   Smartphone,
   ChevronDown,
   ChevronUp,
+  Archive,
+  ArrowRightLeft,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -251,6 +253,12 @@ export default function AdminPage() {
     reader.readAsDataURL(file);
   };
 
+  // Move student to another session
+  const [moveBooking, setMoveBooking] = useState<{ bookingId: number; studentName: string; currentSessionId: number; courseId: number } | null>(null);
+  const [moveTargetSessionId, setMoveTargetSessionId] = useState<number | ''>('');
+  const [moveLoading, setMoveLoading] = useState(false);
+  const [moveError, setMoveError] = useState('');
+
   // Edit booking
   const [editBooking, setEditBooking] = useState<Booking | null>(null);
   const [editForm, setEditForm] = useState({ guestName: '', personnummer: '', guestPhone: '', guestEmail: '', status: '' });
@@ -268,6 +276,7 @@ export default function AdminPage() {
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
   const [sessionMonth, setSessionMonth] = useState('all');
+  const [sessionView, setSessionView] = useState<'active' | 'archive'>('active');
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
   const [editSessionSaving, setEditSessionSaving] = useState(false);
@@ -955,6 +964,37 @@ export default function AdminPage() {
     setStudentsData(updatedData);
   };
 
+  const handleMoveStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!moveBooking || !moveTargetSessionId) return;
+    setMoveLoading(true);
+    setMoveError('');
+    const res = await fetch(`/api/admin/bookings/${moveBooking.bookingId}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newSessionId: moveTargetSessionId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMoveError(data.error || 'Något gick fel');
+      setMoveLoading(false);
+      return;
+    }
+    setMoveLoading(false);
+    setMoveBooking(null);
+    setMoveTargetSessionId('');
+    // Refresh the students modal if open
+    if (studentsData) {
+      const updated = await fetch(`/api/admin/sessions/${studentsData.session.id}/students`);
+      const updatedData = await updated.json();
+      setStudentsData(updatedData);
+    }
+    // Refresh sessions list to update seat counts
+    const sessRes = await fetch('/api/admin/sessions');
+    const sessData = await sessRes.json();
+    setSessions(sessData.sessions || []);
+  };
+
   const handleDeleteBooking = async (bookingId: number) => {
     if (!confirm(`Ta bort bokning #${bookingId}? Platsen återställs om bokningen inte är avbokad.`)) return;
     const res = await fetch(`/api/admin/bookings/${bookingId}`, { method: 'DELETE' });
@@ -1169,7 +1209,9 @@ export default function AdminPage() {
               sessions.map(s => String(new Date(s.startTime).getFullYear()))
             )).sort((a, b) => Number(a) - Number(b));
 
+            const now = new Date();
             const filtered = sessions
+              .filter((s) => sessionView === 'active' ? new Date(s.endTime) >= now : new Date(s.endTime) < now)
               .filter((s) => sessionFilter === 'all' || s.visibility === sessionFilter)
               .filter((s) => vehicleFilter === 'all' || s.course?.vehicle === vehicleFilter)
               .filter((s) => {
@@ -1178,7 +1220,9 @@ export default function AdminPage() {
                 const mMatch = sessionMonth === 'all' || String(d.getMonth() + 1) === sessionMonth;
                 return yMatch && mMatch;
               })
-              .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+              .sort((a, b) => sessionView === 'archive'
+                ? new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+                : new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
             // Group by day → vehicle
             const monthGroups: Record<string, Record<string, typeof filtered>> = {};
@@ -1463,7 +1507,28 @@ export default function AdminPage() {
                 {/* Toolbar */}
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold text-gray-900">Pass ({filtered.length})</h2>
+                    {/* Active / Archive toggle */}
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setSessionView('active')}
+                        className={clsx('flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition',
+                          sessionView === 'active' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                        )}
+                      >
+                        <Calendar className="w-3.5 h-3.5" />Aktiva
+                      </button>
+                      <button
+                        onClick={() => setSessionView('archive')}
+                        className={clsx('flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition',
+                          sessionView === 'archive' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+                        )}
+                      >
+                        <Archive className="w-3.5 h-3.5" />Arkiv
+                      </button>
+                    </div>
+                    <h2 className="font-bold text-gray-900">
+                      {sessionView === 'archive' ? 'Arkiverade' : 'Aktiva'} pass ({filtered.length})
+                    </h2>
                     {/* Visibility filter */}
                     <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
                       {(['all', 'public', 'school'] as const).map((f) => (
@@ -1498,13 +1563,17 @@ export default function AdminPage() {
                       {SESSION_MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
                     </select>
                   </div>
-                  <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
-                    <Plus className="w-4 h-4" />{t('add_session')}
-                  </button>
+                  {sessionView === 'active' && (
+                    <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
+                      <Plus className="w-4 h-4" />{t('add_session')}
+                    </button>
+                  )}
                 </div>
 
                 {filtered.length === 0 && (
-                  <div className="text-center py-16 text-gray-400 text-sm">Inga pass för vald period.</div>
+                  <div className="text-center py-16 text-gray-400 text-sm">
+                    {sessionView === 'archive' ? 'Inga arkiverade pass ännu.' : 'Inga pass för vald period.'}
+                  </div>
                 )}
 
                 {/* Month → Vehicle grouping */}
@@ -2791,6 +2860,22 @@ export default function AdminPage() {
                                   </button>
                                 </>
                               )}
+                              <button
+                                onClick={() => {
+                                  setMoveBooking({
+                                    bookingId: s.bookingId,
+                                    studentName: s.name,
+                                    currentSessionId: studentsData!.session.id,
+                                    courseId: studentsData!.session.course.id,
+                                  });
+                                  setMoveTargetSessionId('');
+                                  setMoveError('');
+                                }}
+                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition"
+                                title="Flytta till annat pass"
+                              >
+                                <ArrowRightLeft className="w-3 h-3" />Flytta
+                              </button>
                               <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-gray-300 hover:text-red-500 transition ml-1" title="Ta bort">
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -2806,6 +2891,68 @@ export default function AdminPage() {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Move Student Modal */}
+      {moveBooking && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <ArrowRightLeft className="w-5 h-5 text-swedish-blue" />Flytta elev
+                </h3>
+                <p className="text-sm text-gray-500 mt-0.5">{moveBooking.studentName}</p>
+              </div>
+              <button onClick={() => setMoveBooking(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMoveStudent} className="space-y-4">
+              {moveError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{moveError}</div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Välj nytt pass *</label>
+                <select
+                  required
+                  value={moveTargetSessionId}
+                  onChange={(e) => setMoveTargetSessionId(e.target.value ? Number(e.target.value) : '')}
+                  className="input-field text-sm"
+                >
+                  <option value="">-- Välj pass --</option>
+                  {sessions
+                    .filter((s) => s.id !== moveBooking.currentSessionId && new Date(s.endTime) >= new Date() && s.seatsAvailable > 0 && s.courseId === moveBooking.courseId)
+                    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+                    .map((s) => {
+                      const start = new Date(s.startTime);
+                      const dateStr = start.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
+                      const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}–${new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
+                      return (
+                        <option key={s.id} value={s.id}>
+                          {dateStr} · {timeStr} · {s.seatsAvailable} plats{s.seatsAvailable !== 1 ? 'er' : ''} kvar
+                        </option>
+                      );
+                    })}
+                </select>
+                {sessions.filter((s) => s.id !== moveBooking.currentSessionId && new Date(s.endTime) >= new Date() && s.seatsAvailable > 0 && s.courseId === moveBooking.courseId).length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1.5">Inga tillgängliga pass för samma kurs.</p>
+                )}
+              </div>
+              <div className="flex gap-2 justify-end pt-1">
+                <button type="button" onClick={() => setMoveBooking(null)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100">Avbryt</button>
+                <button
+                  type="submit"
+                  disabled={moveLoading || !moveTargetSessionId}
+                  className="px-4 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-60 flex items-center gap-2"
+                >
+                  {moveLoading ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Flyttar...</> : <><ArrowRightLeft className="w-3.5 h-3.5" />Flytta elev</>}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
