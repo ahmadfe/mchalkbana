@@ -7,6 +7,8 @@ import { prisma } from '@/lib/db';
 import { CITIES, getCityBySlug } from '@/lib/cities';
 import { CheckCircle2, MapPin, Clock, Car, Bike, ArrowRight, Star, ShieldCheck } from 'lucide-react';
 
+export const revalidate = 3600;
+
 export async function generateStaticParams() {
   return CITIES.map((c) => ({ city: c.slug }));
 }
