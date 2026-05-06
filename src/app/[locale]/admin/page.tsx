@@ -482,10 +482,8 @@ export default function AdminPage() {
     { id: 'overview', label: t('overview'), icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'courses', label: t('manage_courses'), icon: <BookOpen className="w-4 h-4" /> },
     { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
-    { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
     { id: 'students', label: 'Elevprofiler', icon: <UserCircle2 className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
-    { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
     { id: 'hero', label: 'Hero-media', icon: <MonitorPlay className="w-4 h-4" /> },
     { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
@@ -1866,7 +1864,7 @@ export default function AdminPage() {
                 {/* ──── Left dark sidebar ──── */}
                 <div className={clsx(
                   'lg:w-96 flex-shrink-0 flex flex-col rounded-[2rem] border border-white/10 p-5 shadow-2xl',
-                  'bg-[#002623]',
+                  'bg-brand-950',
                   selected ? 'hidden lg:flex' : 'flex',
                 )}>
                   {/* Active / Archived toggle */}
@@ -1888,7 +1886,7 @@ export default function AdminPage() {
                       placeholder="Sök elev..."
                       value={studentSearch}
                       onChange={e => setStudentSearch(e.target.value)}
-                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#d4af37] transition-all"
+                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-swedish-yellow transition-all"
                     />
                   </div>
 
@@ -1910,13 +1908,13 @@ export default function AdminPage() {
                         className={clsx(
                           'w-full text-left p-4 rounded-[1.25rem] border transition-all hover:scale-[1.01]',
                           selectedStudentKey === s.key
-                            ? 'border-[#d4af37]/40 bg-[#d4af37]/10'
+                            ? 'border-swedish-yellow/40 bg-swedish-yellow/10'
                             : 'border-white/5 bg-white/[0.02] hover:border-white/20',
                         )}
                       >
                         <div className="flex items-center gap-3 mb-2">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37]/40 to-[#d4af37]/10 flex items-center justify-center shrink-0">
-                            <span className="text-xs font-black text-[#d4af37]">{s.name.charAt(0).toUpperCase()}</span>
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-swedish-yellow/40 to-swedish-yellow/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-black text-swedish-yellow">{s.name.charAt(0).toUpperCase()}</span>
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-black text-sm text-white truncate">{s.name}</p>
@@ -1926,7 +1924,7 @@ export default function AdminPage() {
                         {s.behorighetList.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {s.behorighetList.map(b => (
-                              <span key={b} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/5 text-[#d4af37] border border-[#d4af37]/20">
+                              <span key={b} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/5 text-swedish-yellow border border-swedish-yellow/20">
                                 {b}
                               </span>
                             ))}
@@ -1952,10 +1950,10 @@ export default function AdminPage() {
                     </button>
 
                     {/* Profile header */}
-                    <div className="bg-gradient-to-r from-[#002623] to-[#003d38] rounded-2xl p-6 mb-4 text-white">
+                    <div className="bg-gradient-to-r from-brand-950 to-brand-900 rounded-2xl p-6 mb-4 text-white">
                       <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/30 flex items-center justify-center shrink-0">
-                          <span className="text-2xl font-black text-[#d4af37]">{selected.name.charAt(0).toUpperCase()}</span>
+                        <div className="w-16 h-16 rounded-2xl bg-swedish-yellow/20 border border-swedish-yellow/30 flex items-center justify-center shrink-0">
+                          <span className="text-2xl font-black text-swedish-yellow">{selected.name.charAt(0).toUpperCase()}</span>
                         </div>
                         <div className="min-w-0 flex-1">
                           <h2 className="text-xl font-black text-white truncate">{selected.name}</h2>
@@ -1975,7 +1973,7 @@ export default function AdminPage() {
                           { label: 'Behörighet', value: selected.behorighetList.join(', ') || '–' },
                         ].map(stat => (
                           <div key={stat.label} className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
-                            <p className="text-base font-black text-[#d4af37]">{stat.value}</p>
+                            <p className="text-base font-black text-swedish-yellow">{stat.value}</p>
                             <p className="text-[9px] uppercase tracking-widest text-white/30 mt-0.5 font-bold">{stat.label}</p>
                           </div>
                         ))}
@@ -1997,18 +1995,19 @@ export default function AdminPage() {
                             const dateStr = start ? start.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Stockholm' }) : '–';
                             const timeStr = start && end ? `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : '';
                             const isPast = start ? start < now : true;
-                            const payment = (b as any).payment as { amount: number; provider: string; status: string } | null;
+                            const payment = (b as any).payment as { id: number; amount: number; provider: string; status: string; transactionId: string | null; createdAt: string } | null;
+                            const paymentDate = payment ? new Date(payment.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Stockholm' }) : null;
                             return (
                               <div key={b.id} className={clsx(
                                 'flex items-start gap-3 p-3 rounded-xl border',
-                                isPast ? 'bg-gray-50 border-gray-100' : 'bg-blue-50 border-blue-100',
+                                isPast ? 'bg-gray-50 border-gray-100' : 'bg-brand-50 border-brand-100',
                               )}>
                                 <div className={clsx('w-2 h-2 rounded-full mt-1.5 shrink-0', isPast ? 'bg-gray-300' : 'bg-swedish-blue')} />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <p className="text-sm font-semibold text-gray-900 truncate">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</p>
                                     {b.session?.course?.behorighet && (
-                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#d4af37]/10 text-[#b8941f] border border-[#d4af37]/20">{b.session.course.behorighet}</span>
+                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-swedish-yellow/10 text-yellow-700 border border-swedish-yellow/20">{b.session.course.behorighet}</span>
                                     )}
                                     <span className={clsx(
                                       'ml-auto text-[9px] font-bold uppercase px-2 py-0.5 rounded-full',
@@ -2020,12 +2019,47 @@ export default function AdminPage() {
                                   <p className="text-xs text-gray-500 mt-0.5">{dateStr} · {timeStr}</p>
                                   {b.session?.school?.name && <p className="text-xs text-gray-400">{b.session.school.name}</p>}
                                   {payment && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {payment.amount.toLocaleString('sv-SE')} kr · {payment.provider} ·{' '}
-                                      <span className={payment.status === 'Succeeded' ? 'text-green-600' : payment.status === 'Refunded' ? 'text-orange-500' : 'text-gray-400'}>
-                                        {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}
-                                      </span>
-                                    </p>
+                                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                                      <div>
+                                        <p className="text-xs text-gray-600 font-medium">
+                                          {payment.amount.toLocaleString('sv-SE')} kr · {payment.provider}
+                                          {paymentDate && <span className="text-gray-400 font-normal"> · {paymentDate}</span>}
+                                        </p>
+                                        <span className={clsx('text-[9px] font-bold uppercase',
+                                          payment.status === 'Succeeded' ? 'text-green-600' :
+                                          payment.status === 'Refunded' ? 'text-orange-500' : 'text-gray-400'
+                                        )}>
+                                          {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}
+                                        </span>
+                                      </div>
+                                      {payment.status === 'Succeeded' && (
+                                        <button
+                                          onClick={() => setRefundTarget({
+                                            id: payment.id,
+                                            bookingId: b.id,
+                                            amount: payment.amount,
+                                            provider: payment.provider,
+                                            status: payment.status,
+                                            transactionId: payment.transactionId,
+                                            createdAt: payment.createdAt,
+                                            booking: {
+                                              guestName: b.guestName ?? null,
+                                              guestEmail: b.guestEmail ?? null,
+                                              personnummer: b.personnummer ?? null,
+                                              user: b.user ?? null,
+                                              session: {
+                                                startTime: b.session?.startTime ?? '',
+                                                course: { titleSv: b.session?.course?.titleSv ?? '' },
+                                                school: { name: b.session?.school?.name ?? '' },
+                                              },
+                                            },
+                                          })}
+                                          className="flex items-center gap-1 text-[10px] font-bold text-red-600 hover:text-red-800 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition whitespace-nowrap shrink-0"
+                                        >
+                                          <RotateCcw className="w-2.5 h-2.5" /> Återbetala
+                                        </button>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
                                 <div className="flex flex-col gap-1 shrink-0">
@@ -3068,7 +3102,25 @@ export default function AdminPage() {
                       {studentsData.students.map((s, i) => (
                         <tr key={s.bookingId} className="hover:bg-gray-50">
                           <td className="py-2.5 px-4 text-gray-400">{i + 1}</td>
-                          <td className="py-2.5 px-4 font-medium">{s.name}</td>
+                          <td className="py-2.5 px-4 font-medium">
+                            <button
+                              onClick={() => {
+                                const email = s.email !== '–' ? s.email.toLowerCase().trim() : null;
+                                const pnr = s.personnummer || null;
+                                const key = email || (pnr ? `pnr-${pnr}` : `booking-${s.bookingId}`);
+                                const profile = studentProfiles.find(p => p.key === key);
+                                setStudentsData(null);
+                                setStudentsLoading(false);
+                                setTab('students');
+                                setSelectedStudentKey(key);
+                                setStudentView(profile?.hasUpcoming ? 'active' : 'archived');
+                              }}
+                              className="text-left hover:text-swedish-blue hover:underline transition font-medium"
+                              title="Öppna elevprofil"
+                            >
+                              {s.name}
+                            </button>
+                          </td>
                           <td className="py-2.5 px-4 font-mono text-xs text-gray-700">{s.personnummer}</td>
                           <td className="py-2.5 px-4 text-gray-500 text-xs">{s.phone}</td>
                           <td className="py-2.5 px-4 text-gray-500 text-xs">{s.email}</td>
