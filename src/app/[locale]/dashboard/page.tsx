@@ -16,6 +16,8 @@ import {
   AlertCircle,
   BookOpen,
   ChevronRight,
+  RefreshCw,
+  Lock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -114,8 +116,24 @@ export default function DashboardPage() {
             <p className="text-xs text-gray-400 mt-1">#{booking.id}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
           <StatusBadge status={booking.status} />
+          {isFuture && booking.status !== 'Canceled' && (() => {
+            const hoursUntil = (start.getTime() - Date.now()) / (1000 * 60 * 60);
+            const locked = hoursUntil < 74;
+            return locked ? (
+              <span className="flex items-center gap-1 text-xs text-gray-400 font-medium" title="Tidsbyte låst inom 74h">
+                <Lock className="w-3 h-3" /> Låst
+              </span>
+            ) : (
+              <Link
+                href={`/${locale}/byt-tid?bookingId=${booking.id}`}
+                className="flex items-center gap-1 text-xs text-swedish-blue hover:underline font-medium"
+              >
+                <RefreshCw className="w-3 h-3" /> Byt tid
+              </Link>
+            );
+          })()}
           {isFuture && booking.status !== 'Canceled' && (
             <button
               onClick={() => setCancelTarget(booking.id)}

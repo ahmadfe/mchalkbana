@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendReceiptEmail, sendInternalBookingNotification } from '@/lib/email';
+import { signBookingToken } from '@/lib/booking-token';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const bookingId = parseInt(params.id);
@@ -55,6 +56,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const start = new Date(booking.session.startTime);
     const end = new Date(booking.session.endTime);
+    const changeToken = await signBookingToken(bookingId);
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://uppsalahalkbana.se';
+    const changeUrl = `${baseUrl}/sv/byt-tid?token=${changeToken}`;
 
     await sendReceiptEmail({
       recipientEmail,
@@ -71,6 +75,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       personnummer: booking.personnummer,
       phone: booking.guestPhone,
       customMessage,
+      changeUrl,
     });
   } else {
     console.warn('[Pay] No email address found for booking #' + bookingId + ' — skipping invoice email');
