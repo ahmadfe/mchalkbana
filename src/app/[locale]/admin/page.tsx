@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -42,11 +42,16 @@ import {
   ChevronUp,
   Archive,
   ArrowRightLeft,
+  UserCircle2,
+  Search,
+  MapPin,
+  Phone,
+  Mail,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'students' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp';
 
 interface InfoCardRecord {
   id: number;
@@ -212,6 +217,11 @@ export default function AdminPage() {
   const [refundTarget, setRefundTarget] = useState<PaymentRecord | null>(null);
   const [refunding, setRefunding] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+
+  // Students profiles
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentView, setStudentView] = useState<'active' | 'archived'>('active');
+  const [selectedStudentKey, setSelectedStudentKey] = useState<string | null>(null);
 
   // Info Cards
   const [infoCards, setInfoCards] = useState<InfoCardRecord[]>([]);
@@ -422,11 +432,58 @@ export default function AdminPage() {
     setCourseGroups((prev) => prev.filter((g) => g.id !== id));
   };
 
+  interface StudentProfileData {
+    key: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    personnummer: string | null;
+    bookings: Booking[];
+    totalPaid: number;
+    behorighetList: string[];
+    hasUpcoming: boolean;
+  }
+
+  // Derive unique student profiles from bookings (deduped by email → pnr → bookingId)
+  const studentProfiles = useMemo<StudentProfileData[]>(() => {
+    const now = new Date();
+    const map = new Map<string, StudentProfileData>();
+    bookings.forEach((b) => {
+      const email = (b.guestEmail ?? (b.user as any)?.email ?? '').toLowerCase().trim() || null;
+      const pnr = b.personnummer?.trim() || null;
+      const key = email || (pnr ? `pnr-${pnr}` : `booking-${b.id}`);
+      const payment = (b as any).payment as { amount: number; status: string } | null;
+      const beh = b.session?.course?.behorighet ?? '';
+      const isUpcoming = !!(b.session && new Date(b.session.endTime) >= now && b.status !== 'Canceled');
+      if (map.has(key)) {
+        const s = map.get(key)!;
+        s.bookings.push(b);
+        if (payment?.status === 'Succeeded') s.totalPaid += payment.amount;
+        if (beh && !s.behorighetList.includes(beh)) s.behorighetList.push(beh);
+        if (isUpcoming) s.hasUpcoming = true;
+      } else {
+        map.set(key, {
+          key,
+          name: b.guestName ?? (b.user as any)?.name ?? 'Okänd',
+          email,
+          phone: b.guestPhone ?? null,
+          personnummer: pnr,
+          bookings: [b],
+          totalPaid: payment?.status === 'Succeeded' ? payment.amount : 0,
+          behorighetList: beh ? [beh] : [],
+          hasUpcoming: isUpcoming,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'sv'));
+  }, [bookings]);
+
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: t('overview'), icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'courses', label: t('manage_courses'), icon: <BookOpen className="w-4 h-4" /> },
     { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
     { id: 'bookings', label: t('bookings'), icon: <Users className="w-4 h-4" /> },
+    { id: 'students', label: 'Elevprofiler', icon: <UserCircle2 className="w-4 h-4" /> },
     { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
     { id: 'payments', label: 'Betalningar', icon: <CreditCard className="w-4 h-4" /> },
     { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
@@ -1782,6 +1839,240 @@ export default function AdminPage() {
                   </div>
                   );
                 })}
+              </div>
+            );
+          })()}
+
+          {/* Student Profiles */}
+          {tab === 'students' && (() => {
+            const now = new Date();
+            const visibleStudents = studentProfiles
+              .filter(s => studentView === 'active' ? s.hasUpcoming : !s.hasUpcoming)
+              .filter(s => {
+                if (!studentSearch) return true;
+                const q = studentSearch.toLowerCase();
+                return (
+                  s.name.toLowerCase().includes(q) ||
+                  (s.email ?? '').toLowerCase().includes(q) ||
+                  (s.personnummer ?? '').includes(q) ||
+                  (s.phone ?? '').includes(q)
+                );
+              });
+            const selected = selectedStudentKey ? studentProfiles.find(s => s.key === selectedStudentKey) ?? null : null;
+
+            return (
+              <div className="flex flex-col lg:flex-row gap-6 min-h-[75vh]">
+
+                {/* ──── Left dark sidebar ──── */}
+                <div className={clsx(
+                  'lg:w-96 flex-shrink-0 flex flex-col rounded-[2rem] border border-white/10 p-5 shadow-2xl',
+                  'bg-[#002623]',
+                  selected ? 'hidden lg:flex' : 'flex',
+                )}>
+                  {/* Active / Archived toggle */}
+                  <div className="flex p-1 bg-black/20 rounded-xl gap-1 mb-5 border border-white/5">
+                    {(['active', 'archived'] as const).map(v => (
+                      <button key={v} onClick={() => { setStudentView(v); setSelectedStudentKey(null); }}
+                        className={clsx('flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all',
+                          studentView === v ? 'bg-white/10 text-white shadow-sm' : 'text-white/30 hover:text-white/60')}>
+                        {v === 'active' ? 'AKTIVA' : 'ARKIVERADE'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search */}
+                  <div className="relative mb-5">
+                    <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-white/20" />
+                    <input
+                      type="text"
+                      placeholder="Sök elev..."
+                      value={studentSearch}
+                      onChange={e => setStudentSearch(e.target.value)}
+                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#d4af37] transition-all"
+                    />
+                  </div>
+
+                  {/* Count */}
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/20 mb-3">
+                    {visibleStudents.length} elev{visibleStudents.length !== 1 ? 'er' : ''}
+                  </p>
+
+                  {/* Student list */}
+                  <div className="space-y-2 overflow-y-auto flex-1 pr-1"
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
+                    {visibleStudents.length === 0 && (
+                      <div className="text-center py-12 text-white/20 text-sm">Inga elever</div>
+                    )}
+                    {visibleStudents.map(s => (
+                      <button
+                        key={s.key}
+                        onClick={() => setSelectedStudentKey(s.key === selectedStudentKey ? null : s.key)}
+                        className={clsx(
+                          'w-full text-left p-4 rounded-[1.25rem] border transition-all hover:scale-[1.01]',
+                          selectedStudentKey === s.key
+                            ? 'border-[#d4af37]/40 bg-[#d4af37]/10'
+                            : 'border-white/5 bg-white/[0.02] hover:border-white/20',
+                        )}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37]/40 to-[#d4af37]/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-black text-[#d4af37]">{s.name.charAt(0).toUpperCase()}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-black text-sm text-white truncate">{s.name}</p>
+                            {s.email && <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold truncate mt-0.5">{s.email}</p>}
+                          </div>
+                        </div>
+                        {s.behorighetList.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {s.behorighetList.map(b => (
+                              <span key={b} className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/5 text-[#d4af37] border border-[#d4af37]/20">
+                                {b}
+                              </span>
+                            ))}
+                            <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md bg-white/5 text-white/30 ml-auto">
+                              {s.bookings.filter(b => b.status !== 'Canceled').length} bok
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ──── Right: Student profile ──── */}
+                {selected ? (
+                  <div className="flex-1 min-w-0">
+                    {/* Back button (mobile only) */}
+                    <button
+                      onClick={() => setSelectedStudentKey(null)}
+                      className="lg:hidden flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"
+                    >
+                      <ChevronDown className="w-4 h-4 rotate-90" /> Tillbaka
+                    </button>
+
+                    {/* Profile header */}
+                    <div className="bg-gradient-to-r from-[#002623] to-[#003d38] rounded-2xl p-6 mb-4 text-white">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/30 flex items-center justify-center shrink-0">
+                          <span className="text-2xl font-black text-[#d4af37]">{selected.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="text-xl font-black text-white truncate">{selected.name}</h2>
+                          {selected.personnummer && <p className="font-mono text-sm text-white/50 mt-0.5">{selected.personnummer}</p>}
+                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-white/60">
+                            {selected.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{selected.email}</span>}
+                            {selected.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{selected.phone}</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="grid grid-cols-3 gap-3 mt-5">
+                        {[
+                          { label: 'Bokningar', value: selected.bookings.filter(b => b.status !== 'Canceled').length },
+                          { label: 'Totalt betalt', value: `${selected.totalPaid.toLocaleString('sv-SE')} kr` },
+                          { label: 'Behörighet', value: selected.behorighetList.join(', ') || '–' },
+                        ].map(stat => (
+                          <div key={stat.label} className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                            <p className="text-base font-black text-[#d4af37]">{stat.value}</p>
+                            <p className="text-[9px] uppercase tracking-widest text-white/30 mt-0.5 font-bold">{stat.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Booking history */}
+                    <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
+                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-swedish-blue" />
+                        Bokningshistorik
+                      </h3>
+                      <div className="space-y-2">
+                        {selected.bookings
+                          .sort((a, b) => new Date(b.session?.startTime ?? b.bookingTime).getTime() - new Date(a.session?.startTime ?? a.bookingTime).getTime())
+                          .map(b => {
+                            const start = b.session ? new Date(b.session.startTime) : null;
+                            const end = b.session ? new Date(b.session.endTime) : null;
+                            const dateStr = start ? start.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Stockholm' }) : '–';
+                            const timeStr = start && end ? `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}` : '';
+                            const isPast = start ? start < now : true;
+                            const payment = (b as any).payment as { amount: number; provider: string; status: string } | null;
+                            return (
+                              <div key={b.id} className={clsx(
+                                'flex items-start gap-3 p-3 rounded-xl border',
+                                isPast ? 'bg-gray-50 border-gray-100' : 'bg-blue-50 border-blue-100',
+                              )}>
+                                <div className={clsx('w-2 h-2 rounded-full mt-1.5 shrink-0', isPast ? 'bg-gray-300' : 'bg-swedish-blue')} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</p>
+                                    {b.session?.course?.behorighet && (
+                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-[#d4af37]/10 text-[#b8941f] border border-[#d4af37]/20">{b.session.course.behorighet}</span>
+                                    )}
+                                    <span className={clsx(
+                                      'ml-auto text-[9px] font-bold uppercase px-2 py-0.5 rounded-full',
+                                      b.status === 'Paid' ? 'bg-green-100 text-green-700' :
+                                      b.status === 'Canceled' ? 'bg-red-100 text-red-600' :
+                                      b.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' : 'bg-yellow-100 text-yellow-700'
+                                    )}>{b.status}</span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">{dateStr} · {timeStr}</p>
+                                  {b.session?.school?.name && <p className="text-xs text-gray-400">{b.session.school.name}</p>}
+                                  {payment && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {payment.amount.toLocaleString('sv-SE')} kr · {payment.provider} ·{' '}
+                                      <span className={payment.status === 'Succeeded' ? 'text-green-600' : payment.status === 'Refunded' ? 'text-orange-500' : 'text-gray-400'}>
+                                        {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}
+                                      </span>
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex flex-col gap-1 shrink-0">
+                                  {b.guestEmail && (b.status === 'Paid' || b.status === 'Confirmed') && (
+                                    <button
+                                      onClick={() => handleResendReceipt(b.id)}
+                                      disabled={!!emailSending[b.id]}
+                                      className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 transition disabled:opacity-50"
+                                      title="Skicka om kvitto"
+                                    >
+                                      <FileText className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 transition" title="Redigera">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    {/* Quick actions */}
+                    <div className="flex flex-wrap gap-2">
+                      {selected.email && (
+                        <a href={`mailto:${selected.email}`}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
+                          <Mail className="w-4 h-4" /> Skicka e-post
+                        </a>
+                      )}
+                      {selected.phone && (
+                        <a href={`tel:${selected.phone}`}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
+                          <Phone className="w-4 h-4" /> Ring
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 hidden lg:flex items-center justify-center text-gray-300">
+                    <div className="text-center">
+                      <UserCircle2 className="w-20 h-20 mx-auto mb-4 text-gray-200" />
+                      <p className="text-sm font-medium text-gray-400">Välj en elev för att se profil</p>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
