@@ -142,12 +142,15 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
   );
 }
 
+const INITIAL_DAYS = 5;
+
 export default function CoursesPage() {
   const locale = useLocale();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [vehicleFilter, setVehicleFilter] = useState<string>('all');
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     fetch('/api/sessions')
@@ -207,12 +210,12 @@ export default function CoursesPage() {
 
           {availableVehicles.length > 1 && (
             <div className="flex bg-gray-100 rounded-lg p-0.5">
-              <button onClick={() => setVehicleFilter('all')}
+              <button onClick={() => { setVehicleFilter('all'); setShowAll(false); }}
                 className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
                 Alla fordon
               </button>
               {availableVehicles.map(v => (
-                <button key={v} onClick={() => setVehicleFilter(v)}
+                <button key={v} onClick={() => { setVehicleFilter(v); setShowAll(false); }}
                   className={clsx('px-2.5 py-1 text-xs font-semibold rounded-md transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
                   {vehicleLabel(v)}
                 </button>
@@ -220,7 +223,7 @@ export default function CoursesPage() {
             </div>
           )}
 
-          <button onClick={() => setAvailableOnly(p => !p)}
+          <button onClick={() => { setAvailableOnly(p => !p); setShowAll(false); }}
             className={clsx('px-2.5 py-1 text-xs font-semibold rounded-lg border transition', availableOnly ? 'bg-swedish-blue text-white border-swedish-blue' : 'text-gray-500 border-gray-200 hover:border-gray-300')}>
             Lediga platser
           </button>
@@ -248,7 +251,7 @@ export default function CoursesPage() {
 
           ) : (
             <div className="space-y-6">
-              {grouped.map(([dk, ds]) => (
+              {(showAll ? grouped : grouped.slice(0, INITIAL_DAYS)).map(([dk, ds]) => (
                 <div key={dk}>
                   <div className="flex items-center gap-3 mb-2.5">
                     <h2 className="text-sm font-semibold text-gray-600 capitalize whitespace-nowrap">{dayLabel(dk)}</h2>
@@ -260,6 +263,19 @@ export default function CoursesPage() {
                   </div>
                 </div>
               ))}
+              {!showAll && grouped.length > INITIAL_DAYS && (
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => setShowAll(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-swedish-blue hover:text-swedish-blue transition shadow-sm"
+                  >
+                    Visa fler kurstillfällen
+                    <span className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium">
+                      +{grouped.length - INITIAL_DAYS} dagar
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

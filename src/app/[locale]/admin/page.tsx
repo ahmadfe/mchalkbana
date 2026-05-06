@@ -275,7 +275,7 @@ export default function AdminPage() {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'public' | 'school'>('all');
   const [vehicleFilter, setVehicleFilter] = useState<'all' | 'Car' | 'Motorcycle'>('all');
   const [sessionYear, setSessionYear] = useState(() => String(new Date().getFullYear()));
-  const [sessionMonth, setSessionMonth] = useState('all');
+  const [sessionMonth, setSessionMonth] = useState(() => String(new Date().getMonth() + 1));
   const [sessionView, setSessionView] = useState<'active' | 'archive'>('active');
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
@@ -1224,204 +1224,185 @@ export default function AdminPage() {
                 ? new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
                 : new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-            // Group by day → vehicle
-            const monthGroups: Record<string, Record<string, typeof filtered>> = {};
+            // Group by day
+            const dayGroups: Record<string, typeof filtered> = {};
             for (const s of filtered) {
               const d = new Date(s.startTime);
-              // Key = YYYY-MM-DD so each day gets its own header
-              const mKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-              const vehicle = s.course?.vehicle === 'Car' ? 'Car' : s.course?.vehicle === 'Motorcycle' ? 'Motorcycle' : 'Other';
-              if (!monthGroups[mKey]) monthGroups[mKey] = {};
-              if (!monthGroups[mKey][vehicle]) monthGroups[mKey][vehicle] = [];
-              monthGroups[mKey][vehicle].push(s);
+              const dKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+              if (!dayGroups[dKey]) dayGroups[dKey] = [];
+              dayGroups[dKey].push(s);
             }
-            const monthKeys = Object.keys(monthGroups).sort();
+            const monthKeys = Object.keys(dayGroups).sort(sessionView === 'archive' ? (a, b) => b.localeCompare(a) : undefined);
 
             const renderCard = (s: typeof filtered[0]) => {
               const isCar = s.course?.vehicle === 'Car';
-              const typeLabel = s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'Combo' ? 'K' : s.course?.type?.slice(0, 2) || '?';
               const d = new Date(s.startTime);
-              const dateStr = d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
               const startT = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
               const endT = new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
               const seatsUsed = s.seatLimit - s.seatsAvailable;
-              const seatPct = Math.round((seatsUsed / s.seatLimit) * 100);
+              const seatPct = s.seatLimit > 0 ? Math.round((seatsUsed / s.seatLimit) * 100) : 0;
               const full = s.seatsAvailable === 0;
+              const isAssigning = assigningSchoolSession === s.id;
               return (
                 <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                   <div className="flex">
-                    {/* Color strip */}
-                    <div className={clsx('w-1 shrink-0', isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
-                    <div className="flex-1 p-4">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-3">
-                          {/* Calendar badge */}
-                          <div className="w-9 h-10 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
-                            <div className={clsx(
-                              'h-3.5 flex items-center justify-center',
-                              s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
-                              s.course?.type === 'Risk2' ? 'bg-orange-400' :
-                              s.course?.type === 'Combo' ? 'bg-purple-600' :
-                              'bg-gray-400'
-                            )}>
-                              <span className="text-[8px] font-bold text-white uppercase tracking-wide">
-                                {d.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
-                              </span>
-                            </div>
-                            <div className="flex-1 bg-white flex items-center justify-center">
-                              <span className="text-sm font-bold text-gray-900 leading-none">{d.getDate()}</span>
-                            </div>
+                    <div className={clsx('w-1.5 shrink-0', isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
+                    <div className="flex-1 min-w-0 p-3 sm:p-4">
+
+                      {/* Info row */}
+                      <div className="flex items-start gap-3">
+                        {/* Calendar badge */}
+                        <div className="w-10 h-11 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
+                          <div className={clsx(
+                            'h-4 flex items-center justify-center',
+                            s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
+                            s.course?.type === 'Risk2' ? 'bg-orange-400' :
+                            s.course?.type === 'Combo' ? 'bg-purple-600' :
+                            'bg-gray-400'
+                          )}>
+                            <span className="text-[8px] font-bold text-white uppercase tracking-wide">
+                              {d.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
+                            </span>
                           </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-gray-900 text-sm">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
-                              {/* Vehicle pill */}
-                              <span className={clsx(
-                                'px-2 py-0.5 rounded-full text-xs font-bold',
-                                isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700'
-                              )}>
-                                {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
-                              </span>
-                              {/* Visibility */}
-                              <span className={clsx(
-                                'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
-                                s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
-                              )}>
-                                {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                                {s.visibility === 'public' ? 'Offentlig' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Skolkonto')}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1.5">
-                              <span>📅 {dateStr}</span>
-                              <span>🕐 {startT}–{endT}</span>
-                              <span>📍 {s.course?.location || s.school?.name}</span>
-                              {s.course?.price ? <span className="font-semibold text-gray-700">💰 {s.course.price.toLocaleString('sv-SE')} kr</span> : null}
-                            </div>
-                            {/* Seat bar */}
-                            <div className="mt-2 flex items-center gap-2">
-                              <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className={clsx('h-full rounded-full transition-all', full ? 'bg-red-400' : seatPct > 70 ? 'bg-orange-400' : 'bg-swedish-blue')} style={{ width: `${seatPct}%` }} />
-                              </div>
-                              <span className={clsx('text-xs font-medium', full ? 'text-red-500' : 'text-gray-500')}>
-                                {full ? 'FULLBOKAD' : `${s.seatsAvailable}/${s.seatLimit} kvar`}
-                              </span>
-                            </div>
+                          <div className="flex-1 bg-white flex items-center justify-center">
+                            <span className="text-sm font-bold text-gray-900 leading-none">{d.getDate()}</span>
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex gap-2 flex-wrap justify-end items-center">
-                          <button onClick={() => handleViewStudents(s.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition">
-                            <Eye className="w-3.5 h-3.5" />Visa elever
-                          </button>
-                          {assigningSchoolSession === s.id ? (() => {
-                            const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
-                            const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
-                            const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
-                            return (
-                              <div className="flex flex-col gap-2 w-72 bg-white border border-gray-200 rounded-xl shadow-lg p-3">
-                                {/* Add row */}
-                                <div className="flex items-center gap-1.5">
-                                  <select
-                                    value={assignPickSchoolId}
-                                    onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')}
-                                    className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white"
-                                  >
-                                    <option value="">Välj skola...</option>
-                                    {availableSchools.map((acc) => (
-                                      <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                    ))}
-                                  </select>
-                                  <input
-                                    type="number"
-                                    min="1"
-                                    max={s.seatLimit}
-                                    value={assignPickSeats}
-                                    onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))}
-                                    className="w-12 text-center border border-gray-300 rounded-lg px-1 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
-                                  />
-                                  <span className="text-xs text-gray-400 shrink-0">pl</span>
-                                  <button
-                                    disabled={!assignPickSchoolId}
-                                    onClick={() => {
-                                      if (!assignPickSchoolId) return;
-                                      setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats }));
-                                      setAssignPickSchoolId('');
-                                      setAssignPickSeats(1);
-                                      setAssignAllocError('');
-                                    }}
-                                    className="shrink-0 px-2 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed"
-                                  >
-                                    + Lägg till
-                                  </button>
-                                </div>
-
-                                {/* Assigned list */}
-                                {assignedEntries.length > 0 && (
-                                  <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-40 overflow-y-auto">
-                                    {assignedEntries.map(([schoolUserId, seats]) => {
-                                      const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
-                                      return (
-                                        <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-1.5 text-xs">
-                                          <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
-                                          <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
-                                          <button
-                                            onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })}
-                                            className="text-gray-300 hover:text-red-500 transition"
-                                          >
-                                            <X className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                                {assignedEntries.length === 0 && (
-                                  <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>
-                                )}
-
-                                {/* Footer */}
-                                <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                                  <span className="text-xs text-gray-500">
-                                    Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser
-                                  </span>
-                                  <div className="flex gap-1.5">
-                                    <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
-                                    <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700">
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                                {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
-                              </div>
-                            );
-                          })() : (
-                            <button
-                              onClick={() => {
-                                setAssigningSchoolSession(s.id);
-                                setAssignAllocError('');
-                                setAssignPickSchoolId('');
-                                setAssignPickSeats(1);
-                                const allocMap: Record<number, number> = {};
-                                ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; });
-                                setAssignAllocations(allocMap);
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition text-orange-600 border-orange-300 hover:bg-orange-50"
-                            >
-                              <School className="w-3.5 h-3.5" />
-                              {(s as any).schoolAllocations?.length > 0
-                                ? (s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')
-                                : 'Tilldela skola'}
-                            </button>
-                          )}
-                          <button onClick={() => handleOpenEditSession(s)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera pass">
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDeleteSession(s.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        {/* Course info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-semibold text-gray-900 text-sm leading-snug">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
+                            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-bold shrink-0', isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
+                              {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
+                            </span>
+                            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 shrink-0', s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700')}>
+                              {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                              {s.visibility === 'public' ? 'Publik' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Skola')}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">🕐 {startT}–{endT} · 📍 {s.course?.location || s.school?.name}</p>
+                          {s.course?.price ? <p className="text-xs font-semibold text-gray-700 mt-0.5">💰 {s.course.price.toLocaleString('sv-SE')} kr</p> : null}
+                          {/* Seat bar */}
+                          <div className="mt-2 flex items-center gap-2">
+                            <div className="w-20 sm:w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className={clsx('h-full rounded-full transition-all', full ? 'bg-red-400' : seatPct > 70 ? 'bg-orange-400' : 'bg-swedish-blue')} style={{ width: `${seatPct}%` }} />
+                            </div>
+                            <span className={clsx('text-xs font-semibold', full ? 'text-red-500' : 'text-gray-500')}>
+                              {full ? 'FULLBOKAD' : `${s.seatsAvailable}/${s.seatLimit} kvar`}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Action row */}
+                      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-50 flex-wrap">
+                        <button
+                          onClick={() => handleViewStudents(s.id)}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition min-h-[38px]"
+                        >
+                          <Eye className="w-3.5 h-3.5 shrink-0" />
+                          <span>Elever ({seatsUsed}/{s.seatLimit})</span>
+                        </button>
+                        {!isAssigning && (
+                          <button
+                            onClick={() => {
+                              setAssigningSchoolSession(s.id);
+                              setAssignAllocError('');
+                              setAssignPickSchoolId('');
+                              setAssignPickSeats(1);
+                              const allocMap: Record<number, number> = {};
+                              ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; });
+                              setAssignAllocations(allocMap);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[38px]"
+                          >
+                            <School className="w-3.5 h-3.5 shrink-0" />
+                            <span>
+                              {(s as any).schoolAllocations?.length > 0
+                                ? <span className="hidden sm:inline">{(s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')}</span>
+                                : null}
+                              <span className={clsx((s as any).schoolAllocations?.length > 0 ? 'sm:hidden' : '')}>
+                                {(s as any).schoolAllocations?.length > 0 ? 'Skola ✓' : 'Skola'}
+                              </span>
+                            </span>
+                          </button>
+                        )}
+                        <button onClick={() => handleOpenEditSession(s)} className="p-2 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 min-h-[38px] min-w-[38px] flex items-center justify-center" title="Redigera pass">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteSession(s.id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 min-h-[38px] min-w-[38px] flex items-center justify-center">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* School assignment panel — full width below action row */}
+                      {isAssigning && (() => {
+                        const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
+                        const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
+                        const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
+                        return (
+                          <div className="mt-3 border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
+                            <p className="text-xs font-semibold text-gray-600">Tilldela platser till skolor</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <select
+                                value={assignPickSchoolId}
+                                onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')}
+                                className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white"
+                              >
+                                <option value="">Välj skola...</option>
+                                {availableSchools.map((acc) => (
+                                  <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="number" min="1" max={s.seatLimit} value={assignPickSeats}
+                                onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
+                              />
+                              <span className="text-xs text-gray-400 shrink-0">pl</span>
+                              <button
+                                disabled={!assignPickSchoolId}
+                                onClick={() => {
+                                  if (!assignPickSchoolId) return;
+                                  setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats }));
+                                  setAssignPickSchoolId(''); setAssignPickSeats(1); setAssignAllocError('');
+                                }}
+                                className="shrink-0 px-2.5 py-2 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed"
+                              >+ Lägg till</button>
+                            </div>
+                            {assignedEntries.length > 0 && (
+                              <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-36 overflow-y-auto bg-white">
+                                {assignedEntries.map(([schoolUserId, seats]) => {
+                                  const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
+                                  return (
+                                    <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-2 text-xs">
+                                      <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
+                                      <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
+                                      <button onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })} className="text-gray-300 hover:text-red-500 transition">
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {assignedEntries.length === 0 && <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>}
+                            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                              <span className="text-xs text-gray-500">
+                                Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser
+                              </span>
+                              <div className="flex gap-1.5">
+                                <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
+                                <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1505,69 +1486,54 @@ export default function AdminPage() {
                 )}
 
                 {/* Toolbar */}
-                <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Active / Archive toggle */}
-                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={() => setSessionView('active')}
-                        className={clsx('flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition',
-                          sessionView === 'active' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                        )}
-                      >
-                        <Calendar className="w-3.5 h-3.5" />Aktiva
-                      </button>
-                      <button
-                        onClick={() => setSessionView('archive')}
-                        className={clsx('flex items-center gap-1.5 px-3 py-1 text-xs rounded-md font-medium transition',
-                          sessionView === 'archive' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                        )}
-                      >
-                        <Archive className="w-3.5 h-3.5" />Arkiv
-                      </button>
+                <div className="mb-5 space-y-2.5">
+                  {/* Row 1: view toggle + count + add button */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1">
+                        <button onClick={() => setSessionView('active')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'active' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                          <Calendar className="w-3.5 h-3.5" />Aktiva
+                        </button>
+                        <button onClick={() => setSessionView('archive')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'archive' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                          <Archive className="w-3.5 h-3.5" />Arkiv
+                        </button>
+                      </div>
+                      <span className="text-sm font-bold text-gray-700 hidden sm:block">
+                        {filtered.length} {sessionView === 'archive' ? 'arkiverade' : 'aktiva'} pass
+                      </span>
                     </div>
-                    <h2 className="font-bold text-gray-900">
-                      {sessionView === 'archive' ? 'Arkiverade' : 'Aktiva'} pass ({filtered.length})
-                    </h2>
-                    {/* Visibility filter */}
-                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                    {sessionView === 'active' && (
+                      <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-1.5 text-sm py-2 px-3 whitespace-nowrap">
+                        <Plus className="w-4 h-4" />
+                        <span className="hidden sm:inline">{t('add_session')}</span>
+                        <span className="sm:hidden">Nytt pass</span>
+                      </button>
+                    )}
+                  </div>
+                  {/* Row 2: scrollable filter pills */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                    <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1 shrink-0">
                       {(['all', 'public', 'school'] as const).map((f) => (
-                        <button key={f} onClick={() => setSessionFilter(f)} className={clsx('px-3 py-1 text-xs rounded-md font-medium transition', sessionFilter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
-                          {f === 'all' ? 'Alla' : f === 'public' ? 'Offentliga' : 'Skolkonto'}
+                        <button key={f} onClick={() => setSessionFilter(f)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', sessionFilter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                          {f === 'all' ? 'Alla' : f === 'public' ? 'Offentliga' : 'Skola'}
                         </button>
                       ))}
                     </div>
-                    {/* Vehicle filter */}
-                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                      {([['all', 'Alla fordon'], ['Car', '🚗 Bil'], ['Motorcycle', '🏍️ MC']] as const).map(([v, l]) => (
-                        <button key={v} onClick={() => setVehicleFilter(v)} className={clsx('px-3 py-1 text-xs rounded-md font-medium transition', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                    <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1 shrink-0">
+                      {([['all', 'Alla'], ['Car', '🚗 Bil'], ['Motorcycle', '🏍️ MC']] as const).map(([v, l]) => (
+                        <button key={v} onClick={() => setVehicleFilter(v)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
                           {l}
                         </button>
                       ))}
                     </div>
-                    {/* Year dropdown */}
-                    <select
-                      value={sessionYear}
-                      onChange={(e) => { setSessionYear(e.target.value); setSessionMonth('all'); }}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
-                    >
+                    <select value={sessionYear} onChange={(e) => { setSessionYear(e.target.value); setSessionMonth(String(new Date().getMonth() + 1)); }} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue shrink-0">
                       {availableSessionYears.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    {/* Month dropdown */}
-                    <select
-                      value={sessionMonth}
-                      onChange={(e) => setSessionMonth(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
-                    >
+                    <select value={sessionMonth} onChange={(e) => setSessionMonth(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue shrink-0">
                       <option value="all">Alla månader</option>
                       {SESSION_MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
                     </select>
                   </div>
-                  {sessionView === 'active' && (
-                    <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
-                      <Plus className="w-4 h-4" />{t('add_session')}
-                    </button>
-                  )}
                 </div>
 
                 {filtered.length === 0 && (
@@ -1576,51 +1542,29 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Month → Vehicle grouping */}
-                <div className="space-y-6">
-                  {monthKeys.map((mKey) => {
-                    const dayLabel = new Date(mKey + 'T12:00:00').toLocaleDateString('sv-SE', {
+                {/* Day grouping */}
+                <div className="space-y-5">
+                  {monthKeys.map((dKey) => {
+                    const dLabel = new Date(dKey + 'T12:00:00').toLocaleDateString('sv-SE', {
                       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                     });
-                    const monthCount = Object.values(monthGroups[mKey]).flat().length;
-                    const isCollapsed = collapsedSessionDays.has(mKey);
+                    const dayCount = dayGroups[dKey].length;
+                    const isCollapsed = collapsedSessionDays.has(dKey);
                     const toggleCollapse = () => setCollapsedSessionDays((prev) => {
                       const next = new Set(prev);
-                      next.has(mKey) ? next.delete(mKey) : next.add(mKey);
+                      next.has(dKey) ? next.delete(dKey) : next.add(dKey);
                       return next;
                     });
                     return (
-                      <div key={mKey}>
-                        {/* Day divider */}
-                        <button
-                          onClick={toggleCollapse}
-                          className="w-full flex items-center gap-3 mb-3 group text-left"
-                        >
-                          <h3 className="text-sm font-semibold text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{dayLabel}</h3>
+                      <div key={dKey}>
+                        <button onClick={toggleCollapse} className="w-full flex items-center gap-3 mb-2.5 group text-left">
+                          <h3 className="text-sm font-semibold text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{dLabel}</h3>
                           <div className="flex-1 h-px bg-gray-200" />
-                          <span className="text-xs text-gray-400">{monthCount} pass</span>
-                          {isCollapsed
-                            ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-                            : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />}
+                          <span className="text-xs text-gray-400 shrink-0">{dayCount} pass</span>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />}
                         </button>
-                        {/* Vehicle sub-groups */}
                         {!isCollapsed && (
-                          <div className="space-y-4">
-                            {Object.keys(monthGroups[mKey]).sort().map((vehicle) => {
-                              const vSessions = monthGroups[mKey][vehicle];
-                              const vLabel = vehicle === 'Car' ? '🚗 Bil' : vehicle === 'Motorcycle' ? '🏍️ MC' : vehicle;
-                              return (
-                                <div key={vehicle}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className={clsx('text-xs font-bold px-2.5 py-1 rounded-full', vehicle === 'Car' ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
-                                      {vLabel} · {vSessions.length} pass
-                                    </span>
-                                  </div>
-                                  <div className="space-y-2">{vSessions.map(renderCard)}</div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                          <div className="space-y-2">{dayGroups[dKey].map(renderCard)}</div>
                         )}
                       </div>
                     );
