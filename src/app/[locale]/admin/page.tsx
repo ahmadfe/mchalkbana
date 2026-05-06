@@ -1243,167 +1243,126 @@ export default function AdminPage() {
               const seatPct = s.seatLimit > 0 ? Math.round((seatsUsed / s.seatLimit) * 100) : 0;
               const full = s.seatsAvailable === 0;
               const isAssigning = assigningSchoolSession === s.id;
+              const typeColor =
+                s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
+                s.course?.type === 'Risk2' ? 'bg-orange-400' :
+                s.course?.type === 'Combo' ? 'bg-purple-600' : 'bg-gray-400';
+
               return (
-                <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                  <div className="flex">
-                    <div className={clsx('w-1.5 shrink-0', isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
-                    <div className="flex-1 min-w-0 p-3 sm:p-4">
+                <div key={s.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                  {/* Top colour bar */}
+                  <div className={clsx('h-1.5 shrink-0', typeColor)} />
 
-                      {/* Info row */}
-                      <div className="flex items-start gap-3">
-                        {/* Calendar badge */}
-                        <div className="w-10 h-11 rounded-lg overflow-hidden flex flex-col shrink-0 shadow-sm border border-gray-100">
-                          <div className={clsx(
-                            'h-4 flex items-center justify-center',
-                            s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
-                            s.course?.type === 'Risk2' ? 'bg-orange-400' :
-                            s.course?.type === 'Combo' ? 'bg-purple-600' :
-                            'bg-gray-400'
-                          )}>
-                            <span className="text-[8px] font-bold text-white uppercase tracking-wide">
-                              {d.toLocaleDateString('sv-SE', { month: 'short', timeZone: 'Europe/Stockholm' }).replace('.', '')}
-                            </span>
-                          </div>
-                          <div className="flex-1 bg-white flex items-center justify-center">
-                            <span className="text-sm font-bold text-gray-900 leading-none">{d.getDate()}</span>
-                          </div>
-                        </div>
-
-                        {/* Course info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="font-semibold text-gray-900 text-sm leading-snug">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
-                            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-bold shrink-0', isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
-                              {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
-                            </span>
-                            <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 shrink-0', s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700')}>
-                              {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                              {s.visibility === 'public' ? 'Publik' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Skola')}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">🕐 {startT}–{endT} · 📍 {s.course?.location || s.school?.name}</p>
-                          {s.course?.price ? <p className="text-xs font-semibold text-gray-700 mt-0.5">💰 {s.course.price.toLocaleString('sv-SE')} kr</p> : null}
-                          {/* Seat bar */}
-                          <div className="mt-2 flex items-center gap-2">
-                            <div className="w-20 sm:w-28 h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={clsx('h-full rounded-full transition-all', full ? 'bg-red-400' : seatPct > 70 ? 'bg-orange-400' : 'bg-swedish-blue')} style={{ width: `${seatPct}%` }} />
-                            </div>
-                            <span className={clsx('text-xs font-semibold', full ? 'text-red-500' : 'text-gray-500')}>
-                              {full ? 'FULLBOKAD' : `${s.seatsAvailable}/${s.seatLimit} kvar`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Action row */}
-                      <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-50 flex-wrap">
-                        <button
-                          onClick={() => handleViewStudents(s.id)}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition min-h-[38px]"
-                        >
-                          <Eye className="w-3.5 h-3.5 shrink-0" />
-                          <span>Elever ({seatsUsed}/{s.seatLimit})</span>
-                        </button>
-                        {!isAssigning && (
-                          <button
-                            onClick={() => {
-                              setAssigningSchoolSession(s.id);
-                              setAssignAllocError('');
-                              setAssignPickSchoolId('');
-                              setAssignPickSeats(1);
-                              const allocMap: Record<number, number> = {};
-                              ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; });
-                              setAssignAllocations(allocMap);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition text-orange-600 border-orange-200 hover:bg-orange-50 min-h-[38px]"
-                          >
-                            <School className="w-3.5 h-3.5 shrink-0" />
-                            <span>
-                              {(s as any).schoolAllocations?.length > 0
-                                ? <span className="hidden sm:inline">{(s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')}</span>
-                                : null}
-                              <span className={clsx((s as any).schoolAllocations?.length > 0 ? 'sm:hidden' : '')}>
-                                {(s as any).schoolAllocations?.length > 0 ? 'Skola ✓' : 'Skola'}
-                              </span>
-                            </span>
-                          </button>
-                        )}
-                        <button onClick={() => handleOpenEditSession(s)} className="p-2 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 min-h-[38px] min-w-[38px] flex items-center justify-center" title="Redigera pass">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDeleteSession(s.id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 min-h-[38px] min-w-[38px] flex items-center justify-center">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* School assignment panel — full width below action row */}
-                      {isAssigning && (() => {
-                        const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
-                        const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
-                        const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
-                        return (
-                          <div className="mt-3 border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
-                            <p className="text-xs font-semibold text-gray-600">Tilldela platser till skolor</p>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <select
-                                value={assignPickSchoolId}
-                                onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')}
-                                className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white"
-                              >
-                                <option value="">Välj skola...</option>
-                                {availableSchools.map((acc) => (
-                                  <option key={acc.id} value={acc.id}>{acc.name}</option>
-                                ))}
-                              </select>
-                              <input
-                                type="number" min="1" max={s.seatLimit} value={assignPickSeats}
-                                onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue"
-                              />
-                              <span className="text-xs text-gray-400 shrink-0">pl</span>
-                              <button
-                                disabled={!assignPickSchoolId}
-                                onClick={() => {
-                                  if (!assignPickSchoolId) return;
-                                  setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats }));
-                                  setAssignPickSchoolId(''); setAssignPickSeats(1); setAssignAllocError('');
-                                }}
-                                className="shrink-0 px-2.5 py-2 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed"
-                              >+ Lägg till</button>
-                            </div>
-                            {assignedEntries.length > 0 && (
-                              <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-36 overflow-y-auto bg-white">
-                                {assignedEntries.map(([schoolUserId, seats]) => {
-                                  const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
-                                  return (
-                                    <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-2 text-xs">
-                                      <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
-                                      <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
-                                      <button onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })} className="text-gray-300 hover:text-red-500 transition">
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            {assignedEntries.length === 0 && <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>}
-                            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                              <span className="text-xs text-gray-500">
-                                Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser
-                              </span>
-                              <div className="flex gap-1.5">
-                                <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
-                                <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700">
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                            {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
-                          </div>
-                        );
-                      })()}
+                  {/* Body */}
+                  <div className="flex-1 p-4">
+                    {/* Badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                      <span className={clsx('px-2 py-0.5 rounded-full text-xs font-bold', isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
+                        {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
+                      </span>
+                      <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1', s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700')}>
+                        {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                        {s.visibility === 'public' ? 'Publik' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Skola')}
+                      </span>
                     </div>
+
+                    {/* Course name */}
+                    <h3 className="font-bold text-gray-900 text-sm leading-snug mb-3">
+                      {locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}
+                    </h3>
+
+                    {/* Details */}
+                    <div className="space-y-1 text-xs text-gray-500 mb-4">
+                      <p>🕐 <span className="font-medium text-gray-700">{startT} – {endT}</span></p>
+                      <p>📍 {s.course?.location || s.school?.name}</p>
+                      {s.course?.price ? <p>💰 <span className="font-semibold text-gray-700">{s.course.price.toLocaleString('sv-SE')} kr</span></p> : null}
+                    </div>
+
+                    {/* Seat bar */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={clsx('h-full rounded-full transition-all', full ? 'bg-red-400' : seatPct > 70 ? 'bg-orange-400' : 'bg-swedish-blue')} style={{ width: `${seatPct}%` }} />
+                      </div>
+                      <span className={clsx('text-xs font-bold shrink-0', full ? 'text-red-500' : 'text-gray-500')}>
+                        {full ? 'FULL' : `${s.seatsAvailable}/${s.seatLimit} kvar`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* School allocation badge */}
+                  {(s as any).schoolAllocations?.length > 0 && !isAssigning && (
+                    <div className="px-4 pb-2">
+                      <p className="text-xs text-purple-600 bg-purple-50 rounded-lg px-2.5 py-1 truncate">
+                        🏫 {(s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* School assignment panel */}
+                  {isAssigning && (() => {
+                    const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
+                    const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
+                    const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
+                    return (
+                      <div className="mx-4 mb-3 border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-600">Tilldela platser till skolor</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <select value={assignPickSchoolId} onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')} className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white">
+                            <option value="">Välj skola...</option>
+                            {availableSchools.map((acc) => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+                          </select>
+                          <input type="number" min="1" max={s.seatLimit} value={assignPickSeats} onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))} className="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue" />
+                          <span className="text-xs text-gray-400 shrink-0">pl</span>
+                          <button disabled={!assignPickSchoolId} onClick={() => { if (!assignPickSchoolId) return; setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats })); setAssignPickSchoolId(''); setAssignPickSeats(1); setAssignAllocError(''); }} className="shrink-0 px-2.5 py-2 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed">+ Lägg till</button>
+                        </div>
+                        {assignedEntries.length > 0 && (
+                          <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-36 overflow-y-auto bg-white">
+                            {assignedEntries.map(([schoolUserId, seats]) => {
+                              const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
+                              return (
+                                <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-2 text-xs">
+                                  <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
+                                  <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
+                                  <button onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })} className="text-gray-300 hover:text-red-500 transition"><X className="w-3.5 h-3.5" /></button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {assignedEntries.length === 0 && <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>}
+                        <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                          <span className="text-xs text-gray-500">Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser</span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
+                            <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                        </div>
+                        {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Action row */}
+                  <div className="px-4 pb-4 pt-3 flex items-center gap-2 border-t border-gray-50">
+                    <button onClick={() => handleViewStudents(s.id)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition min-h-[36px]">
+                      <Eye className="w-3.5 h-3.5 shrink-0" />
+                      <span>Elever ({seatsUsed}/{s.seatLimit})</span>
+                    </button>
+                    {!isAssigning && (
+                      <button
+                        onClick={() => { setAssigningSchoolSession(s.id); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); const allocMap: Record<number, number> = {}; ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; }); setAssignAllocations(allocMap); }}
+                        className={clsx('p-2 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition', (s as any).schoolAllocations?.length > 0 ? 'text-purple-500 hover:text-purple-700 hover:bg-purple-50' : 'text-orange-500 hover:text-orange-700 hover:bg-orange-50')}
+                        title="Tilldela skola"
+                      >
+                        <School className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => handleOpenEditSession(s)} className="p-2 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 min-h-[36px] min-w-[36px] flex items-center justify-center" title="Redigera pass">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteSession(s.id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               );
@@ -1564,7 +1523,7 @@ export default function AdminPage() {
                           {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />}
                         </button>
                         {!isCollapsed && (
-                          <div className="space-y-2">{dayGroups[dKey].map(renderCard)}</div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">{dayGroups[dKey].map(renderCard)}</div>
                         )}
                       </div>
                     );
