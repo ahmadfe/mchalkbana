@@ -312,6 +312,7 @@ export default function AdminPage() {
   const [newInviteName, setNewInviteName] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const [createdInstructor, setCreatedInstructor] = useState<{ name: string; email: string; password: string } | null>(null);
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -2885,14 +2886,17 @@ export default function AdminPage() {
                   e.preventDefault();
                   setInviteSending(true);
                   setInviteSuccess(false);
+                  setCreatedInstructor(null);
                   const res = await fetch('/api/admin/instructor-invites', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: newInviteEmail, name: newInviteName }),
                   });
                   if (res.ok) {
-                    const { invite } = await res.json();
-                    setInstructorInvites((prev) => [invite, ...prev]);
+                    const data = await res.json();
+                    if (data.invite) setInstructorInvites((prev) => [data.invite, ...prev]);
+                    if (data.user) setInstructors((prev) => [data.user, ...prev]);
+                    setCreatedInstructor({ name: newInviteName || data.user?.name || newInviteEmail, email: newInviteEmail, password: data.password });
                     setNewInviteEmail('');
                     setNewInviteName('');
                     setInviteSuccess(true);
@@ -2901,11 +2905,41 @@ export default function AdminPage() {
                   setInviteSending(false);
                 }} className="flex flex-col sm:flex-row gap-3">
                   <input required type="email" placeholder="E-postadress *" value={newInviteEmail} onChange={(e) => setNewInviteEmail(e.target.value)} className="input-field flex-1 text-sm" />
-                  <input placeholder="Namn (valfritt)" value={newInviteName} onChange={(e) => setNewInviteName(e.target.value)} className="input-field flex-1 text-sm" />
+                  <input required placeholder="Namn *" value={newInviteName} onChange={(e) => setNewInviteName(e.target.value)} className="input-field flex-1 text-sm" />
                   <button type="submit" disabled={inviteSending} className="btn-primary px-5 py-2 text-sm whitespace-nowrap disabled:opacity-60">
-                    {inviteSuccess ? '✓ Skickat!' : inviteSending ? 'Skickar...' : 'Skicka inbjudan'}
+                    {inviteSuccess ? '✓ Skapat!' : inviteSending ? 'Skapar...' : 'Skapa konto'}
                   </button>
                 </form>
+
+                {createdInstructor && (
+                  <div className="mt-5 bg-green-50 border border-green-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm font-bold text-green-800">✓ Kontot skapat — spara lösenordet nu!</p>
+                      <button onClick={() => setCreatedInstructor(null)} className="text-green-600 hover:text-green-800 text-xs">Stäng</button>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-700 w-16 shrink-0">Namn</span>
+                        <span className="font-semibold text-green-900">{createdInstructor.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-700 w-16 shrink-0">E-post</span>
+                        <span className="font-semibold text-green-900">{createdInstructor.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-700 w-16 shrink-0">Lösenord</span>
+                        <span className="font-mono font-bold text-green-900 bg-white border border-green-300 px-3 py-1 rounded-lg text-base tracking-wide select-all">{createdInstructor.password}</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(createdInstructor.password)}
+                          className="text-xs bg-green-200 hover:bg-green-300 text-green-800 font-semibold px-2.5 py-1 rounded-lg transition"
+                        >
+                          Kopiera
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-green-600 mt-3">Lösenordet har skickats via e-post till instruktören.</p>
+                  </div>
+                )}
               </div>
 
               {/* Active instructors */}
