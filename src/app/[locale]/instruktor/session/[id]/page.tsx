@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -29,8 +29,8 @@ interface SessionDetail {
   bookings: Student[];
 }
 
-export default function InstruktorSessionPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function InstruktorSessionPage({ params }: { params: { id: string } }) {
+  const { id } = params;
   const locale = useLocale();
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();

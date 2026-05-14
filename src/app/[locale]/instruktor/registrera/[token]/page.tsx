@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { GraduationCap, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
-export default function InstruktorRegistreraPage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = use(params);
+export default function InstruktorRegistreraPage({ params }: { params: { token: string } }) {
+  const { token } = params;
   const locale = useLocale();
   const router = useRouter();
 
