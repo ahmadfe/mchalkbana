@@ -10,7 +10,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const bookingId = parseInt(params.id);
-  const { guestName, personnummer, guestPhone, guestEmail, status } = await request.json();
+  const { guestName, personnummer, guestPhone, guestEmail, status, result, resultNote } = await request.json();
 
   // Fetch current booking before update to detect status change
   const before = await prisma.booking.findUnique({
@@ -26,6 +26,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(guestPhone !== undefined ? { guestPhone: guestPhone || null } : {}),
       ...(guestEmail !== undefined ? { guestEmail } : {}),
       ...(status !== undefined ? { status } : {}),
+      ...(result !== undefined ? { result } : {}),
+      ...(resultNote !== undefined ? { resultNote } : {}),
     },
     include: { session: { include: { course: true, school: true } }, user: { select: { name: true, email: true } } },
   });

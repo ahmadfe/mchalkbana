@@ -41,6 +41,8 @@ export default function LoginPage() {
       router.push(`/${locale}/admin`);
     } else if (meData.user?.role === 'school') {
       router.push(`/${locale}/school`);
+    } else if (meData.user?.role === 'instructor') {
+      router.push(`/${locale}/instruktor`);
     } else {
       router.push(`/${locale}/dashboard`);
     }

@@ -1116,6 +1116,65 @@ export async function sendPaymentFailedEmail(data: PaymentFailedEmailData): Prom
   }
 }
 
+// ── Instructor invite ──────────────────────────────────────────────────────
+
+export async function sendInstructorInviteEmail(data: { email: string; name?: string; registerUrl: string }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — skipping instructor invite for', data.email);
+    return;
+  }
+  const html = `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">✓ &nbsp;INSTRUKTÖRSINBJUDAN</p>
+    </div>
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej${data.name ? ` <strong>${data.name}</strong>` : ''},</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Du har bjudits in som instruktör på Uppsala Halkbana. Klicka på knappen nedan för att skapa ditt konto.</p>
+      <div style="text-align:center;margin-bottom:24px;">
+        <a href="${data.registerUrl}" target="_blank"
+          style="display:inline-block;background:#00C4D4;color:#fff;font-weight:700;font-size:15px;padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:0.2px;">
+          Skapa konto
+        </a>
+        <p style="color:#9ca3af;font-size:12px;margin:10px 0 0;">Länken är giltig i 7 dagar.</p>
+      </div>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Vid frågor, kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a>.</p>
+    </div>
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#9ca3af;font-size:12px;margin:0;">Uppsala Halkbana · Norrlövsta 147, 747 91 Alunda</p>
+      <p style="color:#4b5563;font-size:11px;margin:8px 0 0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        to: [data.email],
+        subject: 'Inbjudan att bli instruktör – Uppsala Halkbana',
+        html,
+      }),
+    });
+    if (!res.ok) console.error('[Email] Resend error (instructor invite):', await res.text());
+    else console.log('[Email] Instructor invite sent to', data.email);
+  } catch (err) {
+    console.error('[Email] Failed to send instructor invite:', err);
+  }
+}
+
 // ── Slot-change magic link ─────────────────────────────────────────────────
 
 interface SlotChangeLinkEmailData {

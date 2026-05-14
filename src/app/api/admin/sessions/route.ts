@@ -6,7 +6,7 @@ import { getAuthUserFromRequest } from '@/lib/auth';
 const SESSION_INCLUDE = {
   course: true,
   school: true,
-  assignedSchoolUsers: { select: { id: true, name: true } },
+  assignedSchoolUsers: { select: { id: true, name: true, role: true } },
   schoolAllocations: {
     select: { schoolUserId: true, allocatedSeats: true, schoolUser: { select: { name: true } } },
   },

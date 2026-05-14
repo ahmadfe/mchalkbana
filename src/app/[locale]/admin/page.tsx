@@ -51,7 +51,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'students' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'students' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp' | 'instructors';
 
 interface InfoCardRecord {
   id: number;
@@ -302,6 +302,17 @@ export default function AdminPage() {
   const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
   const [editSessionSaving, setEditSessionSaving] = useState(false);
 
+  // Instructors
+  const [instructors, setInstructors] = useState<{ id: number; name: string; email: string }[]>([]);
+  const [instructorInvites, setInstructorInvites] = useState<{ id: number; token: string; email: string; name: string | null; usedAt: string | null; expiresAt: string }[]>([]);
+  const [assigningInstructorSession, setAssigningInstructorSession] = useState<number | null>(null);
+  const [assignInstructorIds, setAssignInstructorIds] = useState<number[]>([]);
+  const [assignInstructorSaving, setAssignInstructorSaving] = useState(false);
+  const [newInviteEmail, setNewInviteEmail] = useState('');
+  const [newInviteName, setNewInviteName] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
+
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
   const [newGroupName, setNewGroupName] = useState('');
@@ -388,6 +399,8 @@ export default function AdminPage() {
     setInfoCards(cardsData.cards || []);
     // Load staff separately (don't block main load)
     fetch('/api/admin/staff').then(r => r.json()).then(d => setStaffList(d.staff || []));
+    fetch('/api/admin/instructors').then(r => r.json()).then(d => setInstructors(d.instructors || []));
+    fetch('/api/admin/instructor-invites').then(r => r.json()).then(d => setInstructorInvites(d.invites || []));
     // Load WhatsApp numbers
     fetch('/api/admin/whatsapp-numbers').then(r => r.json()).then(d => setWaNumbers(d.numbers || []));
     setLoading(false);
@@ -507,6 +520,7 @@ export default function AdminPage() {
     { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
     { id: 'hero', label: 'Hero-media', icon: <MonitorPlay className="w-4 h-4" /> },
     { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
+    { id: 'instructors', label: 'Instruktörer', icon: <UserCircle2 className="w-4 h-4" /> },
   ];
 
   const handleSaveCard = async () => {
@@ -1463,6 +1477,19 @@ export default function AdminPage() {
                         <School className="w-4 h-4" />
                       </button>
                     )}
+                    {!isAssigning && (
+                      <button
+                        onClick={() => {
+                          const existingInstrIds = ((s as any).assignedSchoolUsers || []).filter((u: any) => u.role === 'instructor').map((u: any) => u.id);
+                          setAssigningInstructorSession(s.id);
+                          setAssignInstructorIds(existingInstrIds);
+                        }}
+                        className={clsx('p-2 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition', ((s as any).assignedSchoolUsers || []).some((u: any) => u.role === 'instructor') ? 'text-swedish-blue hover:text-swedish-dark hover:bg-brand-50' : 'text-gray-400 hover:text-swedish-blue hover:bg-brand-50')}
+                        title="Tilldela instruktör"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
+                    )}
                     <button onClick={() => handleOpenEditSession(s)} className="p-2 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 min-h-[36px] min-w-[36px] flex items-center justify-center" title="Redigera pass">
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -1544,6 +1571,54 @@ export default function AdminPage() {
                           className="flex items-center gap-2 px-4 py-2 text-sm bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-50">
                           {editSessionSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                           Spara
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Instructor assignment modal */}
+                {assigningInstructorSession !== null && (
+                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssigningInstructorSession(null)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-900 text-base">Tilldela instruktör</h3>
+                        <button onClick={() => setAssigningInstructorSession(null)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"><X className="w-4 h-4" /></button>
+                      </div>
+                      {instructors.length === 0 ? (
+                        <p className="text-sm text-gray-500 text-center py-4">Inga instruktörer hittades. Bjud in via fliken Instruktörer.</p>
+                      ) : (
+                        <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                          {instructors.map((instr) => (
+                            <label key={instr.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-swedish-blue/30 cursor-pointer transition">
+                              <input type="checkbox" checked={assignInstructorIds.includes(instr.id)}
+                                onChange={(e) => setAssignInstructorIds((prev) => e.target.checked ? [...prev, instr.id] : prev.filter((id) => id !== instr.id))}
+                                className="accent-swedish-blue w-4 h-4" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{instr.name}</p>
+                                <p className="text-xs text-gray-400">{instr.email}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => setAssigningInstructorSession(null)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2 rounded-xl text-sm hover:bg-gray-50 transition">Avbryt</button>
+                        <button disabled={assignInstructorSaving} onClick={async () => {
+                          setAssignInstructorSaving(true);
+                          const res = await fetch(`/api/admin/sessions/${assigningInstructorSession}/instructors`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ instructorIds: assignInstructorIds }),
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setSessions((prev) => prev.map((s) => s.id === assigningInstructorSession ? { ...s, assignedSchoolUsers: data.session.assignedSchoolUsers } : s));
+                            setAssigningInstructorSession(null);
+                          }
+                          setAssignInstructorSaving(false);
+                        }} className="flex-1 bg-swedish-blue text-white font-medium py-2 rounded-xl text-sm hover:bg-swedish-dark disabled:opacity-60 transition">
+                          {assignInstructorSaving ? 'Sparar...' : 'Spara'}
                         </button>
                       </div>
                     </div>
@@ -2126,6 +2201,31 @@ export default function AdminPage() {
                                       )}
                                     </div>
                                   )}
+                                  {/* Result badge + admin edit */}
+                                  {(b as any).result && (
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <span className={clsx('text-[9px] font-bold uppercase px-2 py-0.5 rounded-full', (b as any).result === 'passed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+                                        {(b as any).result === 'passed' ? '✓ Godkänd' : '✗ Underkänd'}
+                                      </span>
+                                      {(b as any).resultNote && <span className="text-xs text-gray-400 truncate">{(b as any).resultNote}</span>}
+                                    </div>
+                                  )}
+                                  {/* Admin result override */}
+                                  <div className="mt-1 flex items-center gap-1.5">
+                                    <select
+                                      value={(b as any).result ?? ''}
+                                      onChange={async (e) => {
+                                        const newResult = e.target.value || null;
+                                        const res = await fetch(`/api/admin/bookings/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ result: newResult }) });
+                                        if (res.ok) setBookings((prev) => prev.map((bk) => bk.id === b.id ? { ...bk, result: newResult } as any : bk));
+                                      }}
+                                      className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-swedish-blue/30 bg-white"
+                                    >
+                                      <option value="">– Resultat –</option>
+                                      <option value="passed">Godkänd</option>
+                                      <option value="failed">Underkänd</option>
+                                    </select>
+                                  </div>
                                 </div>
                                 <div className="flex flex-col gap-1 shrink-0">
                                   {b.guestEmail && (b.status === 'Paid' || b.status === 'Confirmed') && (
@@ -2771,6 +2871,85 @@ export default function AdminPage() {
                   <p><span className="text-gray-400">POST</span> /api/whatsapp/cancel-expired</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Instructor management tab */}
+          {tab === 'instructors' && (
+            <div className="space-y-8">
+
+              {/* Send invite */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Bjud in instruktör</h2>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setInviteSending(true);
+                  setInviteSuccess(false);
+                  const res = await fetch('/api/admin/instructor-invites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: newInviteEmail, name: newInviteName }),
+                  });
+                  if (res.ok) {
+                    const { invite } = await res.json();
+                    setInstructorInvites((prev) => [invite, ...prev]);
+                    setNewInviteEmail('');
+                    setNewInviteName('');
+                    setInviteSuccess(true);
+                    setTimeout(() => setInviteSuccess(false), 3000);
+                  }
+                  setInviteSending(false);
+                }} className="flex flex-col sm:flex-row gap-3">
+                  <input required type="email" placeholder="E-postadress *" value={newInviteEmail} onChange={(e) => setNewInviteEmail(e.target.value)} className="input-field flex-1 text-sm" />
+                  <input placeholder="Namn (valfritt)" value={newInviteName} onChange={(e) => setNewInviteName(e.target.value)} className="input-field flex-1 text-sm" />
+                  <button type="submit" disabled={inviteSending} className="btn-primary px-5 py-2 text-sm whitespace-nowrap disabled:opacity-60">
+                    {inviteSuccess ? '✓ Skickat!' : inviteSending ? 'Skickar...' : 'Skicka inbjudan'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Active instructors */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Aktiva instruktörer ({instructors.length})</h2>
+                {instructors.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Inga instruktörer ännu.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {instructors.map((instr) => (
+                      <div key={instr.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{instr.name}</p>
+                          <p className="text-xs text-gray-500">{instr.email}</p>
+                        </div>
+                        <span className="text-xs bg-swedish-blue/10 text-swedish-blue font-medium px-2.5 py-1 rounded-full">Instruktör</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Invites list */}
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="font-bold text-gray-900 mb-5">Skickade inbjudningar ({instructorInvites.length})</h2>
+                {instructorInvites.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Inga inbjudningar ännu.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {instructorInvites.map((inv) => (
+                      <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{inv.email}{inv.name ? ` (${inv.name})` : ''}</p>
+                          <p className="text-xs text-gray-400">Går ut: {new Date(inv.expiresAt).toLocaleDateString('sv-SE')}</p>
+                        </div>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${inv.usedAt ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {inv.usedAt ? 'Använd' : 'Väntar'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 

@@ -108,7 +108,19 @@ model Booking {
   bookedBySchoolUser   User?    @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
   reminderSentAt       DateTime?
   emailReminderSentAt  DateTime?
+  result               String?
+  resultNote           String?
   payment              Payment?
+}
+
+model InstructorInvite {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique
+  email     String
+  name      String?
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
 }
 
 model Payment {
