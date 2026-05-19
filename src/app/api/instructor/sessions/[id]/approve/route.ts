@@ -55,6 +55,50 @@ async function sendXmlEmail(xml: string, subject: string): Promise<void> {
   else console.log('[Email] XML result email sent');
 }
 
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const authUser = await getAuthUserFromRequest(request);
+  if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+
+  const sessionId = parseInt(params.id);
+
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      course: { select: { titleSv: true, behorighet: true } },
+      assignedSchoolUsers: { select: { id: true } },
+      bookings: {
+        where: { status: { not: 'Canceled' } },
+        select: {
+          id: true,
+          guestName: true,
+          personnummer: true,
+          guestPhone: true,
+          guestEmail: true,
+          result: true,
+          resultNote: true,
+          user: { select: { name: true, phone: true, email: true } },
+        },
+      },
+    },
+  });
+
+  if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
+
+  const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
+  if (!isAssigned) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+
+  const xml = buildXml(session);
+  const datum = session.startTime.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }).replace(/\//g, '-');
+  const filename = `kursresultat-${datum}.xml`;
+
+  return new Response(xml, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    },
+  });
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
