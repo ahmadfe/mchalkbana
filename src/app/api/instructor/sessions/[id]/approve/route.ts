@@ -45,7 +45,7 @@ async function sendXmlEmail(xml: string, subject: string): Promise<void> {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
-      to: ['admin@uppsalahalkbana.se'],
+      to: ['result@uppsalahalkbana.se'],
       subject,
       html: `<p>Bifogat finns kursresultaten som XML-fil.</p>`,
       attachments: [{ filename: 'kursresultat.xml', content: xmlBase64 }],

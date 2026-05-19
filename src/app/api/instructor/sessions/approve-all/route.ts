@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
-        to: ['admin@uppsalahalkbana.se'],
+        to: ['result@uppsalahalkbana.se'],
         subject: `Alla kursresultat ${datum}`,
         html: `<p>Bifogat finns alla kursresultat för ${datum} som XML-fil.</p>`,
         attachments: [{ filename: `kursresultat-${datum}.xml`, content: xmlBase64 }],
