@@ -4,40 +4,19 @@ import { getAuthUserFromRequest } from '@/lib/auth';
 
 function buildXml(sessions: {
   startTime: Date;
-  endTime: Date;
-  course: { titleSv: string; behorighet: string };
-  bookings: {
-    id: number;
-    guestName: string | null;
-    personnummer: string | null;
-    guestPhone: string | null;
-    guestEmail: string | null;
-    result: string | null;
-    resultNote: string | null;
-    user: { name: string; phone: string | null; email: string } | null;
-  }[];
+  course: { behorighet: string };
+  bookings: { personnummer: string | null }[];
 }[]): string {
-  const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-  const sessionsXml = sessions.map((session) => {
-    const datum = session.startTime.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
-    const tid = `${session.startTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}–${session.endTime.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const kurs = `${session.course.titleSv} (${session.course.behorighet})`;
-
-    const students = session.bookings.map((b) => {
-      const namn = escape(b.guestName || b.user?.name || '');
-      const pnr = escape(b.personnummer || '');
-      const tel = escape(b.guestPhone || b.user?.phone || '');
-      const email = escape(b.guestEmail || b.user?.email || '');
-      const resultat = b.result === 'passed' ? 'Godkänd' : b.result === 'failed' ? 'Underkänd' : 'Ej bedömd';
-      const notering = escape(b.resultNote || '');
-      return `      <Student>\n        <Namn>${namn}</Namn>\n        <Personnummer>${pnr}</Personnummer>\n        <Telefon>${tel}</Telefon>\n        <Email>${email}</Email>\n        <Resultat>${resultat}</Resultat>\n        <Notering>${notering}</Notering>\n      </Student>`;
-    }).join('\n');
-
-    return `  <Session datum="${datum}" tid="${tid}" kurs="${escape(kurs)}">\n    <Studenter>\n${students}\n    </Studenter>\n  </Session>`;
+  const rapporter = sessions.map((session) => {
+    const utbDatum = session.startTime.toISOString().split('T')[0];
+    const elevRows = session.bookings
+      .filter((b) => b.personnummer)
+      .map((b) => `        <Elev>\n            <PersonNr>${b.personnummer}</PersonNr>\n            <UtbDatum>${utbDatum}</UtbDatum>\n        </Elev>`)
+      .join('\n');
+    return `    <Rapport>\n        <Behorighet>${session.course.behorighet || 'B'}</Behorighet>\n${elevRows}\n    </Rapport>`;
   }).join('\n');
 
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<DagensKursresultat>\n${sessionsXml}\n</DagensKursresultat>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<Rapporter>\n${rapporter}\n</Rapporter>`;
 }
 
 export async function POST(request: Request) {
@@ -59,16 +38,7 @@ export async function POST(request: Request) {
       course: { select: { titleSv: true, behorighet: true } },
       bookings: {
         where: { status: { not: 'Canceled' } },
-        select: {
-          id: true,
-          guestName: true,
-          personnummer: true,
-          guestPhone: true,
-          guestEmail: true,
-          result: true,
-          resultNote: true,
-          user: { select: { name: true, phone: true, email: true } },
-        },
+        select: { personnummer: true },
       },
     },
     orderBy: { startTime: 'asc' },
@@ -77,7 +47,7 @@ export async function POST(request: Request) {
   if (sessions.length === 0) return NextResponse.json({ error: 'Inga sessioner idag' }, { status: 400 });
 
   const xml = buildXml(sessions);
-  const datum = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+  const datum = now.toISOString().split('T')[0];
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {

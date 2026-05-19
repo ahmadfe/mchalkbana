@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CheckCircle2, XCircle, Send, UserPlus, Clock, X, Phone, Download } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Send, UserPlus, Clock, X, Phone } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Student {
@@ -352,21 +352,14 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
         </div>
       </main>
 
-      {/* Sticky bottom bar */}
+      {/* Sticky approve button */}
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex gap-3">
-          <a
-            href={`/api/instructor/sessions/${id}/approve`}
-            download
-            className="flex items-center gap-1.5 px-4 py-4 text-sm bg-gray-800 text-gray-300 rounded-2xl hover:bg-gray-700 transition font-semibold shrink-0"
-          >
-            <Download className="w-4 h-4" /> XML
-          </a>
+        <div className="max-w-2xl mx-auto">
           <button
             onClick={handleApprove}
             disabled={approving || approved}
             className={clsx(
-              'flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition',
+              'w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition',
               approved
                 ? 'bg-green-900/60 text-green-400 border border-green-800'
                 : 'bg-swedish-blue text-white active:scale-[0.98] disabled:opacity-60'
