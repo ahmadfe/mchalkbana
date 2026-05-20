@@ -41,10 +41,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   // Replace school allocations if provided
   if (Array.isArray(schoolAllocations)) {
-    // Delete existing allocations for this session
     await prisma.sessionSchoolAllocation.deleteMany({ where: { sessionId } });
 
-    // Create new allocations (only those with seats > 0)
     const toCreate = (schoolAllocations as { schoolUserId: number; seats: number }[])
       .filter((a) => a.seats > 0);
 
@@ -57,6 +55,19 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         })),
       });
     }
+
+    // Recalculate public seatsAvailable = seatLimit - totalSchoolAllocations - publicBookings
+    const totalAllocated = toCreate.reduce((sum, a) => sum + a.seats, 0);
+    const [publicBookings, sess] = await Promise.all([
+      prisma.booking.count({
+        where: { sessionId, status: { not: 'Canceled' }, bookedBySchoolUserId: null },
+      }),
+      prisma.session.findUnique({ where: { id: sessionId }, select: { seatLimit: true } }),
+    ]);
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: { seatsAvailable: Math.max(0, (sess?.seatLimit ?? 0) - totalAllocated - publicBookings) },
+    });
   }
 
   // Return fresh session with updated allocations

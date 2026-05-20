@@ -39,23 +39,30 @@ export async function POST(request: Request) {
 
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
-    include: { course: true, school: true, assignedSchoolUsers: { select: { id: true } } },
+    include: {
+      course: true,
+      school: true,
+      assignedSchoolUsers: { select: { id: true } },
+      schoolAllocations: { where: { schoolUserId: authUser.userId }, select: { allocatedSeats: true } },
+    },
   });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
 
-  // Verify this school is assigned to the session
   const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
-  if (!isAssigned) {
+  const allocation = (session as any).schoolAllocations?.[0] ?? null;
+
+  // Must be assigned OR have an allocation
+  if (!isAssigned && !allocation) {
     return NextResponse.json({ error: 'Detta pass är inte tilldelat din skola' }, { status: 403 });
   }
-  if (session.seatsAvailable <= 0) {
+
+  // For school-only sessions: check seatsAvailable (shared pool)
+  // For public sessions with allocation: allocation quota is the only limit
+  if (session.visibility === 'school' && session.seatsAvailable <= 0) {
     return NextResponse.json({ error: 'Inga platser kvar' }, { status: 409 });
   }
 
-  // Enforce per-school seat allocation if one exists
-  const allocation = await prisma.sessionSchoolAllocation.findUnique({
-    where: { sessionId_schoolUserId: { sessionId, schoolUserId: authUser.userId } },
-  });
+  // Enforce per-school allocation quota
   if (allocation) {
     const usedSeats = await prisma.booking.count({
       where: { sessionId, bookedBySchoolUserId: authUser.userId, status: { not: 'Canceled' } },
@@ -74,24 +81,24 @@ export async function POST(request: Request) {
   });
   if (existing) return NextResponse.json({ error: 'Detta personnummer är redan bokat på detta pass' }, { status: 409 });
 
-  const [booking] = await prisma.$transaction([
-    prisma.booking.create({
-      data: {
-        sessionId,
-        guestName,
-        personnummer,
-        guestPhone: guestPhone || null,
-        guestEmail: guestEmail || null,
-        status: 'Confirmed',
-        bookedByRole: 'school',
-        bookedBySchoolUserId: authUser.userId,
-      },
-    }),
-    prisma.session.update({
-      where: { id: sessionId },
-      data: { seatsAvailable: { decrement: 1 } },
-    }),
-  ]);
+  const bookingData = {
+    sessionId,
+    guestName,
+    personnummer,
+    guestPhone: guestPhone || null,
+    guestEmail: guestEmail || null,
+    status: 'Confirmed',
+    bookedByRole: 'school',
+    bookedBySchoolUserId: authUser.userId,
+  };
+
+  // Only decrement seatsAvailable for school-only sessions (public sessions track public seats separately)
+  const booking = session.visibility === 'school'
+    ? (await prisma.$transaction([
+        prisma.booking.create({ data: bookingData }),
+        prisma.session.update({ where: { id: sessionId }, data: { seatsAvailable: { decrement: 1 } } }),
+      ]))[0]
+    : await prisma.booking.create({ data: bookingData });
 
   if (guestEmail && sendConfirmation) {
     const schoolUser = await prisma.user.findUnique({

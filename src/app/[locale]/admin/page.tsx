@@ -962,13 +962,10 @@ export default function AdminPage() {
       return;
     }
 
-    const visibility = allocations.length > 0 ? 'school' : 'public';
-    const assignedSchoolUserIds = allocations.map((a) => a.schoolUserId);
-
     const res = await fetch(`/api/admin/sessions/${sessionId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visibility, assignedSchoolUserIds, schoolAllocations: allocations }),
+      body: JSON.stringify({ schoolAllocations: allocations }),
     });
     if (res.ok) {
       const { session: updated } = await res.json();

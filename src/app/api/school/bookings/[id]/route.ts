@@ -23,10 +23,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   const sessionId = booking.sessionId;
   await prisma.booking.delete({ where: { id: bookingId } });
-  await prisma.session.update({
-    where: { id: sessionId },
-    data: { seatsAvailable: { increment: 1 } },
-  });
+  // Only restore seatsAvailable for school-only sessions; public sessions track public seats separately
+  if (booking.session?.visibility === 'school') {
+    await prisma.session.update({ where: { id: sessionId }, data: { seatsAvailable: { increment: 1 } } });
+  }
 
   // Send cancellation email + internal notification
   if (booking.session) {

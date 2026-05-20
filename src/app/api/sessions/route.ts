@@ -24,10 +24,12 @@ export async function GET(request: Request) {
     // Admin sees everything
     visibilityFilter = {};
   } else if (isSchool) {
-    // School sees only sessions assigned to them (many-to-many)
+    // School sees sessions assigned to them OR sessions where they have an allocation
     visibilityFilter = {
-      visibility: 'school',
-      assignedSchoolUsers: { some: { id: authUser!.userId } },
+      OR: [
+        { visibility: 'school', assignedSchoolUsers: { some: { id: authUser!.userId } } },
+        { schoolAllocations: { some: { schoolUserId: authUser!.userId } } },
+      ],
     };
   } else {
     // Public: only public sessions
