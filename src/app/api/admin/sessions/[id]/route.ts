@@ -62,11 +62,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       prisma.booking.count({
         where: { sessionId, status: { not: 'Canceled' }, bookedBySchoolUserId: null },
       }),
-      prisma.session.findUnique({ where: { id: sessionId }, select: { seatLimit: true } }),
+      prisma.session.findUnique({ where: { id: sessionId }, select: { seatLimit: true, visibility: true } }),
     ]);
+    const newPublicSeats = Math.max(0, (sess?.seatLimit ?? 0) - totalAllocated - publicBookings);
+    // If there are remaining public seats, make the session public so it shows in the course listing
+    const newVisibility = newPublicSeats > 0 ? 'public' : (sess?.visibility ?? 'public');
     await prisma.session.update({
       where: { id: sessionId },
-      data: { seatsAvailable: Math.max(0, (sess?.seatLimit ?? 0) - totalAllocated - publicBookings) },
+      data: { seatsAvailable: newPublicSeats, visibility: newVisibility },
     });
   }
 
