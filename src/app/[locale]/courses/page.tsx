@@ -118,10 +118,23 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
 
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right">
-              <p className="font-bold text-gray-900 text-sm leading-tight">
-                {course.price.toLocaleString('sv-SE')} kr
-              </p>
-              <p className="text-xs text-gray-400">per person</p>
+              {session.discountPrice ? (
+                <>
+                  <p className="font-bold text-gray-900 text-sm leading-tight">
+                    {session.discountPrice.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-gray-400 line-through leading-tight">
+                    {course.price.toLocaleString('sv-SE')} kr
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-gray-900 text-sm leading-tight">
+                    {course.price.toLocaleString('sv-SE')} kr
+                  </p>
+                  <p className="text-xs text-gray-400">per person</p>
+                </>
+              )}
             </div>
             {isSoldOut ? (
               <span className="px-3 py-1.5 text-xs font-semibold text-gray-400 bg-gray-100 rounded-lg whitespace-nowrap">
