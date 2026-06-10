@@ -299,7 +299,7 @@ export default function AdminPage() {
   const [sessionMonth, setSessionMonth] = useState(() => String(new Date().getMonth() + 1));
   const [sessionView, setSessionView] = useState<'active' | 'archive'>('active');
   const [editingSession, setEditingSession] = useState<Session | null>(null);
-  const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', receiptMessage: '', visibility: 'public' });
+  const [editSessionForm, setEditSessionForm] = useState({ date: '', startTime: '', endTime: '', seatLimit: '', seatsAvailable: '', price: '', discountPrice: '', receiptMessage: '', visibility: 'public' });
   const [editSessionSaving, setEditSessionSaving] = useState(false);
 
   // Instructors
@@ -614,6 +614,7 @@ export default function AdminPage() {
       seatLimit: String(s.seatLimit),
       seatsAvailable: String(s.seatsAvailable),
       price: String((s as any).course?.price ?? ''),
+      discountPrice: (s as any).course?.discountPrice ? String((s as any).course.discountPrice) : '',
       receiptMessage: s.receiptMessage ?? '',
       visibility: s.visibility,
     });
@@ -630,8 +631,10 @@ export default function AdminPage() {
     const endISO = new Date(sy, sm - 1, sd, eh, emi, 0).toISOString();
 
     const priceChanged = (editingSession as any).course && String((editingSession as any).course.price) !== editSessionForm.price;
+    const discountPriceChanged = (editingSession as any).course && String((editingSession as any).course.discountPrice ?? '') !== editSessionForm.discountPrice;
+    const courseChanged = priceChanged || discountPriceChanged;
 
-    const [sessionRes, priceRes] = await Promise.all([
+    const [sessionRes, courseRes] = await Promise.all([
       fetch(`/api/admin/sessions/${editingSession.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -644,11 +647,14 @@ export default function AdminPage() {
           visibility: editSessionForm.visibility,
         }),
       }),
-      priceChanged
+      courseChanged
         ? fetch(`/api/admin/courses/${editingSession.courseId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ price: editSessionForm.price }),
+            body: JSON.stringify({
+              price: editSessionForm.price,
+              discountPrice: editSessionForm.discountPrice,
+            }),
           })
         : Promise.resolve(null),
     ]);
@@ -657,11 +663,11 @@ export default function AdminPage() {
       const data = await sessionRes.json();
       setSessions((prev) => prev.map((s) => s.id === editingSession.id ? { ...s, ...data.session } : s));
     }
-    if (priceRes?.ok) {
-      const priceData = await priceRes.json();
+    if (courseRes?.ok) {
+      const courseData = await courseRes.json();
       setSessions((prev) => prev.map((s) =>
         s.courseId === editingSession.courseId
-          ? { ...s, course: (s as any).course ? { ...(s as any).course, price: priceData.course.price } : (s as any).course }
+          ? { ...s, course: (s as any).course ? { ...(s as any).course, price: courseData.course.price, discountPrice: courseData.course.discountPrice } : (s as any).course }
           : s
       ));
     }
@@ -1563,6 +1569,13 @@ export default function AdminPage() {
                           <input type="number" min="0" value={editSessionForm.price} onChange={(e) => setEditSessionForm({ ...editSessionForm, price: e.target.value })}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           <p className="text-xs text-amber-600 mt-1">⚠️ Prisändring gäller alla pass med samma kurs</p>
+                        </div>
+                        {/* Discount Price */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Rabatterat pris (kr) <span className="text-gray-400 font-normal">— valfritt, lämna tomt för att ta bort</span></label>
+                          <input type="number" min="0" placeholder="t.ex. 1400" value={editSessionForm.discountPrice} onChange={(e) => setEditSessionForm({ ...editSessionForm, discountPrice: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                          <p className="text-xs text-amber-600 mt-1">⚠️ Gäller alla pass med samma kurs</p>
                         </div>
                         {/* Receipt message */}
                         <div>
