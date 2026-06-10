@@ -2,7 +2,7 @@
 
 import { useTranslations, useLocale } from 'next-intl';
 import Link from 'next/link';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Tag } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import clsx from 'clsx';
 
@@ -105,16 +105,46 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
           />
         </div>
 
+        {/* Discount label */}
+        {course.discountPrice && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <Tag className="w-3.5 h-3.5 text-brand-500" />
+            <span className="text-sm font-semibold text-brand-500">Rabatterat pris</span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold text-gray-900">
-            {course.price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
-          </span>
+          <div>
+            {course.discountPrice ? (
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-gray-900">
+                  {course.discountPrice.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
+                </span>
+                <span className="text-sm text-gray-400 line-through">
+                  {course.price.toLocaleString('sv-SE')} kr
+                </span>
+              </div>
+            ) : (
+              <span className="text-xl font-bold text-gray-900">
+                {course.price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
+              </span>
+            )}
+          </div>
 
           {isSoldOut ? (
             <button disabled className="bg-gray-100 text-gray-400 text-sm font-medium px-5 py-2 rounded-xl cursor-not-allowed">
               {t('sold_out')}
             </button>
+          ) : course.discountPrice ? (
+            <Link
+              href={`/${locale}/checkout?session=${session.id}`}
+              className="bg-gray-900 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-gray-700 transition flex items-center gap-2"
+            >
+              Boka{' '}
+              <span>{course.discountPrice.toLocaleString('sv-SE')} kr</span>
+              <span className="text-gray-400 line-through text-xs">{course.price.toLocaleString('sv-SE')} kr</span>
+            </Link>
           ) : (
             <Link
               href={`/${locale}/checkout?session=${session.id}`}

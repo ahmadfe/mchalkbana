@@ -41,7 +41,8 @@ model Course {
   type        String
   vehicle     String
   behorighet  String    @default("B")
-  price       Int
+  price          Int
+  discountPrice  Int?
   location       String    @default("")
   receiptMessage String    @default("")
   sessions       Session[]

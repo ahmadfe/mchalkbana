@@ -58,7 +58,7 @@ function CheckoutContent() {
           // Track: successful purchase
           fbq('track', 'Purchase', {
             content_name: session?.course?.titleSv ?? 'Riskutbildning',
-            value: session?.course?.price ?? 0,
+            value: (session?.course?.discountPrice ?? session?.course?.price) ?? 0,
             currency: 'SEK',
           });
           setStep('success');
@@ -90,6 +90,7 @@ function CheckoutContent() {
   }
 
   const course = session.course!;
+  const effectivePrice = course.discountPrice ?? course.price;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const courseSubtitle = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
   const start = new Date(session.startTime);
@@ -124,7 +125,7 @@ function CheckoutContent() {
     // Track: user started checkout
     fbq('track', 'InitiateCheckout', {
       content_name: session?.course?.titleSv ?? 'Riskutbildning',
-      value: session?.course?.price ?? 0,
+      value: (session?.course?.discountPrice ?? session?.course?.price) ?? 0,
       currency: 'SEK',
     });
 
@@ -188,7 +189,7 @@ function CheckoutContent() {
               <Smartphone className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Väntar på Swish</h1>
-            <p className="text-gray-500 mb-6">Betala <strong>{course.price.toLocaleString('sv-SE')} kr</strong> för {locale === 'sv' ? course.titleSv : course.titleEn}</p>
+            <p className="text-gray-500 mb-6">Betala <strong>{effectivePrice.toLocaleString('sv-SE')} kr</strong> för {locale === 'sv' ? course.titleSv : course.titleEn}</p>
 
             {/* QR code for desktop users */}
             {swishDeepLink && (
@@ -230,7 +231,7 @@ function CheckoutContent() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
-                  Godkänn betalningen på <strong>{course.price.toLocaleString('sv-SE')} kr</strong>
+                  Godkänn betalningen på <strong>{effectivePrice.toLocaleString('sv-SE')} kr</strong>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
@@ -313,7 +314,7 @@ function CheckoutContent() {
                 )}
                 <div className="flex justify-between border-t-2 border-swedish-blue pt-2 mt-2">
                   <span className="font-semibold">Totalt betalt:</span>
-                  <span className="font-bold text-swedish-blue text-base">{course.price.toLocaleString('sv-SE')} kr</span>
+                  <span className="font-bold text-swedish-blue text-base">{effectivePrice.toLocaleString('sv-SE')} kr</span>
                 </div>
               </div>
             </div>
@@ -479,7 +480,7 @@ function CheckoutContent() {
                 ) : (
                   <Smartphone className="w-5 h-5" />
                 )}
-                {submitting ? 'Skickar...' : `Betala ${course.price.toLocaleString('sv-SE')} kr med Swish`}
+                {submitting ? 'Skickar...' : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
               </button>
             </form>
 
@@ -517,17 +518,23 @@ function CheckoutContent() {
                 </div>
 
                 <div className="border-t border-gray-100 mt-5 pt-4">
+                  {course.discountPrice && (
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-500">Ordinarie pris</span>
+                      <span className="line-through text-gray-400">{course.price.toLocaleString('sv-SE')} kr</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500">Kursavgift (exkl. moms)</span>
-                    <span>{Math.round(course.price / 1.25).toLocaleString('sv-SE')} kr</span>
+                    <span>{Math.round(effectivePrice / 1.25).toLocaleString('sv-SE')} kr</span>
                   </div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500">Moms (25%)</span>
-                    <span>{(course.price - Math.round(course.price / 1.25)).toLocaleString('sv-SE')} kr</span>
+                    <span>{(effectivePrice - Math.round(effectivePrice / 1.25)).toLocaleString('sv-SE')} kr</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-100">
                     <span>Totalt:</span>
-                    <span className="text-swedish-blue">{course.price.toLocaleString('sv-SE')} kr</span>
+                    <span className="text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
                   </div>
                 </div>
 

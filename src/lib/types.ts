@@ -28,6 +28,7 @@ export interface Course {
   vehicle: VehicleType;
   behorighet: string;
   price: number;
+  discountPrice?: number | null;
   location: string;
   receiptMessage?: string;
 }
