@@ -1511,7 +1511,18 @@ export default function AdminPage() {
                           <X className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-xs text-gray-500 mb-4 font-medium">{(editingSession as any).course?.titleSv} · {(editingSession as any).course?.behorighet}</p>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-xs text-gray-500 font-medium">{(editingSession as any).course?.titleSv} · {(editingSession as any).course?.behorighet}</p>
+                        {(editingSession as any).course && (
+                          <button
+                            type="button"
+                            onClick={() => { setEditingSession(null); openEditCourse((editingSession as any).course); }}
+                            className="text-xs text-swedish-blue hover:underline font-medium flex items-center gap-1"
+                          >
+                            Hantera kurs →
+                          </button>
+                        )}
+                      </div>
 
                       <div className="space-y-4">
                         {/* Date */}
