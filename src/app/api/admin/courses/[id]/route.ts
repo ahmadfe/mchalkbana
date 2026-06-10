@@ -9,13 +9,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   const data = await request.json();
   const course = await prisma.course.update({
     where: { id: parseInt(params.id) },
-    data: {
-      ...data,
-      price: data.price ? parseInt(data.price) : undefined,
-      discountPrice: data.discountPrice !== undefined
-        ? (data.discountPrice === '' || data.discountPrice === null ? null : parseInt(data.discountPrice))
-        : undefined,
-    },
+    data: { ...data, price: data.price ? parseInt(data.price) : undefined },
   });
   return NextResponse.json({ course });
 }

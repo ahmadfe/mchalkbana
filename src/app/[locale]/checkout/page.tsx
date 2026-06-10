@@ -58,7 +58,7 @@ function CheckoutContent() {
           // Track: successful purchase
           fbq('track', 'Purchase', {
             content_name: session?.course?.titleSv ?? 'Riskutbildning',
-            value: (session?.course?.discountPrice ?? session?.course?.price) ?? 0,
+            value: (session?.discountPrice ?? session?.course?.price) ?? 0,
             currency: 'SEK',
           });
           setStep('success');
@@ -90,7 +90,7 @@ function CheckoutContent() {
   }
 
   const course = session.course!;
-  const effectivePrice = course.discountPrice ?? course.price;
+  const effectivePrice = session.discountPrice ?? course.price;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const courseSubtitle = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
   const start = new Date(session.startTime);
@@ -125,7 +125,7 @@ function CheckoutContent() {
     // Track: user started checkout
     fbq('track', 'InitiateCheckout', {
       content_name: session?.course?.titleSv ?? 'Riskutbildning',
-      value: (session?.course?.discountPrice ?? session?.course?.price) ?? 0,
+      value: (session?.discountPrice ?? session?.course?.price) ?? 0,
       currency: 'SEK',
     });
 
@@ -518,7 +518,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="border-t border-gray-100 mt-5 pt-4">
-                  {course.discountPrice && (
+                  {session.discountPrice && (
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-500">Ordinarie pris</span>
                       <span className="line-through text-gray-400">{course.price.toLocaleString('sv-SE')} kr</span>

@@ -42,7 +42,6 @@ model Course {
   vehicle     String
   behorighet  String    @default("B")
   price          Int
-  discountPrice  Int?
   location       String    @default("")
   receiptMessage String    @default("")
   sessions       Session[]
@@ -69,6 +68,7 @@ model Session {
   endTime              DateTime
   seatLimit            Int
   seatsAvailable       Int
+  discountPrice        Int?
   visibility           String    @default("public")
   receiptMessage       String    @default("")
   comboRisk1SessionId  Int?

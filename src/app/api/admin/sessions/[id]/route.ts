@@ -32,6 +32,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...(data.seatsAvailable !== undefined ? { seatsAvailable: parseInt(data.seatsAvailable) } : {}),
       ...(data.visibility ? { visibility: data.visibility } : {}),
       ...(data.receiptMessage !== undefined ? { receiptMessage: data.receiptMessage } : {}),
+      ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice === '' || data.discountPrice === null ? null : parseInt(data.discountPrice) } : {}),
       ...(data.visibility === 'school'
         ? { assignedSchoolUsers: { set: ids.map((id) => ({ id })) } }
         : data.visibility === 'public' ? { assignedSchoolUsers: { set: [] } } : {}),

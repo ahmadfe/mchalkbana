@@ -28,7 +28,6 @@ export interface Course {
   vehicle: VehicleType;
   behorighet: string;
   price: number;
-  discountPrice?: number | null;
   location: string;
   receiptMessage?: string;
 }
@@ -49,6 +48,7 @@ export interface Session {
   endTime: string;
   seatLimit: number;
   seatsAvailable: number;
+  discountPrice?: number | null;
   visibility: string;
   receiptMessage?: string;
   comboRisk1SessionId?: number | null;

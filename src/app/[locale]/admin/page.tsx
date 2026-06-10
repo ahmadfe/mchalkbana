@@ -137,7 +137,7 @@ export default function AdminPage() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [editCourse, setEditCourse] = useState<Course | null>(null);
-  const [editCourseForm, setEditCourseForm] = useState({ titleSv: '', titleEn: '', description: '', type: '', vehicle: '', behorighet: '', price: '', discountPrice: '', location: '', receiptMessage: '' });
+  const [editCourseForm, setEditCourseForm] = useState({ titleSv: '', titleEn: '', description: '', type: '', vehicle: '', behorighet: '', price: '', location: '', receiptMessage: '' });
   const [editCourseSaving, setEditCourseSaving] = useState(false);
   const [editCourseError, setEditCourseError] = useState('');
   const [showAddSession, setShowAddSession] = useState(false);
@@ -325,7 +325,7 @@ export default function AdminPage() {
   const [testEmailStatus, setTestEmailStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [testEmailError, setTestEmailError] = useState('');
 
-  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', discountPrice: '', location: '', receiptMessage: '' });
+  const [newCourse, setNewCourse] = useState({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
   const [newSession, setNewSession] = useState({ courseId: '', schoolId: '', seatLimit: '8', visibility: 'public', assignedSchoolUserIds: [] as number[], receiptMessage: '', comboRisk1SessionId: '', comboRisk2SessionId: '' });
   const [sessionDate, setSessionDate] = useState('');
   const [startHour, setStartHour] = useState('09:00');
@@ -568,7 +568,7 @@ export default function AdminPage() {
 
   const openEditCourse = (c: Course) => {
     setEditCourse(c);
-    setEditCourseForm({ titleSv: c.titleSv, titleEn: c.titleEn, description: c.description || '', type: c.type, vehicle: c.vehicle, behorighet: c.behorighet, price: String(c.price), discountPrice: c.discountPrice ? String(c.discountPrice) : '', location: c.location || '', receiptMessage: c.receiptMessage || '' });
+    setEditCourseForm({ titleSv: c.titleSv, titleEn: c.titleEn, description: c.description || '', type: c.type, vehicle: c.vehicle, behorighet: c.behorighet, price: String(c.price), location: c.location || '', receiptMessage: c.receiptMessage || '' });
     setEditCourseError('');
   };
 
@@ -614,7 +614,7 @@ export default function AdminPage() {
       seatLimit: String(s.seatLimit),
       seatsAvailable: String(s.seatsAvailable),
       price: String((s as any).course?.price ?? ''),
-      discountPrice: (s as any).course?.discountPrice ? String((s as any).course.discountPrice) : '',
+      discountPrice: (s as any).discountPrice ? String((s as any).discountPrice) : '',
       receiptMessage: s.receiptMessage ?? '',
       visibility: s.visibility,
     });
@@ -631,10 +631,8 @@ export default function AdminPage() {
     const endISO = new Date(sy, sm - 1, sd, eh, emi, 0).toISOString();
 
     const priceChanged = (editingSession as any).course && String((editingSession as any).course.price) !== editSessionForm.price;
-    const discountPriceChanged = (editingSession as any).course && String((editingSession as any).course.discountPrice ?? '') !== editSessionForm.discountPrice;
-    const courseChanged = priceChanged || discountPriceChanged;
 
-    const [sessionRes, courseRes] = await Promise.all([
+    const [sessionRes, priceRes] = await Promise.all([
       fetch(`/api/admin/sessions/${editingSession.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -645,16 +643,14 @@ export default function AdminPage() {
           seatsAvailable: editSessionForm.seatsAvailable,
           receiptMessage: editSessionForm.receiptMessage,
           visibility: editSessionForm.visibility,
+          discountPrice: editSessionForm.discountPrice,
         }),
       }),
-      courseChanged
+      priceChanged
         ? fetch(`/api/admin/courses/${editingSession.courseId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              price: editSessionForm.price,
-              discountPrice: editSessionForm.discountPrice,
-            }),
+            body: JSON.stringify({ price: editSessionForm.price }),
           })
         : Promise.resolve(null),
     ]);
@@ -663,11 +659,11 @@ export default function AdminPage() {
       const data = await sessionRes.json();
       setSessions((prev) => prev.map((s) => s.id === editingSession.id ? { ...s, ...data.session } : s));
     }
-    if (courseRes?.ok) {
-      const courseData = await courseRes.json();
+    if (priceRes?.ok) {
+      const priceData = await priceRes.json();
       setSessions((prev) => prev.map((s) =>
         s.courseId === editingSession.courseId
-          ? { ...s, course: (s as any).course ? { ...(s as any).course, price: courseData.course.price, discountPrice: courseData.course.discountPrice } : (s as any).course }
+          ? { ...s, course: (s as any).course ? { ...(s as any).course, price: priceData.course.price } : (s as any).course }
           : s
       ));
     }
@@ -700,7 +696,7 @@ export default function AdminPage() {
       const data = await res.json();
       setCourses((prev) => [...prev, data.course]);
       setShowAddCourse(false);
-      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', discountPrice: '', location: '', receiptMessage: '' });
+      setNewCourse({ titleSv: '', titleEn: '', description: '', type: 'Risk1', vehicle: 'Car', behorighet: 'B', price: '', location: '', receiptMessage: '' });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -1575,7 +1571,6 @@ export default function AdminPage() {
                           <label className="block text-xs font-medium text-gray-700 mb-1">Rabatterat pris (kr) <span className="text-gray-400 font-normal">— valfritt, lämna tomt för att ta bort</span></label>
                           <input type="number" min="0" placeholder="t.ex. 1400" value={editSessionForm.discountPrice} onChange={(e) => setEditSessionForm({ ...editSessionForm, discountPrice: e.target.value })}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
-                          <p className="text-xs text-amber-600 mt-1">⚠️ Gäller alla pass med samma kurs</p>
                         </div>
                         {/* Receipt message */}
                         <div>
@@ -3863,10 +3858,6 @@ export default function AdminPage() {
                 <input type="number" className="input-field" placeholder="1500" value={newCourse.price} onChange={(e) => setNewCourse({ ...newCourse, price: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Rabatterat pris (kr) <span className="text-gray-400 font-normal">valfritt</span></label>
-                <input type="number" className="input-field" placeholder="t.ex. 1200" value={newCourse.discountPrice} onChange={(e) => setNewCourse({ ...newCourse, discountPrice: e.target.value })} />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
                 <input type="text" className="input-field" placeholder="Uppsala Halkbana, Industrigatan 12" value={newCourse.location} onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })} />
               </div>
@@ -3947,10 +3938,6 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (kr)</label>
                 <input type="number" className="input-field" value={editCourseForm.price} onChange={(e) => setEditCourseForm({ ...editCourseForm, price: e.target.value })} required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Rabatterat pris (kr) <span className="text-gray-400 font-normal">valfritt – lämna tomt för att ta bort</span></label>
-                <input type="number" className="input-field" placeholder="t.ex. 1200" value={editCourseForm.discountPrice} onChange={(e) => setEditCourseForm({ ...editCourseForm, discountPrice: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>

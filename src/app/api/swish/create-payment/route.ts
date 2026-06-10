@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   try {
     const { swishRequestId } = await createPaymentRequest({
       bookingId: booking.id,
-      amount: booking.session.course.discountPrice ?? booking.session.course.price,
+      amount: booking.session.discountPrice ?? booking.session.course.price,
       payerPhone,
       message: `Uppsala Halkbana – ${booking.session.course.titleSv}`,
     });
