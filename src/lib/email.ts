@@ -95,7 +95,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
             <td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td>
           </tr>
           <tr>
-            <td style="color:#6b7280;padding:5px 0;">Plats</td>
+            <td style="color:#6b7280;padding:5px 0;">Mötesplats</td>
             <td style="font-weight:600;text-align:right;">
               <a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#00C4D4;text-decoration:none;">📍 ${data.location}</a>
             </td>
@@ -215,7 +215,7 @@ function buildBookingConfirmationHtml(data: BookingConfirmationEmailData): strin
           <tr><td style="color:#6b7280;padding:5px 0;width:40%;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
-          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#00C4D4;text-decoration:none;">📍 ${data.location}</a></td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Mötesplats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#00C4D4;text-decoration:none;">📍 ${data.location}</a></td></tr>
           ${data.schoolName ? `<tr><td style="color:#6b7280;padding:5px 0;">Trafikskola</td><td style="color:#111827;font-weight:600;text-align:right;">${data.schoolName}</td></tr>` : ''}
           ${data.personnummer ? `<tr><td style="color:#6b7280;padding:5px 0;">Personnummer</td><td style="color:#111827;font-weight:600;text-align:right;">${data.personnummer}</td></tr>` : ''}
           ${data.phone ? `<tr><td style="color:#6b7280;padding:5px 0;">Telefon</td><td style="color:#111827;font-weight:600;text-align:right;">${data.phone}</td></tr>` : ''}
@@ -790,7 +790,7 @@ function buildReminderHtml(data: ReminderEmailData): string {
           <tr><td style="color:#6b7280;padding:5px 0;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
-          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#f59e0b;text-decoration:none;">📍 ${data.location}</a></td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Mötesplats</td><td style="font-weight:600;text-align:right;"><a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" target="_blank" style="color:#f59e0b;text-decoration:none;">📍 ${data.location}</a></td></tr>
         </table>
       </div>
 
@@ -899,7 +899,7 @@ function buildCancellationHtml(data: CancellationEmailData): string {
           <tr><td style="color:#6b7280;padding:5px 0;">Kurs</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseName}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Datum</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseDate}</td></tr>
           <tr><td style="color:#6b7280;padding:5px 0;">Tid</td><td style="color:#111827;font-weight:600;text-align:right;">${data.courseTime}</td></tr>
-          <tr><td style="color:#6b7280;padding:5px 0;">Plats</td><td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">Mötesplats</td><td style="color:#111827;font-weight:600;text-align:right;">${data.location}</td></tr>
         </table>
       </div>
 
@@ -1035,7 +1035,7 @@ function buildInternalNotificationHtml(data: InternalBookingNotificationData): s
           <td style="padding:10px 0;color:#111827;">${data.courseTime}</td>
         </tr>
         <tr style="border-bottom:1px solid #f3f4f6;">
-          <td style="padding:10px 0;color:#6b7280;">Plats</td>
+          <td style="padding:10px 0;color:#6b7280;">Mötesplats</td>
           <td style="padding:10px 0;color:#111827;">${data.location}</td>
         </tr>
         <tr style="${isCanceled ? 'border-bottom:1px solid #f3f4f6;' : ''}">
