@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { linkBookingToStudent } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
@@ -186,6 +187,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
     return b;
   });
+
+  await linkBookingToStudent(booking.id);
 
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);

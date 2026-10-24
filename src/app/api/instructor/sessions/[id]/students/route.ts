@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { linkBookingToStudent } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -39,6 +40,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: { seatsAvailable: { decrement: 1 } },
     }),
   ]);
+
+  await linkBookingToStudent(booking.id);
 
   return NextResponse.json({ booking });
 }

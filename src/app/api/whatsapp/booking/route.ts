@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { linkBookingToStudent } from '@/lib/students';
 import { validateWhatsappApiKey } from '@/lib/whatsapp-auth';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
     });
     return b;
   });
+
+  await linkBookingToStudent(booking.id);
 
   // Admin bookings: send email confirmation if email provided
   if (role === 'admin' && guestEmail) {

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { linkBookingToStudent } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail, sendInternalBookingNotification } from '@/lib/email';
 
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
         prisma.session.update({ where: { id: sessionId }, data: { seatsAvailable: { decrement: 1 } } }),
       ]))[0]
     : await prisma.booking.create({ data: bookingData });
+  await linkBookingToStudent(booking.id);
 
   if (guestEmail && sendConfirmation) {
     const schoolUser = await prisma.user.findUnique({

@@ -18,6 +18,7 @@ model User {
   hidden           Boolean   @default(false)
   languagePref     String    @default("sv")
   bookings         Booking[]
+  checkIns         Booking[] @relation("BookingCheckedInBy")
   schoolBookings   Booking[] @relation("BookingSchoolUser")
   assignedSessions Session[] @relation("AssignedSchoolSessions")
   schoolCoursePrices SchoolCoursePrice[]
@@ -25,12 +26,42 @@ model User {
   createdAt        DateTime  @default(now())
 }
 
+// Används som filial (plats/kontor) i admin
 model School {
   id           Int       @id @default(autoincrement())
   name         String
   address      String
+  city         String    @default("")
   contactEmail String
+  active       Boolean   @default(true)
   sessions     Session[]
+  students     Student[]
+}
+
+model Student {
+  id               Int       @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  personnummerEnc  String?
+  personnummerHash String?   @unique
+  email            String    @default("")
+  phone            String    @default("")
+  address          String    @default("")
+  postalCode       String    @default("")
+  city             String    @default("")
+  behorighet       String    @default("B")
+  status           String    @default("active") // active | archived
+  filialId         Int?
+  filial           School?   @relation(fields: [filialId], references: [id], onDelete: SetNull)
+  permitValidUntil DateTime?
+  synintygDate     DateTime?
+  risk1DoneAt      DateTime?
+  risk2DoneAt      DateTime?
+  gdprInformedAt   DateTime?
+  notes            String    @default("")
+  bookings         Booking[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Course {
@@ -71,6 +102,10 @@ model Session {
   discountPrice        Int?
   visibility           String    @default("public")
   receiptMessage       String    @default("")
+  status               String    @default("planned") // planned | completed | canceled
+  reportToTS           Boolean   @default(true)
+  reportedAt           DateTime?
+  internalNotes        String    @default("")
   comboRisk1SessionId  Int?
   comboRisk2SessionId  Int?
   comboRisk1Session    Session?  @relation("ComboR1", fields: [comboRisk1SessionId], references: [id])
@@ -98,6 +133,8 @@ model Booking {
   session      Session  @relation(fields: [sessionId], references: [id])
   userId       Int?
   user         User?    @relation(fields: [userId], references: [id])
+  studentId    Int?
+  student      Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
   guestName    String?
   personnummer String?
   guestPhone   String?
@@ -111,7 +148,43 @@ model Booking {
   emailReminderSentAt  DateTime?
   result               String?
   resultNote           String?
+  attendance           String   @default("registered") // registered | attended | no_show | late_cancel
+  checkedInAt          DateTime?
+  checkedInById        Int?
+  checkedInBy          User?    @relation("BookingCheckedInBy", fields: [checkedInById], references: [id])
+  idType               String?  // korkort | pass | nationellt_id | id_kort
   payment              Payment?
+
+  @@index([studentId])
+}
+
+// Kopia av varje incheckning på riskutbildning. Sparas i fem år, även om eleven raderas.
+model RiskRegisterEntry {
+  id              Int      @id @default(autoincrement())
+  bookingId       Int?
+  studentId       Int?
+  sessionId       Int?
+  courseType      String
+  courseTitle     String
+  sessionDate     DateTime
+  studentName     String
+  personnummerEnc String
+  idType          String
+  checkedInAt     DateTime
+  checkedInById   Int?
+  checkedInByName String
+  createdAt       DateTime @default(now())
+
+  @@index([sessionDate])
+}
+
+model ExportLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  userName  String
+  kind      String
+  period    String   @default("")
+  createdAt DateTime @default(now())
 }
 
 model InstructorInvite {
