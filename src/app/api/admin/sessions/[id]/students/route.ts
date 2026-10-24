@@ -38,6 +38,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     phone: b.guestPhone || b.user?.phone || '–',
     email: b.guestEmail || b.user?.email || '–',
     bookedByRole: b.bookedByRole,
+    attendance: b.attendance,
     bookedBySchool: b.bookedByRole === 'school' ? (b.bookedBySchoolUser?.name || 'Skola') : null,
   }));
 

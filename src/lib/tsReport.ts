@@ -40,3 +40,23 @@ export function buildTsReportXml(opts: { bana: string; behorighet: string; del: 
     '',
   ].join('\n');
 }
+
+export interface ReportSession {
+  id: number;
+  startTime: Date | string;
+  course: { type: string; behorighet: string };
+  school: { bana: string; name: string };
+  bookings: { personnummer: string | null; guestName: string | null; attendance?: string; user?: { name: string } | null }[];
+}
+
+/** En eller två rapportfiler (Kombo = teori + praktik) för ett kurstillfälle. Uteblivna och sena avanmälningar tas inte med. */
+export function sessionReportFiles(s: ReportSession): { filename: string; xml: string }[] {
+  const utbDatum = new Date(s.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+  const elever = s.bookings
+    .filter(b => b.attendance !== 'no_show' && b.attendance !== 'late_cancel')
+    .map(b => ({ personnummer: b.personnummer, name: b.guestName || b.user?.name || '' }));
+  return reportParts(s.course.type).map(del => ({
+    filename: `rapport-${utbDatum}-${del.toLowerCase()}-kurs${s.id}.xml`,
+    xml: buildTsReportXml({ bana: s.school.bana, behorighet: s.course.behorighet, del, utbDatum, elever }),
+  }));
+}

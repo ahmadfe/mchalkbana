@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
 import KindBadge from '@/components/admin/KindBadge';
+import { sessionReportFiles } from '@/lib/tsReport';
 import type { Course, Session, Booking } from '@/lib/types';
 import {
   LayoutDashboard,
@@ -107,6 +108,7 @@ interface StudentRecord {
   email: string;
   bookedByRole: string;
   bookedBySchool: string | null;
+  attendance?: string;
 }
 
 interface SessionStudentsData {
@@ -117,7 +119,7 @@ interface SessionStudentsData {
     seatLimit: number;
     seatsAvailable: number;
     course: Course;
-    school: { name: string };
+    school: { name: string; bana?: string };
   };
   students: StudentRecord[];
 }
@@ -1135,23 +1137,31 @@ export default function AdminPage() {
   };
 
   const exportXml = (data: SessionStudentsData) => {
-    const course = data.session.course;
-    const utbDatum = new Date(data.session.startTime).toISOString().split('T')[0];
-
-    const elevRows = data.students
-      .filter((s) => s.personnummer && s.personnummer !== '–')
-      .map((s) => `    <Elev>\n        <PersonNr>${s.personnummer}</PersonNr>\n        <UtbDatum>${utbDatum}</UtbDatum>\n    </Elev>`)
-      .join('\n');
-
-    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<Rapport>\n    <Behorighet>${course.behorighet || 'B'}</Behorighet>\n${elevRows}\n</Rapport>`;
-
-    const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `elever_session_${data.session.id}_${utbDatum}.xml`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const { session } = data;
+    if (!session.school.bana) {
+      alert(`Banans namn saknas för filialen ${session.school.name}. Fyll i det under Filialer → Redigera först.`);
+      return;
+    }
+    // Samma format som på kurssidan – Kombo ger en fil för teori och en för praktik
+    const files = sessionReportFiles({
+      id: session.id,
+      startTime: session.startTime,
+      course: { type: session.course.type, behorighet: session.course.behorighet },
+      school: { name: session.school.name, bana: session.school.bana },
+      bookings: data.students.map((s) => ({
+        personnummer: s.personnummer === '–' ? null : s.personnummer,
+        guestName: s.name,
+        attendance: s.attendance,
+      })),
+    });
+    for (const f of files) {
+      const url = URL.createObjectURL(new Blob([f.xml], { type: 'application/xml;charset=utf-8;' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const exportCsv = () => {

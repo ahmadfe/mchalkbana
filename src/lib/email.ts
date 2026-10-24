@@ -1297,3 +1297,26 @@ export async function sendExportCodeEmail(data: { email: string; name: string; c
     return false;
   }
 }
+
+// ── Kursresultat (rapportfiler till Transportstyrelsen) ────────────────────
+
+export async function sendResultReportEmail(data: { subject: string; files: { filename: string; xml: string }[]; missingBana: string[] }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { console.log('[Email] No RESEND_API_KEY — skipping result report email'); return; }
+  const warning = data.missingBana.length
+    ? `<p style="color:#b45309;"><strong>Obs:</strong> Banans namn saknas för ${data.missingBana.join(', ')}. Fyll i det under Admin → Filialer och ladda ner rapporten igen från kurssidan.</p>`
+    : '';
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+      to: ['result@uppsalahalkbana.se'],
+      subject: data.subject,
+      html: `<p>Bifogat finns kursresultaten som XML-fil${data.files.length > 1 ? 'er' : ''} i Transportstyrelsens format.</p>${warning}`,
+      attachments: data.files.map(f => ({ filename: f.filename, content: Buffer.from(f.xml, 'utf-8').toString('base64') })),
+    }),
+  });
+  if (!res.ok) console.error('[Email] Resend error (result report):', await res.text());
+  else console.log('[Email] Result report email sent');
+}
