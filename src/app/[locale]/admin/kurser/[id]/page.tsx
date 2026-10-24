@@ -457,7 +457,7 @@ function AddStudent({ kursId, onAdded, locale }: { kursId: number; onAdded: () =
     const t = setTimeout(() => {
       ctrl.current?.abort();
       ctrl.current = new AbortController();
-      fetch(`/api/admin/students?q=${encodeURIComponent(q)}`, { signal: ctrl.current.signal })
+      fetch(`/api/admin/students?status=all&q=${encodeURIComponent(q)}`, { signal: ctrl.current.signal })
         .then(r => r.json()).then(d => setHits((d.students ?? []).slice(0, 8))).catch(() => {});
     }, 250);
     return () => clearTimeout(t);

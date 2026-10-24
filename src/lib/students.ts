@@ -117,3 +117,30 @@ export async function linkBookingToStudent(bookingId: number): Promise<void> {
     console.error('linkBookingToStudent failed', bookingId, err);
   }
 }
+
+type BookingForArchive = { status: string; session: { endTime: Date; status: string } };
+
+/** Kurser som är inställda eller avbokade räknas inte. */
+const countsAsCourse = (b: BookingForArchive) => b.status !== 'Canceled' && b.session.status !== 'canceled';
+const isDone = (b: BookingForArchive, now: Date) => b.session.status === 'completed' || b.session.endTime < now;
+
+/**
+ * Arkiverad = manuellt arkiverad, eller har gått kurser och har inga kommande kvar.
+ * En ny bokning gör eleven aktiv igen automatiskt.
+ */
+export function archiveState(student: { status: string }, bookings: BookingForArchive[], now = new Date()): 'active' | 'archived' | 'done' {
+  if (student.status === 'archived') return 'archived';
+  const courses = bookings.filter(countsAsCourse);
+  return courses.length > 0 && courses.every(b => isDone(b, now)) ? 'done' : 'active';
+}
+
+/** Prisma-filter för elever som räknas som aktiva (för antal i översikten). */
+export function activeStudentWhere(now = new Date()) {
+  return {
+    status: 'active',
+    OR: [
+      { bookings: { none: { status: { not: 'Canceled' }, session: { status: { not: 'canceled' } } } } },
+      { bookings: { some: { status: { not: 'Canceled' }, session: { status: { notIn: ['canceled', 'completed'] }, endTime: { gte: now } } } } },
+    ],
+  };
+}

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { activeStudentWhere } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     prisma.booking.count({ where: { status: { not: 'Canceled' } } }),
     prisma.payment.aggregate({ where: { status: 'Succeeded' }, _sum: { amount: true } }),
     prisma.session.count({ where: { startTime: { gte: new Date() } } }),
-    prisma.student.count({ where: { status: 'active' } }),
+    prisma.student.count({ where: activeStudentWhere() }),
   ]);
 
   return NextResponse.json({

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { parseStudentInput, toStudentDto } from '@/lib/students';
+import { archiveState, parseStudentInput, toStudentDto } from '@/lib/students';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     payment: b.payment,
   }));
 
-  return NextResponse.json({ student: toStudentDto(student), bookings });
+  return NextResponse.json({ student: toStudentDto(student), bookings, archiveState: archiveState(student, student.bookings) });
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {

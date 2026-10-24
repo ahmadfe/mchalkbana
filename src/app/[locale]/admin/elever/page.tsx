@@ -9,7 +9,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import { Badge, Select, formatDate } from '@/components/admin/ui';
 import type { StudentDto } from '@/lib/students';
 
-type Row = StudentDto & { filialName: string; lastCourseAt: string | null };
+type Row = StudentDto & { filialName: string; lastCourseAt: string | null; archiveState: 'active' | 'archived' | 'done' };
 interface Filial { id: number; name: string }
 
 export default function EleverPage() {
@@ -78,7 +78,7 @@ export default function EleverPage() {
         <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
       ) : rows.length === 0 ? (
         <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">
-          {q ? 'Inga elever matchar sökningen.' : status === 'active' ? 'Inga aktiva elever än.' : 'Inga arkiverade elever.'}
+          {q ? 'Inga elever matchar sökningen.' : status === 'active' ? 'Inga aktiva elever än.' : 'Inga arkiverade elever. Elever flyttas hit automatiskt när alla deras kurser är genomförda.'}
         </div>
       ) : (
         <>
@@ -95,6 +95,8 @@ export default function EleverPage() {
                     <span className="font-bold truncate">{s.name || '(namn saknas)'}</span>
                     {s.risk1DoneAt && <Badge tone="green">Risk 1</Badge>}
                     {s.risk2DoneAt && <Badge tone="green">Risk 2</Badge>}
+                    {s.archiveState === 'done' && <Badge tone="blue">Kurser klara</Badge>}
+                    {s.archiveState === 'archived' && <Badge>Manuellt arkiverad</Badge>}
                   </div>
                   <p className="text-sm text-white/50 truncate mt-0.5">
                     {[s.personnummer, s.phone, s.email].filter(Boolean).join(' · ')}

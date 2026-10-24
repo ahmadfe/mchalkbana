@@ -48,6 +48,7 @@ export default function ElevPage({ params }: { params: { id: string } }) {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [values, setValues] = useState<StudentFormValues | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [archived, setArchived] = useState<'active' | 'archived' | 'done'>('active');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -57,6 +58,7 @@ export default function ElevPage({ params }: { params: { id: string } }) {
     const data = await res.json();
     setStudent(data.student);
     setBookings(data.bookings);
+    setArchived(data.archiveState);
     setValues(toForm(data.student));
   }, [params.id]);
 
@@ -122,6 +124,12 @@ export default function ElevPage({ params }: { params: { id: string } }) {
         <Milestone label="Riskutbildning del 1" date={student.risk1DoneAt} />
         <Milestone label="Riskutbildning del 2" date={student.risk2DoneAt} />
       </div>
+
+      {archived === 'done' && (
+        <p className="rounded-2xl bg-sky-500/10 text-sky-200 text-sm px-4 py-3 mb-4">
+          Eleven ligger under Arkiverade eftersom alla kurser är genomförda. Bokas eleven på en ny kurs blir den aktiv igen.
+        </p>
+      )}
 
       <Card title="Kurser" className="mb-4">
         {bookings.length === 0 ? (
