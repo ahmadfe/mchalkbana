@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
-  const { sessionId, guestName, personnummer, guestPhone, guestEmail, sendConfirmation } = await request.json();
+  const { sessionId, guestName, personnummer, guestPhone, guestEmail, sendConfirmation, note } = await request.json();
   if (!sessionId || !guestName || !personnummer) {
     return NextResponse.json({ error: 'Session, namn och personnummer krävs' }, { status: 400 });
   }
@@ -49,6 +49,8 @@ export async function POST(request: Request) {
   });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
   if (session.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
+  // Passet är låst för skolan när det har börjat (det syns då under Arkiverade)
+  if (session.startTime <= new Date()) return NextResponse.json({ error: 'Passet har redan börjat och kan inte ändras' }, { status: 400 });
 
   const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
   const allocation = (session as any).schoolAllocations?.[0] ?? null;
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
     guestEmail: guestEmail || null,
     status: 'Confirmed',
     bookedByRole: 'school',
+    note: typeof note === 'string' && note.trim() ? note.trim().slice(0, 500) : null,
     bookedBySchoolUserId: authUser.userId,
   };
 

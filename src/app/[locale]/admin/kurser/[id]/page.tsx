@@ -42,6 +42,7 @@ interface Participant {
   status: string;
   bookedBy: string;
   schoolName: string | null;
+  note: string | null;
   price: number;
   payment: { amount: number; provider: string; createdAt: string } | null;
   paid: boolean;
@@ -362,6 +363,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn }: {
             ? <Link href={`/${locale}/admin/elever/${p.studentId}`} className="font-bold hover:underline">{p.name}</Link>
             : <span className="font-bold">{p.name}</span>}
           <p className="text-sm text-white/50 truncate">{[p.phone, p.email].filter(Boolean).join(' · ') || 'Inga kontaktuppgifter'}</p>
+          {p.note && <p className="text-sm text-amber-200/90 bg-amber-500/10 rounded-lg px-2.5 py-1.5 mt-1.5 whitespace-pre-wrap">📝 {p.note}{p.schoolName ? ` – ${p.schoolName}` : ''}</p>}
         </div>
         <button onClick={cancel} disabled={busy} className="text-sm text-white/40 hover:text-red-400 shrink-0">Avboka</button>
       </div>

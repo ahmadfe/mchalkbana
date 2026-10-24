@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
 import {
   Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2,
-  ChevronDown, ChevronUp, BarChart2, BookOpen,
+  ChevronDown, ChevronUp, BarChart2, BookOpen, Archive, Lock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +18,7 @@ interface StudentForm {
   personnummer: string;
   phone: string;
   email: string;
+  note: string;
   sendConfirmation: boolean;
 }
 
@@ -27,6 +28,7 @@ interface SchoolBooking {
   personnummer: string | null;
   guestPhone: string | null;
   guestEmail: string | null;
+  note: string | null;
   status: string;
   bookingTime: string;
   session: Session & { course: { titleSv: string; titleEn: string } };
@@ -42,10 +44,11 @@ export default function SchoolPage() {
   const [priceMap, setPriceMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [view, setView] = useState<'upcoming' | 'archived'>('upcoming');
 
   // Add student modal
   const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
+  const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -85,12 +88,12 @@ export default function SchoolPage() {
 
   const openModal = (session: Session) => {
     setActiveSession(session);
-    setStudents([{ name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
+    setStudents([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
     setSaveError('');
     setSaveSuccess(false);
   };
 
-  const addStudentRow = () => setStudents((p) => [...p, { name: '', personnummer: '', phone: '', email: '', sendConfirmation: false }]);
+  const addStudentRow = () => setStudents((p) => [...p, { name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
   const removeStudentRow = (i: number) => setStudents((p) => p.filter((_, idx) => idx !== i));
   const updateStudentRow = (i: number, field: keyof StudentForm, value: string | boolean) =>
     setStudents((p) => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
@@ -114,6 +117,7 @@ export default function SchoolPage() {
           guestPhone: student.phone || null,
           guestEmail: student.email || null,
           sendConfirmation: student.sendConfirmation,
+          note: student.note,
         }),
       });
       if (!res.ok) {
@@ -147,6 +151,12 @@ export default function SchoolPage() {
     acc[sid].push(b);
     return acc;
   }, {});
+
+  // Arkiverade pass = pass där skolan har elever och som redan har börjat. De går inte att ändra.
+  const archivedSessions = Object.values(bookingsBySession)
+    .filter((list) => new Date(list[0].session.startTime) <= new Date())
+    .map((list) => ({ session: list[0].session, students: list }))
+    .sort((a, b) => new Date(b.session.startTime).getTime() - new Date(a.session.startTime).getTime());
 
   // Stats
   const now = new Date();
@@ -223,12 +233,68 @@ export default function SchoolPage() {
 
           {/* Sessions */}
           <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              Tillgängliga pass
-            </h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-base font-semibold text-gray-700 flex items-center gap-2">
+                {view === 'upcoming' ? <BookOpen className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                {view === 'upcoming' ? 'Tillgängliga pass' : 'Arkiverade pass'}
+              </h2>
+              <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1">
+                {([['upcoming', 'Kommande'], ['archived', `Arkiverade (${archivedSessions.length})`]] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={clsx('px-3 py-1.5 text-xs rounded-md font-medium transition', view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {sessions.length === 0 ? (
+            {view === 'archived' ? (
+              archivedSessions.length === 0 ? (
+                <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
+                  <Archive className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                  <p className="font-medium">Inga arkiverade pass än</p>
+                  <p className="text-sm mt-1">Pass hamnar här när de har börjat.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">Passen har redan börjat eller är genomförda och kan inte ändras. Kontakta oss om något behöver rättas.</p>
+                  {archivedSessions.map(({ session: s, students: list }) => {
+                    const start = new Date(s.startTime);
+                    const end = new Date(s.endTime);
+                    const isOpen = expanded.has(s.id);
+                    return (
+                      <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                        <button onClick={() => toggleExpand(s.id)} className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-gray-50">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-gray-900">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                <Lock className="w-3 h-3" /> {end < new Date() ? 'Genomfört' : 'Pågår'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
+                              <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
+                              <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
+                              <span>📍 {s.course?.location || s.school?.name}</span>
+                              <span className="text-swedish-blue font-medium">{list.length} elev{list.length !== 1 ? 'er' : ''}</span>
+                            </div>
+                          </div>
+                          {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
+                        </button>
+                        {isOpen && (
+                          <div className="border-t border-gray-100">
+                            <StudentTable list={list} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : sessions.length === 0 ? (
               <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
                 <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
                 <p className="font-medium">Inga tillgängliga pass</p>
@@ -323,36 +389,7 @@ export default function SchoolPage() {
                               Inga elever bokade på detta pass ännu.
                             </div>
                           ) : (
-                            <table className="w-full text-sm">
-                              <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
-                                <tr>
-                                  <th className="text-left py-2.5 px-5">Namn</th>
-                                  <th className="text-left py-2.5 px-5">Personnummer</th>
-                                  <th className="text-left py-2.5 px-5 hidden sm:table-cell">Telefon</th>
-                                  <th className="text-left py-2.5 px-5 hidden sm:table-cell">E-post</th>
-                                  <th className="py-2.5 px-5"></th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-gray-50">
-                                {sessionStudents.map((b) => (
-                                  <tr key={b.id} className="hover:bg-gray-50">
-                                    <td className="py-3 px-5 font-medium">{b.guestName || '–'}</td>
-                                    <td className="py-3 px-5 font-mono text-xs text-gray-600">{b.personnummer || '–'}</td>
-                                    <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestPhone || '–'}</td>
-                                    <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestEmail || '–'}</td>
-                                    <td className="py-3 px-5 text-right">
-                                      <button
-                                        onClick={() => handleDeleteStudent(b.id)}
-                                        className="text-gray-300 hover:text-red-500 transition"
-                                        title="Ta bort elev"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            <StudentTable list={sessionStudents} onDelete={handleDeleteStudent} />
                           )}
                         </div>
                       )}
@@ -474,6 +511,16 @@ export default function SchoolPage() {
                           <label className="block text-xs font-medium text-gray-600 mb-1">E-post</label>
                           <input type="email" className="input-field text-sm" placeholder="anna@skola.se" value={s.email} onChange={(e) => updateStudentRow(i, 'email', e.target.value)} />
                         </div>
+                        <div className="col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Anteckning</label>
+                          <textarea
+                            className="input-field text-sm min-h-[64px]"
+                            placeholder="Valfritt – t.ex. behöver tolk, kommer lite sent, referens för fakturan"
+                            maxLength={500}
+                            value={s.note}
+                            onChange={(e) => updateStudentRow(i, 'note', e.target.value)}
+                          />
+                        </div>
                       </div>
                       {s.email && (
                         <label className="flex items-center gap-2 cursor-pointer select-none mt-1">
@@ -517,5 +564,46 @@ export default function SchoolPage() {
 
       <Footer />
     </div>
+  );
+}
+
+/** Elevlista för ett pass. Utan onDelete är listan skrivskyddad (arkiverade pass). */
+function StudentTable({ list, onDelete }: { list: SchoolBooking[]; onDelete?: (bookingId: number) => void }) {
+  return (
+    <table className="w-full text-sm">
+      <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
+        <tr>
+          <th className="text-left py-2.5 px-5">Namn</th>
+          <th className="text-left py-2.5 px-5">Personnummer</th>
+          <th className="text-left py-2.5 px-5 hidden sm:table-cell">Telefon</th>
+          <th className="text-left py-2.5 px-5 hidden sm:table-cell">E-post</th>
+          {onDelete && <th className="py-2.5 px-5"></th>}
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-50">
+        {list.map((b) => (
+          <tr key={b.id} className="hover:bg-gray-50 align-top">
+            <td className="py-3 px-5">
+              <p className="font-medium">{b.guestName || '–'}</p>
+              {b.note && <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1 mt-1 whitespace-pre-wrap">📝 {b.note}</p>}
+            </td>
+            <td className="py-3 px-5 font-mono text-xs text-gray-600">{b.personnummer || '–'}</td>
+            <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestPhone || '–'}</td>
+            <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestEmail || '–'}</td>
+            {onDelete && (
+              <td className="py-3 px-5 text-right">
+                <button
+                  onClick={() => confirm(`Ta bort ${b.guestName || 'eleven'} från passet?`) && onDelete(b.id)}
+                  className="text-gray-300 hover:text-red-500 transition"
+                  title="Ta bort elev"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

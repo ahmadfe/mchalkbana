@@ -46,6 +46,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       status: b.status,
       bookedBy: b.bookedByRole,
       schoolName: b.bookedBySchoolUser?.name ?? null,
+      note: b.note,
       price: expectedPrice(b, s, schoolPrices),
       payment: b.payment ? { ...b.payment, createdAt: b.payment.createdAt.toISOString() } : null,
       paid: !!b.payment || b.status === 'Paid',

@@ -21,6 +21,7 @@ interface Student {
   bookedByRole: string;
   checkedInAt?: string | null;
   idType?: string | null;
+  note?: string | null;
   user: { name: string; phone: string | null; email: string } | null;
 }
 
@@ -234,6 +235,9 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
                         </a>
                       )}
                     </div>
+                    {student.note && (
+                      <p className="text-sm text-amber-200 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 mt-2 whitespace-pre-wrap">📝 {student.note}</p>
+                    )}
                   </div>
 
                   {/* Check-in: legitimation must be verified before the course */}

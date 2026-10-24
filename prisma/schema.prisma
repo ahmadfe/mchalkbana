@@ -140,6 +140,7 @@ model Booking {
   personnummer String?
   guestPhone   String?
   guestEmail   String?
+  note         String?  // anteckning från skolan eller admin, t.ex. "behöver tolk"
   bookingTime          DateTime @default(now())
   status               String   @default("Pending")
   bookedByRole         String   @default("student")

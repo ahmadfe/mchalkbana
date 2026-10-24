@@ -36,8 +36,8 @@ export async function GET(request: Request) {
     visibilityFilter = { visibility: 'public' };
   }
 
-  // Public users: hide sessions starting within 1 hour
-  const cutoff = !isAdmin ? new Date(Date.now() + 60 * 60 * 1000) : undefined;
+  // Allmänheten: dölj pass som börjar inom en timme. Skolor ser passen ända tills de börjar.
+  const cutoff = isAdmin ? undefined : new Date(Date.now() + (isSchool ? 0 : 60 * 60 * 1000));
 
   const sessions = await prisma.session.findMany({
     where: {

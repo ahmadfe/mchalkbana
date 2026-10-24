@@ -20,6 +20,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   if (booking.bookedBySchoolUserId !== authUser.userId) {
     return NextResponse.json({ error: 'Ej behörig att ta bort denna bokning' }, { status: 403 });
   }
+  if (booking.session.startTime <= new Date()) {
+    return NextResponse.json({ error: 'Passet har redan börjat – arkiverade pass kan inte ändras' }, { status: 400 });
+  }
 
   const sessionId = booking.sessionId;
   await prisma.booking.delete({ where: { id: bookingId } });

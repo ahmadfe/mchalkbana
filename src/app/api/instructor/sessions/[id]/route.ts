@@ -27,6 +27,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
           bookedByRole: true,
           checkedInAt: true,
           idType: true,
+          note: true,
           user: { select: { name: true, phone: true, email: true } },
         },
         orderBy: { bookingTime: 'asc' },
