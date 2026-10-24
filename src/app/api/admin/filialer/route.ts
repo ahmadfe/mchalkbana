@@ -14,10 +14,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
-  const { name, address, city, contactEmail } = await request.json();
+  const { name, address, city, bana, contactEmail } = await request.json();
   if (!name?.trim() || !address?.trim()) return NextResponse.json({ error: 'Namn och adress krävs' }, { status: 400 });
   const filial = await prisma.school.create({
-    data: { name: name.trim(), address: address.trim(), city: (city ?? '').trim(), contactEmail: (contactEmail ?? '').trim() },
+    data: { name: name.trim(), address: address.trim(), city: (city ?? '').trim(), bana: (bana ?? '').trim(), contactEmail: (contactEmail ?? '').trim() },
   });
   return NextResponse.json({ filial }, { status: 201 });
 }

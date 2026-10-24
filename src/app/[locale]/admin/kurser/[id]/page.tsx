@@ -7,6 +7,8 @@ import clsx from 'clsx';
 import AdminShell from '@/components/admin/AdminShell';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
+import { buildTsReportXml, reportParts } from '@/lib/tsReport';
+import { normalizePersonnummer } from '@/lib/pnr';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
 
 interface Kurs {
@@ -17,7 +19,7 @@ interface Kurs {
   coursePrice: number;
   discountPrice: number | null;
   location: string;
-  filial: { id: number; name: string };
+  filial: { id: number; name: string; bana: string };
   startTime: string;
   endTime: string;
   seatLimit: number;
@@ -144,13 +146,21 @@ export default function KursPage({ params }: { params: { id: string } }) {
   };
 
   const exportXml = () => {
+    if (!kurs.filial.bana) {
+      alert(`Banans namn saknas för filialen ${kurs.filial.name}. Fyll i det under Filialer → Redigera först.`);
+      return;
+    }
     const date = new Date(kurs.startTime).toLocaleDateString('sv-SE', tz);
     const elever = active
-      .filter(p => p.personnummer && p.attendance !== 'no_show' && p.attendance !== 'late_cancel')
-      .map(p => `    <Elev>\n        <PersonNr>${p.personnummer}</PersonNr>\n        <UtbDatum>${date}</UtbDatum>\n    </Elev>`)
-      .join('\n');
-    const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<Rapport>\n    <Behorighet>${kurs.behorighet || 'B'}</Behorighet>\n${elever}\n</Rapport>`;
-    download(`rapport-${date}-kurs${kurs.id}.xml`, xml, 'application/xml;charset=utf-8');
+      .filter(p => p.attendance !== 'no_show' && p.attendance !== 'late_cancel')
+      .map(p => ({ personnummer: p.personnummer, name: p.name }));
+    const skipped = elever.filter(e => !normalizePersonnummer(e.personnummer));
+    if (skipped.length && !confirm(`${skipped.map(e => e.name).join(', ')} saknar giltigt personnummer och tas inte med i rapporten. Fortsätt?`)) return;
+    // Kombo ger två filer: en för teori och en för praktik
+    for (const del of reportParts(kurs.courseType)) {
+      const xml = buildTsReportXml({ bana: kurs.filial.bana, behorighet: kurs.behorighet, del, utbDatum: date, elever });
+      download(`rapport-${date}-${del.toLowerCase()}-kurs${kurs.id}.xml`, xml, 'application/xml;charset=utf-8');
+    }
   };
 
   return (

@@ -6,8 +6,8 @@ import { requireAdmin } from '@/lib/auth';
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   const body = await request.json();
-  const data: { name?: string; address?: string; city?: string; contactEmail?: string; active?: boolean } = {};
-  for (const f of ['name', 'address', 'city', 'contactEmail'] as const) {
+  const data: { name?: string; address?: string; city?: string; bana?: string; contactEmail?: string; active?: boolean } = {};
+  for (const f of ['name', 'address', 'city', 'bana', 'contactEmail'] as const) {
     if (body[f] !== undefined) data[f] = String(body[f]).trim();
   }
   if (body.active !== undefined) data.active = !!body.active;

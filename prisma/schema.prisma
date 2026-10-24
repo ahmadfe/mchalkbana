@@ -32,6 +32,7 @@ model School {
   name         String
   address      String
   city         String    @default("")
+  bana         String    @default("") // banans namn i rapporten till Transportstyrelsen
   contactEmail String
   active       Boolean   @default(true)
   sessions     Session[]

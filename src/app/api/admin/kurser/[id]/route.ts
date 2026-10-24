@@ -12,7 +12,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     where: { id: Number(params.id) },
     include: {
       course: true,
-      school: { select: { id: true, name: true, address: true } },
+      school: { select: { id: true, name: true, address: true, bana: true } },
       assignedSchoolUsers: { where: { role: 'instructor' }, select: { id: true, name: true } },
       schoolAllocations: { select: { allocatedSeats: true, schoolUser: { select: { name: true } } } },
       comboRisk1Session: { select: { id: true, startTime: true } },

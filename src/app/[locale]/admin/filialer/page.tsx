@@ -10,13 +10,14 @@ interface Filial {
   name: string;
   address: string;
   city: string;
+  bana: string;
   contactEmail: string;
   active: boolean;
   _count: { students: number; sessions: number };
 }
 
-type Draft = Pick<Filial, 'name' | 'address' | 'city' | 'contactEmail'>;
-const emptyDraft: Draft = { name: '', address: '', city: '', contactEmail: '' };
+type Draft = Pick<Filial, 'name' | 'address' | 'city' | 'bana' | 'contactEmail'>;
+const emptyDraft: Draft = { name: '', address: '', city: '', bana: '', contactEmail: '' };
 
 export default function FilialerPage() {
   const [filialer, setFilialer] = useState<Filial[] | null>(null);
@@ -33,7 +34,7 @@ export default function FilialerPage() {
   const startEdit = (f: Filial | null) => {
     setError('');
     setEditing(f ? f.id : 'new');
-    setDraft(f ? { name: f.name, address: f.address, city: f.city, contactEmail: f.contactEmail } : emptyDraft);
+    setDraft(f ? { name: f.name, address: f.address, city: f.city, bana: f.bana, contactEmail: f.contactEmail } : emptyDraft);
   };
 
   const save = async () => {
@@ -67,6 +68,9 @@ export default function FilialerPage() {
         <Field label="Kontakt-e-post"><Input type="email" value={draft.contactEmail} onChange={e => setDraft({ ...draft, contactEmail: e.target.value })} /></Field>
         <Field label="Adress" required><Input value={draft.address} onChange={e => setDraft({ ...draft, address: e.target.value })} /></Field>
         <Field label="Ort"><Input value={draft.city} onChange={e => setDraft({ ...draft, city: e.target.value })} /></Field>
+        <Field label="Bana" className="sm:col-span-2" hint="Banans namn som det står i rapporten till Transportstyrelsen, t.ex. Lilla trafikövningsplatsen.">
+          <Input value={draft.bana} onChange={e => setDraft({ ...draft, bana: e.target.value })} />
+        </Field>
       </div>
       <div className="flex items-center justify-end gap-3">
         {error && <p className="text-sm text-red-400 mr-auto">{error}</p>}
@@ -103,6 +107,7 @@ export default function FilialerPage() {
                   {!f.active && <Badge>Inaktiv</Badge>}
                 </div>
                 <p className="text-sm text-white/50 mt-0.5">{[f.address, f.city, f.contactEmail].filter(Boolean).join(' · ')}</p>
+                <p className={f.bana ? 'text-sm text-white/50 mt-0.5' : 'text-sm text-amber-300/90 mt-0.5'}>{f.bana ? `Bana: ${f.bana}` : 'Bana saknas – behövs för rapporten till Transportstyrelsen'}</p>
                 <p className="text-sm text-white/40 mt-0.5">{f._count.students} elever · {f._count.sessions} kurstillfällen</p>
               </div>
               <div className="flex gap-2">
