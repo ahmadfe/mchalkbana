@@ -172,7 +172,7 @@ export default function KursForm({ values, onChange, isNew }: { values: KursForm
         <Card title="Platser och pris">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Antal platser"><Input type="number" min={1} {...text('seatLimit')} /></Field>
-            <Field label="Kampanjpris (kr)" hint="Valfritt. Visas överstruket mot ordinarie pris.">
+            <Field label="Pris för detta tillfälle (kr)" hint="Lämna tomt för ordinarie pris. Ett lägre pris visas som rabatt på webbplatsen.">
               <Input type="number" min={0} {...text('discountPrice')} placeholder={course ? String(course.price) : ''} />
             </Field>
           </div>

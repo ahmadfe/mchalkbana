@@ -518,7 +518,7 @@ function CheckoutContent() {
                 </div>
 
                 <div className="border-t border-gray-100 mt-5 pt-4">
-                  {session.discountPrice && (
+                  {session.discountPrice != null && session.discountPrice < course.price && (
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-500">Ordinarie pris</span>
                       <span className="line-through text-gray-400">{course.price.toLocaleString('sv-SE')} kr</span>

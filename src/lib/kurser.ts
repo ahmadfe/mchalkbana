@@ -93,7 +93,7 @@ export async function parseKursInput(
     if (v === '' || v === null) data.discountPrice = null;
     else {
       const n = Number(v);
-      if (!Number.isInteger(n) || n < 0) return { error: 'Ogiltigt kampanjpris' };
+      if (!Number.isInteger(n) || n < 0) return { error: 'Ogiltigt pris' };
       data.discountPrice = n;
     }
   }

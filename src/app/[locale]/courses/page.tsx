@@ -31,13 +31,16 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const seatsUsed = session.seatLimit - session.seatsAvailable;
   const seatPct = Math.round((seatsUsed / session.seatLimit) * 100);
+  // Ett eget pris på passet är bara rabatt om det är lägre än kursens ordinarie pris
+  const price = session.discountPrice ?? course.price;
+  const isDiscount = session.discountPrice != null && session.discountPrice < course.price;
 
   return (
     <div className={clsx(
       'bg-white rounded-xl border overflow-hidden flex transition hover:shadow-md',
-      isSoldOut ? 'border-gray-100 opacity-70' : session.discountPrice ? 'border-brand-200 hover:border-brand-300' : 'border-gray-100 hover:border-gray-200',
+      isSoldOut ? 'border-gray-100 opacity-70' : isDiscount ? 'border-brand-200 hover:border-brand-300' : 'border-gray-100 hover:border-gray-200',
     )}>
-      <div className={clsx('w-1 shrink-0', session.discountPrice ? 'bg-brand-500' : isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
+      <div className={clsx('w-1 shrink-0', isDiscount ? 'bg-brand-500' : isCar ? 'bg-swedish-blue' : 'bg-orange-400')} />
 
       <div className="flex-1 px-4 py-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -117,26 +120,26 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            {session.discountPrice ? (
+            {isDiscount ? (
               <div className="text-right">
                 <div className="flex items-center justify-end gap-1 mb-1">
                   <Tag className="w-3 h-3 text-brand-500" />
                   <span className="text-[10px] font-bold text-brand-500 uppercase tracking-wide">Rabatt</span>
                 </div>
                 <p className="font-bold text-gray-900 text-base leading-tight">
-                  {session.discountPrice.toLocaleString('sv-SE')} kr
+                  {price.toLocaleString('sv-SE')} kr
                 </p>
                 <p className="text-xs text-gray-400 line-through leading-none">
                   {course.price.toLocaleString('sv-SE')} kr
                 </p>
                 <p className="text-[11px] font-semibold text-green-600 mt-0.5">
-                  Spara {(course.price - session.discountPrice).toLocaleString('sv-SE')} kr
+                  Spara {(course.price - price).toLocaleString('sv-SE')} kr
                 </p>
               </div>
             ) : (
               <div className="text-right">
                 <p className="font-bold text-gray-900 text-sm leading-tight">
-                  {course.price.toLocaleString('sv-SE')} kr
+                  {price.toLocaleString('sv-SE')} kr
                 </p>
                 <p className="text-xs text-gray-400">per person</p>
               </div>

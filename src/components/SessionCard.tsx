@@ -20,6 +20,9 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const isSoldOut = session.seatsAvailable === 0;
+  // Ett eget pris på passet är bara rabatt om det är lägre än kursens ordinarie pris
+  const price = session.discountPrice ?? course.price;
+  const isDiscount = session.discountPrice != null && session.discountPrice < course.price;
 
   const dateStr = start.toLocaleDateString(locale === 'sv' ? 'sv-SE' : 'en-GB', {
     weekday: 'short',
@@ -106,7 +109,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
         </div>
 
         {/* Discount label */}
-        {session.discountPrice && (
+        {isDiscount && (
           <div className="flex items-center gap-1.5 mb-3">
             <Tag className="w-3.5 h-3.5 text-brand-500" />
             <span className="text-sm font-semibold text-brand-500">Rabatterat pris</span>
@@ -116,10 +119,10 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div>
-            {session.discountPrice ? (
+            {isDiscount ? (
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-bold text-gray-900">
-                  {session.discountPrice.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
+                  {price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
                 </span>
                 <span className="text-sm text-gray-400 line-through">
                   {course.price.toLocaleString('sv-SE')} kr
@@ -127,7 +130,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
               </div>
             ) : (
               <span className="text-xl font-bold text-gray-900">
-                {course.price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
+                {price.toLocaleString('sv-SE')} <span className="text-sm font-normal text-gray-500">kr</span>
               </span>
             )}
           </div>
@@ -136,13 +139,13 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
             <button disabled className="bg-gray-100 text-gray-400 text-sm font-medium px-5 py-2 rounded-xl cursor-not-allowed">
               {t('sold_out')}
             </button>
-          ) : session.discountPrice ? (
+          ) : isDiscount ? (
             <Link
               href={`/${locale}/checkout?session=${session.id}`}
               className="bg-gray-900 text-white text-sm font-semibold px-5 py-2 rounded-xl hover:bg-gray-700 transition flex items-center gap-2"
             >
               Boka{' '}
-              <span>{session.discountPrice.toLocaleString('sv-SE')} kr</span>
+              <span>{price.toLocaleString('sv-SE')} kr</span>
               <span className="text-gray-400 line-through text-xs">{course.price.toLocaleString('sv-SE')} kr</span>
             </Link>
           ) : (
