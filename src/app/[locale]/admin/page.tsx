@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
+import KindBadge from '@/components/admin/KindBadge';
 import type { Course, Session, Booking } from '@/lib/types';
 import {
   LayoutDashboard,
@@ -1187,8 +1188,11 @@ export default function AdminPage() {
     );
   }
 
+  // Pass och bokningar har fått den mörka listan från Kurser
+  const darkTab = tab === 'sessions';
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={clsx('min-h-screen', darkTab ? 'bg-[#0b0b0d]' : 'bg-gray-50')}>
       <AdminSidebar activeTab={tab as OldTab} onOldTab={selectTab} />
 
       <div className="lg:pl-60">
@@ -1196,8 +1200,8 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-gray-900">{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
-              <p className="text-sm text-gray-500 mt-1">Uppsala Halkbana</p>
+              <h1 className={clsx('font-headline text-3xl font-extrabold tracking-tight', darkTab ? 'text-white' : 'text-gray-900')}>{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
+              <p className={clsx('text-sm mt-1', darkTab ? 'text-white/50' : 'text-gray-500')}>Uppsala Halkbana</p>
             </div>
             {saved && (
               <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-medium">
@@ -1342,143 +1346,123 @@ export default function AdminPage() {
               const startT = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
               const endT = new Date(s.endTime).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
               const seatsUsed = s.seatLimit - s.seatsAvailable;
-              const seatPct = s.seatLimit > 0 ? Math.round((seatsUsed / s.seatLimit) * 100) : 0;
               const full = s.seatsAvailable === 0;
               const isAssigning = assigningSchoolSession === s.id;
-              const typeColor =
-                s.course?.type === 'Risk1' ? 'bg-swedish-blue' :
-                s.course?.type === 'Risk2' ? 'bg-orange-400' :
-                s.course?.type === 'Combo' ? 'bg-purple-600' : 'bg-gray-400';
+
+              const allocations = (s as any).schoolAllocations || [];
+              const instructors = ((s as any).assignedSchoolUsers || []).filter((u: any) => u.role === 'instructor');
+              const schools = ((s as any).assignedSchoolUsers || []).filter((u: any) => u.role !== 'instructor');
+              const canceled = (s as any).status === 'canceled';
+              const iconBtn = 'w-9 h-9 rounded-full flex items-center justify-center transition shrink-0';
 
               return (
-                <div key={s.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow">
-                  {/* Top colour bar */}
-                  <div className={clsx('h-1.5 shrink-0', typeColor)} />
-
-                  {/* Body */}
-                  <div className="flex-1 p-4">
-                    {/* Badges */}
-                    <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
-                      <span className={clsx('px-2 py-0.5 rounded-full text-xs font-bold', isCar ? 'bg-cyan-50 text-cyan-700' : 'bg-orange-50 text-orange-700')}>
-                        {isCar ? '🚗 Bil' : '🏍️ MC'} · {s.course?.behorighet}
-                      </span>
-                      <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1', s.visibility === 'public' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700')}>
-                        {s.visibility === 'public' ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                        {s.visibility === 'public' ? 'Publik' : ((s.assignedSchoolUsers && s.assignedSchoolUsers.length > 0) ? s.assignedSchoolUsers.map((u: any) => u.name).join(', ') : 'Skola')}
-                      </span>
-                    </div>
-
-                    {/* Course name */}
-                    <h3 className="font-bold text-gray-900 text-sm leading-snug mb-3">
-                      {locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}
-                    </h3>
-
-                    {/* Details */}
-                    <div className="space-y-1 text-xs text-gray-500 mb-4">
-                      <p>🕐 <span className="font-medium text-gray-700">{startT} – {endT}</span></p>
-                      <p>📍 {s.course?.location || s.school?.name}</p>
-                      {s.course?.price ? <p>💰 <span className="font-semibold text-gray-700">{s.course.price.toLocaleString('sv-SE')} kr</span></p> : null}
-                    </div>
-
-                    {/* Seat bar */}
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={clsx('h-full rounded-full transition-all', full ? 'bg-red-400' : seatPct > 70 ? 'bg-orange-400' : 'bg-swedish-blue')} style={{ width: `${seatPct}%` }} />
+                <div key={s.id} className={clsx('rounded-2xl bg-[#1c1c1f] hover:bg-[#232327] transition', canceled && 'opacity-60')}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <KindBadge type={s.course?.type ?? ''} />
+                        <a href={`/${locale}/admin/kurser/${s.id}`} className={clsx('font-bold text-white hover:underline truncate', canceled && 'line-through')}>
+                          {locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}
+                        </a>
+                        <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-white/10 text-white/60">
+                          {isCar ? 'Bil' : 'MC'} · {s.course?.behorighet}
+                        </span>
+                        {canceled && <span className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-red-500/15 text-red-300">Inställd</span>}
+                        {s.visibility !== 'public' && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300">
+                            <Lock className="w-3 h-3" />{schools.length > 0 ? schools.map((u: any) => u.name).join(', ') : 'Ej bokningsbar'}
+                          </span>
+                        )}
                       </div>
-                      <span className={clsx('text-xs font-bold shrink-0', full ? 'text-red-500' : 'text-gray-500')}>
-                        {full ? 'FULL' : `${s.seatsAvailable}/${s.seatLimit} kvar`}
-                      </span>
+                      <p className="text-sm text-white/50 mt-1 truncate">
+                        {startT}–{endT} · {s.course?.location || s.school?.name}
+                        {s.course?.price ? ` · ${((s as any).discountPrice ?? s.course.price).toLocaleString('sv-SE')} kr` : ''}
+                        {instructors.length > 0 && ` · ${instructors.map((u: any) => u.name).join(', ')}`}
+                      </p>
+                      {allocations.length > 0 && !isAssigning && (
+                        <p className="text-sm text-violet-300/90 mt-0.5 truncate">
+                          Skolor: {allocations.map((a: any) => `${a.schoolUser?.name ?? '?'} (${a.allocatedSeats})`).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleViewStudents(s.id)}
+                        className={clsx('h-9 px-3.5 rounded-full text-sm font-semibold transition flex items-center gap-1.5',
+                          full ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25' : 'bg-white/10 text-white hover:bg-white/15')}
+                        title="Visa elever"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> {seatsUsed}/{s.seatLimit}
+                      </button>
+                      {!isAssigning && (
+                        <button
+                          onClick={() => { setAssigningSchoolSession(s.id); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); const allocMap: Record<number, number> = {}; allocations.forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; }); setAssignAllocations(allocMap); }}
+                          className={clsx(iconBtn, allocations.length > 0 ? 'text-violet-300 hover:bg-violet-500/15' : 'text-white/50 hover:text-white hover:bg-white/10')}
+                          title="Tilldela skola"
+                        >
+                          <School className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setAssigningInstructorSession(s.id); setAssignInstructorIds(instructors.map((u: any) => u.id)); }}
+                        className={clsx(iconBtn, instructors.length > 0 ? 'text-sky-300 hover:bg-sky-500/15' : 'text-white/50 hover:text-white hover:bg-white/10')}
+                        title="Tilldela instruktör"
+                      >
+                        <Users className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleOpenEditSession(s)} className={clsx(iconBtn, 'text-white/50 hover:text-white hover:bg-white/10')} title="Redigera pass">
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteSession(s.id)} className={clsx(iconBtn, 'text-white/50 hover:text-red-400 hover:bg-red-500/10')} title="Ta bort pass">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* School allocation badge */}
-                  {(s as any).schoolAllocations?.length > 0 && !isAssigning && (
-                    <div className="px-4 pb-2">
-                      <p className="text-xs text-purple-600 bg-purple-50 rounded-lg px-2.5 py-1 truncate">
-                        🏫 {(s as any).schoolAllocations.map((a: any) => `${a.schoolUser?.name ?? '?'}: ${a.allocatedSeats}pl`).join(' · ')}
-                      </p>
-                    </div>
-                  )}
 
                   {/* School assignment panel */}
                   {isAssigning && (() => {
                     const totalAlloc = Object.values(assignAllocations).reduce((a, b) => a + b, 0);
                     const assignedEntries = Object.entries(assignAllocations).filter(([, v]) => v > 0);
                     const availableSchools = schoolAccounts.filter((acc) => !assignAllocations[acc.id]);
+                    const field = 'text-sm rounded-lg px-2.5 py-2 bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40 [color-scheme:dark]';
                     return (
-                      <div className="mx-4 mb-3 border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
-                        <p className="text-xs font-semibold text-gray-600">Tilldela platser till skolor</p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <select value={assignPickSchoolId} onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')} className="flex-1 min-w-0 text-xs border border-gray-300 rounded-lg px-2 py-2 focus:outline-none focus:ring-1 focus:ring-swedish-blue bg-white">
+                      <div className="mx-5 mb-4 rounded-xl p-4 space-y-3 bg-white/5 border border-white/10">
+                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60">Tilldela platser till skolor</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <select value={assignPickSchoolId} onChange={(e) => setAssignPickSchoolId(e.target.value ? Number(e.target.value) : '')} className={clsx(field, 'flex-1 min-w-[10rem]')}>
                             <option value="">Välj skola...</option>
                             {availableSchools.map((acc) => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
                           </select>
-                          <input type="number" min="1" max={s.seatLimit} value={assignPickSeats} onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))} className="w-14 text-center border border-gray-300 rounded-lg px-1 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-swedish-blue" />
-                          <span className="text-xs text-gray-400 shrink-0">pl</span>
-                          <button disabled={!assignPickSchoolId} onClick={() => { if (!assignPickSchoolId) return; setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats })); setAssignPickSchoolId(''); setAssignPickSeats(1); setAssignAllocError(''); }} className="shrink-0 px-2.5 py-2 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark disabled:opacity-40 disabled:cursor-not-allowed">+ Lägg till</button>
+                          <input type="number" min="1" max={s.seatLimit} value={assignPickSeats} onChange={(e) => setAssignPickSeats(Math.max(1, parseInt(e.target.value) || 1))} className={clsx(field, 'w-16 text-center')} />
+                          <span className="text-sm text-white/50">platser</span>
+                          <button disabled={!assignPickSchoolId} onClick={() => { if (!assignPickSchoolId) return; setAssignAllocations((prev) => ({ ...prev, [assignPickSchoolId]: assignPickSeats })); setAssignPickSchoolId(''); setAssignPickSeats(1); setAssignAllocError(''); }} className="h-9 px-4 text-sm font-semibold bg-white/10 text-white rounded-full hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed">+ Lägg till</button>
                         </div>
-                        {assignedEntries.length > 0 && (
-                          <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 max-h-36 overflow-y-auto bg-white">
+                        {assignedEntries.length > 0 ? (
+                          <div className="rounded-lg divide-y divide-white/5 max-h-40 overflow-y-auto bg-black/20">
                             {assignedEntries.map(([schoolUserId, seats]) => {
                               const school = schoolAccounts.find((a) => a.id === Number(schoolUserId));
                               return (
-                                <div key={schoolUserId} className="flex items-center justify-between px-2.5 py-2 text-xs">
-                                  <span className="text-gray-700 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
-                                  <span className="font-semibold text-swedish-blue mx-2">{seats} pl</span>
-                                  <button onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })} className="text-gray-300 hover:text-red-500 transition"><X className="w-3.5 h-3.5" /></button>
+                                <div key={schoolUserId} className="flex items-center justify-between px-3 py-2 text-sm">
+                                  <span className="text-white/80 truncate flex-1">{school?.name ?? `#${schoolUserId}`}</span>
+                                  <span className="font-semibold text-white mx-3">{seats} pl</span>
+                                  <button onClick={() => setAssignAllocations((prev) => { const n = { ...prev }; delete n[Number(schoolUserId)]; return n; })} className="text-white/40 hover:text-red-400" aria-label="Ta bort"><X className="w-4 h-4" /></button>
                                 </div>
                               );
                             })}
                           </div>
-                        )}
-                        {assignedEntries.length === 0 && <p className="text-xs text-gray-400 text-center py-1">Inga skolor tillagda ännu</p>}
-                        <div className="flex items-center justify-between pt-1 border-t border-gray-100">
-                          <span className="text-xs text-gray-500">Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-500' : 'text-gray-800')}>{totalAlloc}</span>/{s.seatLimit} platser</span>
-                          <div className="flex gap-1.5">
-                            <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="px-3 py-1.5 text-xs bg-swedish-blue text-white rounded-lg hover:bg-swedish-dark">Spara</button>
-                            <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="p-1.5 text-gray-400 hover:text-gray-700"><X className="w-3.5 h-3.5" /></button>
+                        ) : <p className="text-sm text-white/40">Inga skolor tillagda ännu</p>}
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                          <span className="text-sm text-white/60">Totalt: <span className={clsx('font-bold', totalAlloc > s.seatLimit ? 'text-red-400' : 'text-white')}>{totalAlloc}</span>/{s.seatLimit} platser</span>
+                          <div className="flex gap-2">
+                            <button onClick={() => { setAssigningSchoolSession(null); setAssignAllocations({}); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); }} className="h-9 px-4 text-sm font-semibold rounded-full bg-white/10 text-white hover:bg-white/15">Avbryt</button>
+                            <button onClick={() => handleAssignSchool(s.id, s.seatLimit)} className="h-9 px-4 text-sm font-semibold rounded-full bg-white text-black hover:bg-white/90">Spara</button>
                           </div>
                         </div>
-                        {assignAllocError && <p className="text-xs text-red-500">{assignAllocError}</p>}
+                        {assignAllocError && <p className="text-sm text-red-400">{assignAllocError}</p>}
                       </div>
                     );
                   })()}
-
-                  {/* Action row */}
-                  <div className="px-4 pb-4 pt-3 flex items-center gap-2 border-t border-gray-50">
-                    <button onClick={() => handleViewStudents(s.id)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-swedish-blue border border-swedish-blue rounded-lg hover:bg-brand-50 transition min-h-[36px]">
-                      <Eye className="w-3.5 h-3.5 shrink-0" />
-                      <span>Elever ({seatsUsed}/{s.seatLimit})</span>
-                    </button>
-                    {!isAssigning && (
-                      <button
-                        onClick={() => { setAssigningSchoolSession(s.id); setAssignAllocError(''); setAssignPickSchoolId(''); setAssignPickSeats(1); const allocMap: Record<number, number> = {}; ((s as any).schoolAllocations || []).forEach((a: any) => { allocMap[a.schoolUserId] = a.allocatedSeats; }); setAssignAllocations(allocMap); }}
-                        className={clsx('p-2 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition', (s as any).schoolAllocations?.length > 0 ? 'text-purple-500 hover:text-purple-700 hover:bg-purple-50' : 'text-orange-500 hover:text-orange-700 hover:bg-orange-50')}
-                        title="Tilldela skola"
-                      >
-                        <School className="w-4 h-4" />
-                      </button>
-                    )}
-                    {!isAssigning && (
-                      <button
-                        onClick={() => {
-                          const existingInstrIds = ((s as any).assignedSchoolUsers || []).filter((u: any) => u.role === 'instructor').map((u: any) => u.id);
-                          setAssigningInstructorSession(s.id);
-                          setAssignInstructorIds(existingInstrIds);
-                        }}
-                        className={clsx('p-2 rounded-lg min-h-[36px] min-w-[36px] flex items-center justify-center transition', ((s as any).assignedSchoolUsers || []).some((u: any) => u.role === 'instructor') ? 'text-swedish-blue hover:text-swedish-dark hover:bg-brand-50' : 'text-gray-400 hover:text-swedish-blue hover:bg-brand-50')}
-                        title="Tilldela instruktör"
-                      >
-                        <Users className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button onClick={() => handleOpenEditSession(s)} className="p-2 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 min-h-[36px] min-w-[36px] flex items-center justify-center" title="Redigera pass">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDeleteSession(s.id)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 min-h-[36px] min-w-[36px] flex items-center justify-center">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
               );
             };
@@ -1629,20 +1613,20 @@ export default function AdminPage() {
                   {/* Row 1: view toggle + count + add button */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1">
-                        <button onClick={() => setSessionView('active')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'active' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                      <div className="flex gap-0.5 bg-[#1c1c1f] rounded-xl p-1">
+                        <button onClick={() => setSessionView('active')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'active' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>
                           <Calendar className="w-3.5 h-3.5" />Aktiva
                         </button>
-                        <button onClick={() => setSessionView('archive')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'archive' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                        <button onClick={() => setSessionView('archive')} className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md font-medium transition', sessionView === 'archive' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>
                           <Archive className="w-3.5 h-3.5" />Arkiv
                         </button>
                       </div>
-                      <span className="text-sm font-bold text-gray-700 hidden sm:block">
+                      <span className="text-sm font-semibold text-white/60 hidden sm:block">
                         {filtered.length} {sessionView === 'archive' ? 'arkiverade' : 'aktiva'} pass
                       </span>
                     </div>
                     {sessionView === 'active' && (
-                      <button onClick={() => setShowAddSession(true)} className="btn-primary flex items-center gap-1.5 text-sm py-2 px-3 whitespace-nowrap">
+                      <button onClick={() => setShowAddSession(true)} className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-white text-black text-sm font-semibold hover:bg-white/90 whitespace-nowrap">
                         <Plus className="w-4 h-4" />
                         <span className="hidden sm:inline">{t('add_session')}</span>
                         <span className="sm:hidden">Nytt pass</span>
@@ -1651,24 +1635,24 @@ export default function AdminPage() {
                   </div>
                   {/* Row 2: scrollable filter pills */}
                   <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-                    <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1 shrink-0">
+                    <div className="flex gap-0.5 bg-[#1c1c1f] rounded-xl p-1 shrink-0">
                       {(['all', 'public', 'school'] as const).map((f) => (
-                        <button key={f} onClick={() => setSessionFilter(f)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', sessionFilter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                        <button key={f} onClick={() => setSessionFilter(f)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', sessionFilter === f ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>
                           {f === 'all' ? 'Alla' : f === 'public' ? 'Offentliga' : 'Skola'}
                         </button>
                       ))}
                     </div>
-                    <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1 shrink-0">
+                    <div className="flex gap-0.5 bg-[#1c1c1f] rounded-xl p-1 shrink-0">
                       {([['all', 'Alla'], ['Car', '🚗 Bil'], ['Motorcycle', '🏍️ MC']] as const).map(([v, l]) => (
-                        <button key={v} onClick={() => setVehicleFilter(v)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', vehicleFilter === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}>
+                        <button key={v} onClick={() => setVehicleFilter(v)} className={clsx('px-2.5 py-1 text-xs rounded-md font-medium transition whitespace-nowrap', vehicleFilter === v ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>
                           {l}
                         </button>
                       ))}
                     </div>
-                    <select value={sessionYear} onChange={(e) => { setSessionYear(e.target.value); setSessionMonth(String(new Date().getMonth() + 1)); }} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue shrink-0">
+                    <select value={sessionYear} onChange={(e) => { setSessionYear(e.target.value); setSessionMonth(String(new Date().getMonth() + 1)); }} className="text-xs border border-white/10 rounded-lg px-2.5 py-1.5 bg-[#1c1c1f] text-white focus:outline-none focus:border-white/40 shrink-0 [color-scheme:dark]">
                       {availableSessionYears.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
-                    <select value={sessionMonth} onChange={(e) => setSessionMonth(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue shrink-0">
+                    <select value={sessionMonth} onChange={(e) => setSessionMonth(e.target.value)} className="text-xs border border-white/10 rounded-lg px-2.5 py-1.5 bg-[#1c1c1f] text-white focus:outline-none focus:border-white/40 shrink-0 [color-scheme:dark]">
                       <option value="all">Alla månader</option>
                       {SESSION_MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
                     </select>
@@ -1676,13 +1660,13 @@ export default function AdminPage() {
                 </div>
 
                 {filtered.length === 0 && (
-                  <div className="text-center py-16 text-gray-400 text-sm">
+                  <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50 text-sm">
                     {sessionView === 'archive' ? 'Inga arkiverade pass ännu.' : 'Inga pass för vald period.'}
                   </div>
                 )}
 
                 {/* Day grouping */}
-                <div className="space-y-5">
+                <div className="space-y-6">
                   {monthKeys.map((dKey) => {
                     const dLabel = new Date(dKey + 'T12:00:00').toLocaleDateString('sv-SE', {
                       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -1697,13 +1681,13 @@ export default function AdminPage() {
                     return (
                       <div key={dKey}>
                         <button onClick={toggleCollapse} className="w-full flex items-center gap-3 mb-2.5 group text-left">
-                          <h3 className="text-sm font-semibold text-gray-600 capitalize group-hover:text-gray-900 transition-colors">{dLabel}</h3>
-                          <div className="flex-1 h-px bg-gray-200" />
-                          <span className="text-xs text-gray-400 shrink-0">{dayCount} pass</span>
-                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" />}
+                          <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-white/40 group-hover:text-white/70 transition-colors">{dLabel}</h3>
+                          <div className="flex-1 h-px bg-white/5" />
+                          <span className="text-xs text-white/40 shrink-0">{dayCount} pass</span>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-white/40 shrink-0" /> : <ChevronUp className="w-4 h-4 text-white/40 shrink-0" />}
                         </button>
                         {!isCollapsed && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">{dayGroups[dKey].map(renderCard)}</div>
+                          <div className="space-y-2">{dayGroups[dKey].map(renderCard)}</div>
                         )}
                       </div>
                     );

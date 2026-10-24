@@ -3,7 +3,7 @@ export type CourseKind = 'risk1' | 'risk2' | 'kombo' | 'other';
 /** Kurstyperna i databasen är fritext ("Risk 2", "Risk2", "Kombo " ...). */
 export function courseKind(type: string): CourseKind {
   const t = type.toLowerCase().replace(/\s+/g, '');
-  if (t.startsWith('kombo') || t.includes('1+2')) return 'kombo';
+  if (t.startsWith('kombo') || t.startsWith('combo') || t.includes('1+2')) return 'kombo';
   if (t.includes('risk1')) return 'risk1';
   if (t.includes('risk2') || t.includes('halka')) return 'risk2';
   return 'other';
