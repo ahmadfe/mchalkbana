@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     prisma.booking.count({ where: { status: { not: 'Canceled' } } }),
     prisma.payment.aggregate({ where: { status: 'Succeeded' }, _sum: { amount: true } }),
     prisma.session.count({ where: { startTime: { gte: new Date() } } }),
-    prisma.user.count({ where: { role: 'student' } }),
+    prisma.student.count({ where: { status: 'active' } }),
   ]);
 
   return NextResponse.json({

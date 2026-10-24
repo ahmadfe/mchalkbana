@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
+import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
 import type { Course, Session, Booking } from '@/lib/types';
 import {
   LayoutDashboard,
@@ -129,6 +128,19 @@ export default function AdminPage() {
   const { user, isLoading: authLoading } = useAuth();
 
   const [tab, setTab] = useState<Tab>('overview');
+
+  // Sidomenyn länkar hit med ?tab=… från de nya admin-sidorna
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    if (fromUrl && fromUrl in OLD_TAB_LABEL) setTab(fromUrl as Tab);
+  }, []);
+
+  const selectTab = (next: OldTab) => {
+    setTab(next);
+    window.history.replaceState(null, '', `?tab=${next}`);
+    window.scrollTo({ top: 0 });
+  };
+
   const [bookingStatusFilter, setBookingStatusFilter] = useState('all');
   const [bookingYear, setBookingYear] = useState(() => String(new Date().getFullYear()));
   const [bookingMonth, setBookingMonth] = useState(() => String(new Date().getMonth() + 1));
@@ -512,17 +524,6 @@ export default function AdminPage() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'sv'));
   }, [bookings]);
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'overview', label: t('overview'), icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'courses', label: t('manage_courses'), icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'sessions', label: t('manage_sessions'), icon: <Calendar className="w-4 h-4" /> },
-    { id: 'students', label: 'Elevprofiler', icon: <UserCircle2 className="w-4 h-4" /> },
-    { id: 'schools', label: 'Trafikskolor', icon: <School className="w-4 h-4" /> },
-    { id: 'cards', label: 'Informationskort', icon: <Tag className="w-4 h-4" /> },
-    { id: 'hero', label: 'Hero-media', icon: <MonitorPlay className="w-4 h-4" /> },
-    { id: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-4 h-4" /> },
-    { id: 'instructors', label: 'Instruktörer', icon: <UserCircle2 className="w-4 h-4" /> },
-  ];
 
   const handleSaveCard = async () => {
     setCardSaving(true);
@@ -1180,28 +1181,23 @@ export default function AdminPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
-        </main>
-        <Footer />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50">
+      <AdminSidebar activeTab={tab as OldTab} onOldTab={selectTab} />
 
-      <main className="flex-1 py-8">
+      <div className="lg:pl-60">
+      <main className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-              <a href={`/${locale}/admin/kurser`} className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700">Kurser →</a>
-              <a href={`/${locale}/admin/elever`} className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700">Elevregister →</a>
-              <a href={`/${locale}/admin/filialer`} className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-800 text-sm font-semibold hover:bg-gray-300">Filialer</a>
+            <div>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-gray-900">{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
+              <p className="text-sm text-gray-500 mt-1">Uppsala Halkbana</p>
             </div>
             {saved && (
               <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-medium">
@@ -1209,25 +1205,6 @@ export default function AdminPage() {
                 Sparat!
               </div>
             )}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-8 overflow-x-auto">
-            {tabs.map((tabItem) => (
-              <button
-                key={tabItem.id}
-                onClick={() => setTab(tabItem.id)}
-                className={clsx(
-                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition whitespace-nowrap',
-                  tab === tabItem.id
-                    ? 'bg-swedish-blue text-white'
-                    : 'text-gray-600 hover:bg-gray-50'
-                )}
-              >
-                {tabItem.icon}
-                {tabItem.label}
-              </button>
-            ))}
           </div>
 
           {/* Overview */}
@@ -3010,6 +2987,7 @@ export default function AdminPage() {
 
         </div>
       </main>
+      </div>
 
       {/* Reset Password Modal */}
       {resetPwdTarget && (
@@ -4226,7 +4204,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }
