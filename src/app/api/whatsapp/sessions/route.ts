@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const sessions = await prisma.session.findMany({
     where: {
       visibility: 'public',
+      status: { not: 'canceled' },
       startTime: { gt: cutoff },
       seatsAvailable: { gt: 0 },
     },

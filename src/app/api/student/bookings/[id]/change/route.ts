@@ -28,6 +28,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     where: {
       courseId: booking.session.courseId,
       id: { not: booking.sessionId },
+      status: { not: 'canceled' },
       seatsAvailable: { gt: 0 },
       startTime: { gt: cutoff },
       visibility: 'public',
@@ -81,6 +82,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     include: { course: true, school: true },
   });
   if (!newSession) return NextResponse.json({ error: 'Nytt pass hittades inte' }, { status: 404 });
+  if (newSession.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
   if (newSession.courseId !== booking.session.courseId) {
     return NextResponse.json({ error: 'Ogiltigt pass' }, { status: 400 });
   }

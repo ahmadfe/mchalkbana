@@ -9,6 +9,7 @@ import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
 const NAV = [
+  { href: '/admin/kurser', label: 'Kurser' },
   { href: '/admin/elever', label: 'Elever' },
   { href: '/admin/filialer', label: 'Filialer' },
   { href: '/admin', label: 'Övrig admin' },
@@ -73,7 +74,7 @@ export default function AdminShell({ title, back, actions, children }: Props) {
         )}
         <div className="flex items-start justify-between gap-4 mb-8">
           <div className="min-w-0">
-            <h1 className="font-headline text-3xl sm:text-4xl font-extrabold tracking-tight truncate">{title}</h1>
+            <h1 className="font-headline text-3xl sm:text-4xl font-extrabold tracking-tight break-words">{title}</h1>
             <p className="text-sm text-white/50 mt-1">Uppsala Halkbana</p>
           </div>
           {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}

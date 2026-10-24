@@ -1199,6 +1199,7 @@ export default function AdminPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+              <a href={`/${locale}/admin/kurser`} className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700">Kurser →</a>
               <a href={`/${locale}/admin/elever`} className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700">Elevregister →</a>
               <a href={`/${locale}/admin/filialer`} className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-800 text-sm font-semibold hover:bg-gray-300">Filialer</a>
             </div>

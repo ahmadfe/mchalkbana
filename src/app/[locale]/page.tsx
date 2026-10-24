@@ -69,7 +69,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
     prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }).catch(() => []),
     getAuthUser().catch(() => null),
     prisma.session.findMany({
-      where: { startTime: { gte: now }, visibility: 'public', seatsAvailable: { gt: 0 } },
+      where: { startTime: { gte: now }, visibility: 'public', status: { not: 'canceled' }, seatsAvailable: { gt: 0 } },
       orderBy: { startTime: 'asc' },
       take: 3,
       include: { course: true, school: true },

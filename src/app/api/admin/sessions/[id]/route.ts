@@ -22,6 +22,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     ? assignedSchoolUserIds.map(Number).filter(Boolean)
     : [];
 
+  // Instructors share the assignedSchoolUsers relation – keep them when the school list is replaced
+  const instructorIds = (await prisma.user.findMany({
+    where: { role: 'instructor', assignedSessions: { some: { id: sessionId } } },
+    select: { id: true },
+  })).map((u) => u.id);
+
   // Update the session itself
   const session = await prisma.session.update({
     where: { id: sessionId },
@@ -34,8 +40,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       ...(data.receiptMessage !== undefined ? { receiptMessage: data.receiptMessage } : {}),
       ...(data.discountPrice !== undefined ? { discountPrice: data.discountPrice === '' || data.discountPrice === null ? null : parseInt(data.discountPrice) } : {}),
       ...(data.visibility === 'school'
-        ? { assignedSchoolUsers: { set: ids.map((id) => ({ id })) } }
-        : data.visibility === 'public' ? { assignedSchoolUsers: { set: [] } } : {}),
+        ? { assignedSchoolUsers: { set: Array.from(new Set([...ids, ...instructorIds])).map((id) => ({ id })) } }
+        : data.visibility === 'public' ? { assignedSchoolUsers: { set: instructorIds.map((id) => ({ id })) } } : {}),
     },
     include: SESSION_INCLUDE,
   });

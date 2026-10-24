@@ -42,6 +42,7 @@ export async function GET(request: Request) {
   const sessions = await prisma.session.findMany({
     where: {
       ...visibilityFilter,
+      ...(!isAdmin ? { status: { not: 'canceled' } } : {}),
       ...(cutoff ? { startTime: { gt: cutoff } } : {}),
       ...(availableOnly ? { seatsAvailable: { gt: 0 } } : {}),
       course: {

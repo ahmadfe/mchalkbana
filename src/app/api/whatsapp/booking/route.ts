@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     include: { course: true, school: true },
   });
   if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+  if (session.status === 'canceled') return NextResponse.json({ error: 'Session is canceled' }, { status: 400 });
   if (session.seatsAvailable <= 0) return NextResponse.json({ error: 'No seats available' }, { status: 409 });
 
   // Duplicate check

@@ -17,6 +17,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     include: { assignedSchoolUsers: { select: { id: true } } },
   });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
+  if (session.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
 
   const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
   if (!isAssigned) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });

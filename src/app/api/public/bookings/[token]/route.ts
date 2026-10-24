@@ -27,6 +27,7 @@ export async function GET(_request: Request, { params }: { params: { token: stri
     where: {
       courseId: booking.session.courseId,
       id: { not: booking.sessionId },
+      status: { not: 'canceled' },
       seatsAvailable: { gt: 0 },
       startTime: { gt: cutoff },
       visibility: 'public',

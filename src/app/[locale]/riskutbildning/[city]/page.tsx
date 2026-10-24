@@ -147,7 +147,7 @@ export default async function CityPage({ params }: { params: { city: string; loc
 
   const now = new Date();
   const upcomingSessions = await prisma.session.findMany({
-    where: { startTime: { gte: now }, visibility: 'public', seatsAvailable: { gt: 0 } },
+    where: { startTime: { gte: now }, visibility: 'public', status: { not: 'canceled' }, seatsAvailable: { gt: 0 } },
     orderBy: { startTime: 'asc' },
     take: 4,
     include: { course: true, school: true },

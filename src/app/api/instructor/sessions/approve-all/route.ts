@@ -66,5 +66,7 @@ export async function POST(request: Request) {
     if (!res.ok) console.error('[Email] Resend error (approve-all XML):', await res.text());
   }
 
+  await prisma.session.updateMany({ where: { id: { in: sessions.map((s) => s.id) }, status: 'planned' }, data: { status: 'completed' } });
+
   return NextResponse.json({ sent: true, sessionCount: sessions.length });
 }

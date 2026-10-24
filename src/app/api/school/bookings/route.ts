@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     },
   });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
+  if (session.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
 
   const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
   const allocation = (session as any).schoolAllocations?.[0] ?? null;

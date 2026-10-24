@@ -61,6 +61,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const xml = buildXml(session);
   const datum = session.startTime.toISOString().split('T')[0];
   await sendXmlEmail(xml, `Kursresultat – ${session.course.titleSv} (${datum})`, `kursresultat-${datum}.xml`);
+  if (session.status === 'planned') await prisma.session.update({ where: { id: sessionId }, data: { status: 'completed' } });
 
   return NextResponse.json({ sent: true });
 }

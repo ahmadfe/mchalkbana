@@ -167,6 +167,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     include: { course: true, school: true },
   });
   if (!session) return NextResponse.json({ error: 'Pass hittades inte' }, { status: 404 });
+  if (session.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
   if (session.seatsAvailable <= 0) return NextResponse.json({ error: 'Inga platser kvar' }, { status: 400 });
 
   const booking = await prisma.$transaction(async (tx) => {
