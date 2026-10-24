@@ -42,3 +42,8 @@ export async function getAuthUserFromRequest(request: Request): Promise<JWTPaylo
   if (!match) return null;
   return verifyToken(match[1]);
 }
+
+export async function requireAdmin(request: Request): Promise<JWTPayload | null> {
+  const user = await getAuthUserFromRequest(request);
+  return user?.role === 'admin' ? user : null;
+}

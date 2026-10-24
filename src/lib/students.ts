@@ -1,5 +1,81 @@
+import type { Prisma, Student } from '@prisma/client';
 import { prisma } from './db';
-import { encryptPersonnummer, hashPersonnummer, normalizePersonnummer } from './personnummer';
+import {
+  ageFromPersonnummer,
+  decryptPersonnummer,
+  encryptPersonnummer,
+  formatPersonnummer,
+  hashPersonnummer,
+  normalizePersonnummer,
+} from './personnummer';
+
+const DATE_FIELDS = ['permitValidUntil', 'synintygDate', 'risk1DoneAt', 'risk2DoneAt'] as const;
+const TEXT_FIELDS = ['firstName', 'lastName', 'email', 'phone', 'address', 'postalCode', 'city', 'behorighet', 'notes'] as const;
+
+export function toStudentDto(s: Student) {
+  let pnr: string | null = null;
+  try { pnr = decryptPersonnummer(s.personnummerEnc); } catch { /* nyckel saknas eller fel */ }
+  const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '');
+  return {
+    id: s.id,
+    firstName: s.firstName,
+    lastName: s.lastName,
+    name: `${s.firstName} ${s.lastName}`.trim(),
+    personnummer: pnr ? formatPersonnummer(pnr) : '',
+    age: pnr ? ageFromPersonnummer(pnr) : null,
+    email: s.email,
+    phone: s.phone,
+    address: s.address,
+    postalCode: s.postalCode,
+    city: s.city,
+    behorighet: s.behorighet,
+    status: s.status,
+    filialId: s.filialId,
+    permitValidUntil: iso(s.permitValidUntil),
+    synintygDate: iso(s.synintygDate),
+    risk1DoneAt: iso(s.risk1DoneAt),
+    risk2DoneAt: iso(s.risk2DoneAt),
+    gdprInformed: !!s.gdprInformedAt,
+    notes: s.notes,
+    createdAt: s.createdAt.toISOString(),
+  };
+}
+
+export type StudentDto = ReturnType<typeof toStudentDto>;
+
+/** Tolkar formulärdata från admin. Returnerar fel som text eller data att spara. */
+export function parseStudentInput(
+  body: Record<string, unknown>,
+  { partial }: { partial: boolean },
+): { error: string } | { data: Prisma.StudentUncheckedUpdateInput; pnr?: string } {
+  const data: Prisma.StudentUncheckedUpdateInput = {};
+  for (const f of TEXT_FIELDS) {
+    if (body[f] !== undefined) data[f] = String(body[f] ?? '').trim();
+  }
+  for (const f of DATE_FIELDS) {
+    if (body[f] === undefined) continue;
+    const v = String(body[f] ?? '');
+    if (v && isNaN(Date.parse(v))) return { error: 'Ogiltigt datum' };
+    data[f] = v ? new Date(v) : null;
+  }
+  if (body.status !== undefined) data.status = body.status === 'archived' ? 'archived' : 'active';
+  if (body.filialId !== undefined) data.filialId = body.filialId ? Number(body.filialId) : null;
+  if (body.gdprInformed !== undefined) data.gdprInformedAt = body.gdprInformed ? new Date() : null;
+
+  // Importerade elever kan sakna efternamn, så det krävs bara när en ny elev skapas.
+  if ((!partial || data.firstName !== undefined) && !data.firstName) return { error: 'Förnamn krävs' };
+  if (!partial && !data.lastName) return { error: 'För- och efternamn krävs' };
+
+  let pnr: string | undefined;
+  if (!partial || body.personnummer !== undefined) {
+    const n = normalizePersonnummer(String(body.personnummer ?? ''));
+    if (!n) return { error: 'Ogiltigt personnummer (ÅÅÅÅMMDD-XXXX)' };
+    pnr = n;
+    data.personnummerHash = hashPersonnummer(n);
+    data.personnummerEnc = encryptPersonnummer(n);
+  }
+  return { data, pnr };
+}
 
 export type CourseKind = 'risk1' | 'risk2' | 'kombo' | 'other';
 

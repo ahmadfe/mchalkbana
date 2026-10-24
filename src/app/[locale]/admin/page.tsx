@@ -1197,7 +1197,11 @@ export default function AdminPage() {
       <main className="flex-1 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+              <a href={`/${locale}/admin/elever`} className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700">Elevregister →</a>
+              <a href={`/${locale}/admin/filialer`} className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-800 text-sm font-semibold hover:bg-gray-300">Filialer</a>
+            </div>
             {saved && (
               <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-medium">
                 <CheckCircle2 className="w-4 h-4" />
