@@ -318,7 +318,10 @@ export default function AdminPage() {
   const [editSessionSaving, setEditSessionSaving] = useState(false);
 
   // Instructors
-  const [instructors, setInstructors] = useState<{ id: number; name: string; email: string }[]>([]);
+  const [instructors, setInstructors] = useState<{ id: number; name: string; email: string; phone?: string | null; _count?: { assignedSessions: number } }[]>([]);
+  const [editInstr, setEditInstr] = useState<{ id: number; name: string; email: string; phone: string } | null>(null);
+  const [instrBusy, setInstrBusy] = useState<number | null>(null);
+  const [instrError, setInstrError] = useState('');
   const [instructorInvites, setInstructorInvites] = useState<{ id: number; token: string; email: string; name: string | null; usedAt: string | null; expiresAt: string }[]>([]);
   const [assigningInstructorSession, setAssigningInstructorSession] = useState<number | null>(null);
   const [assignInstructorIds, setAssignInstructorIds] = useState<number[]>([]);
@@ -327,7 +330,7 @@ export default function AdminPage() {
   const [newInviteName, setNewInviteName] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [createdInstructor, setCreatedInstructor] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [createdInstructor, setCreatedInstructor] = useState<{ name: string; email: string; password: string; reset?: boolean } | null>(null);
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -2906,7 +2909,7 @@ export default function AdminPage() {
                 {createdInstructor && (
                   <div className="mt-5 bg-green-50 border border-green-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-bold text-green-800">✓ Kontot skapat — spara lösenordet nu!</p>
+                      <p className="text-sm font-bold text-green-800">{createdInstructor.reset ? '✓ Nytt lösenord skapat — spara det nu!' : '✓ Kontot skapat — spara lösenordet nu!'}</p>
                       <button onClick={() => setCreatedInstructor(null)} className="text-green-600 hover:text-green-800 text-xs">Stäng</button>
                     </div>
                     <div className="space-y-2 text-sm">
@@ -2941,15 +2944,101 @@ export default function AdminPage() {
                   <p className="text-sm text-gray-400 text-center py-4">Inga instruktörer ännu.</p>
                 ) : (
                   <div className="space-y-2">
-                    {instructors.map((instr) => (
-                      <div key={instr.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{instr.name}</p>
-                          <p className="text-xs text-gray-500">{instr.email}</p>
+                    {instrError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{instrError}</p>}
+                    {instructors.map((instr) => {
+                      const busy = instrBusy === instr.id;
+                      const upcoming = instr._count?.assignedSessions ?? 0;
+
+                      if (editInstr?.id === instr.id) {
+                        return (
+                          <form
+                            key={instr.id}
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              setInstrBusy(instr.id);
+                              setInstrError('');
+                              const res = await fetch(`/api/admin/instructors/${instr.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name: editInstr.name, email: editInstr.email, phone: editInstr.phone }),
+                              });
+                              const data = await res.json();
+                              setInstrBusy(null);
+                              if (!res.ok) { setInstrError(data.error || 'Kunde inte spara'); return; }
+                              setInstructors((prev) => prev.map((i) => i.id === instr.id ? { ...i, ...data.instructor } : i));
+                              setEditInstr(null);
+                            }}
+                            className="p-3 bg-gray-50 rounded-xl border border-swedish-blue/30 space-y-2"
+                          >
+                            <div className="grid sm:grid-cols-3 gap-2">
+                              <input required placeholder="Namn" value={editInstr.name} onChange={(e) => setEditInstr({ ...editInstr, name: e.target.value })} className="input-field text-sm" />
+                              <input required type="email" placeholder="E-post" value={editInstr.email} onChange={(e) => setEditInstr({ ...editInstr, email: e.target.value })} className="input-field text-sm" />
+                              <input type="tel" placeholder="Telefon" value={editInstr.phone} onChange={(e) => setEditInstr({ ...editInstr, phone: e.target.value })} className="input-field text-sm" />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                              <button type="button" onClick={() => { setEditInstr(null); setInstrError(''); }} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-white">Avbryt</button>
+                              <button type="submit" disabled={busy} className="btn-primary px-4 py-2 text-sm disabled:opacity-60">{busy ? 'Sparar...' : 'Spara'}</button>
+                            </div>
+                          </form>
+                        );
+                      }
+
+                      return (
+                        <div key={instr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{instr.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{[instr.email, instr.phone].filter(Boolean).join(' · ')}</p>
+                            <p className="text-xs text-gray-400">{upcoming > 0 ? `${upcoming} kommande pass` : 'Inga kommande pass'}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 shrink-0">
+                            <button
+                              onClick={() => { setInstrError(''); setEditInstr({ id: instr.id, name: instr.name, email: instr.email, phone: instr.phone ?? '' }); }}
+                              disabled={busy}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-lg hover:bg-gray-100"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Redigera
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Skapa ett nytt lösenord för ${instr.name}?\n\nDet gamla slutar fungera och det nya skickas till ${instr.email}.`)) return;
+                                setInstrBusy(instr.id);
+                                setInstrError('');
+                                const res = await fetch(`/api/admin/instructors/${instr.id}`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ resetPassword: true }),
+                                });
+                                const data = await res.json();
+                                setInstrBusy(null);
+                                if (!res.ok) { setInstrError(data.error || 'Kunde inte återställa lösenordet'); return; }
+                                setCreatedInstructor({ name: instr.name, email: instr.email, password: data.password, reset: true });
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              disabled={busy}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-lg hover:bg-gray-100"
+                            >
+                              <KeyRound className="w-3.5 h-3.5" /> Nytt lösenord
+                            </button>
+                            <button
+                              onClick={async () => {
+                                const warn = upcoming > 0 ? `\n\n${instr.name} är tilldelad ${upcoming} kommande pass – de blir utan lärare.` : '';
+                                if (!confirm(`Ta bort instruktören ${instr.name}?${warn}\n\nKontot raderas och kan inte loggas in med längre. Gjorda incheckningar och riskregistret finns kvar.`)) return;
+                                setInstrBusy(instr.id);
+                                setInstrError('');
+                                const res = await fetch(`/api/admin/instructors/${instr.id}`, { method: 'DELETE' });
+                                setInstrBusy(null);
+                                if (!res.ok) { setInstrError((await res.json()).error || 'Kunde inte ta bort'); return; }
+                                setInstructors((prev) => prev.filter((i) => i.id !== instr.id));
+                              }}
+                              disabled={busy}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-200 text-red-600 bg-white rounded-lg hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Ta bort
+                            </button>
+                          </div>
                         </div>
-                        <span className="text-xs bg-swedish-blue/10 text-swedish-blue font-medium px-2.5 py-1 rounded-full">Instruktör</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

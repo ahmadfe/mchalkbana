@@ -9,7 +9,10 @@ export async function GET(request: Request) {
 
   const instructors = await prisma.user.findMany({
     where: { role: 'instructor' },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: {
+      id: true, name: true, email: true, phone: true, createdAt: true,
+      _count: { select: { assignedSessions: { where: { startTime: { gte: new Date() } } } } },
+    },
     orderBy: { name: 'asc' },
   });
   return NextResponse.json({ instructors });
