@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CheckCircle2, XCircle, Send, UserPlus, Clock, X, Phone } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Send, UserPlus, Clock, X, Phone, ContactRound } from 'lucide-react';
+import CheckInModal from '@/components/CheckInModal';
 import clsx from 'clsx';
 
 interface Student {
@@ -18,8 +19,12 @@ interface Student {
   result: string | null;
   resultNote: string | null;
   bookedByRole: string;
+  checkedInAt?: string | null;
+  idType?: string | null;
   user: { name: string; phone: string | null; email: string } | null;
 }
+
+const ID_LABEL: Record<string, string> = { korkort: 'körkort', pass: 'pass', nationellt_id: 'nationellt id-kort', id_kort: 'id-kort' };
 
 interface SessionDetail {
   id: number;
@@ -45,19 +50,21 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [expandedNote, setExpandedNote] = useState<number | null>(null);
+  const [checkInFor, setCheckInFor] = useState<Student | null>(null);
+
+  const reload = useCallback(() =>
+    fetch(`/api/instructor/sessions/${id}`)
+      .then((r) => r.json())
+      .then((d) => { setSession(d.session || null); setLoading(false); })
+      .catch(() => setLoading(false)), [id]);
 
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'instructor')) {
       router.push(`/${locale}/login`);
       return;
     }
-    if (user?.role === 'instructor') {
-      fetch(`/api/instructor/sessions/${id}`)
-        .then((r) => r.json())
-        .then((d) => { setSession(d.session || null); setLoading(false); })
-        .catch(() => setLoading(false));
-    }
-  }, [user, authLoading, id, locale, router]);
+    if (user?.role === 'instructor') reload();
+  }, [user, authLoading, locale, router, reload]);
 
   const setResult = async (bookingId: number, result: string | null, note?: string) => {
     setSaving(bookingId);
@@ -229,6 +236,22 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
                     </div>
                   </div>
 
+                  {/* Check-in: legitimation must be verified before the course */}
+                  {student.checkedInAt ? (
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-800 text-sm text-green-400">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      Incheckad {new Date(student.checkedInAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}
+                      {student.idType && ` med ${ID_LABEL[student.idType] ?? student.idType}`}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCheckInFor(student)}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 border-t border-gray-800 font-bold text-sm text-amber-300 hover:bg-amber-950/30 active:bg-amber-950/50 transition"
+                    >
+                      <ContactRound className="w-4 h-4" /> Checka in – kontrollera legitimation
+                    </button>
+                  )}
+
                   {/* Pass/Fail buttons — full width, large */}
                   <div className="grid grid-cols-2 border-t border-gray-800">
                     <button
@@ -375,6 +398,21 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
           </button>
         </div>
       </div>
+
+      {checkInFor && (
+        <CheckInModal
+          person={{
+            bookingId: checkInFor.id,
+            name: checkInFor.guestName || checkInFor.user?.name || '–',
+            email: checkInFor.guestEmail || checkInFor.user?.email,
+            phone: checkInFor.guestPhone || checkInFor.user?.phone,
+            personnummer: checkInFor.personnummer,
+            behorighet: session.course.behorighet,
+          }}
+          onClose={() => setCheckInFor(null)}
+          onDone={() => { setCheckInFor(null); reload(); }}
+        />
+      )}
     </div>
   );
 }

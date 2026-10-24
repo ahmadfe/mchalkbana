@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl';
 import clsx from 'clsx';
 import AdminShell from '@/components/admin/AdminShell';
 import KindBadge from '@/components/admin/KindBadge';
+import CheckInModal from '@/components/CheckInModal';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
 
 interface Kurs {
@@ -208,7 +209,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
                 </span>
               </div>
               <div className="divide-y divide-white/5 -mx-5 sm:-mx-6">
-                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} />)}
+                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} />)}
                 {shown.length === 0 && <p className="px-6 py-4 text-sm text-white/50">Alla har betalat.</p>}
               </div>
             </>
@@ -311,7 +312,14 @@ const ATTENDANCE_OPTIONS = [
   { value: 'late_cancel', label: 'Sen avanmälan' },
 ];
 
-function ParticipantRow({ p, locale, onChange }: { p: Participant; locale: string; onChange: () => Promise<void> }) {
+function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn }: {
+  p: Participant;
+  locale: string;
+  onChange: () => Promise<void>;
+  behorighet: string;
+  canCheckIn: boolean;
+}) {
+  const [checkingIn, setCheckingIn] = useState(false);
   const [paying, setPaying] = useState(false);
   const [amount, setAmount] = useState(String(p.price));
   const [provider, setProvider] = useState('cash');
@@ -389,6 +397,18 @@ function ParticipantRow({ p, locale, onChange }: { p: Participant; locale: strin
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mt-3">
+        {canCheckIn && !p.checkedInAt && (
+          <Button className="!h-10" onClick={() => setCheckingIn(true)} disabled={busy}>Checka in</Button>
+        )}
+        {p.checkedInAt && (
+          <Button
+            className="!h-10"
+            disabled={busy}
+            onClick={() => confirm(`Ångra incheckningen av ${p.name}? Raden i riskregistret tas bort.`) && call(`/api/checkin/${p.bookingId}`, 'DELETE', {})}
+          >
+            Ångra incheckning
+          </Button>
+        )}
         <Select
           value={p.attendance}
           disabled={busy}
@@ -399,6 +419,14 @@ function ParticipantRow({ p, locale, onChange }: { p: Participant; locale: strin
         </Select>
         {p.result === 'passed' && <Badge tone="green">Godkänd av lärare</Badge>}
       </div>
+
+      {checkingIn && (
+        <CheckInModal
+          person={{ bookingId: p.bookingId, name: p.name, email: p.email, phone: p.phone, personnummer: p.personnummer, behorighet }}
+          onClose={() => setCheckingIn(false)}
+          onDone={async () => { setCheckingIn(false); await onChange(); }}
+        />
+      )}
     </div>
   );
 }

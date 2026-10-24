@@ -119,7 +119,7 @@ export default function StudentForm({
             <Field label="Riskutbildning del 2 gjord"><Input {...text('risk2DoneAt')} type="date" /></Field>
           </div>
           <p className="text-sm text-white/50 mt-3 leading-relaxed">
-            Lämna tomt om eleven inte gjort dem än – datumen fylls i automatiskt när eleven checkas in och godkänns på en kurs.
+            Lämna tomt om eleven inte gjort dem än – datumen fylls i automatiskt när eleven checkas in på en riskutbildning.
           </p>
         </Card>
 
