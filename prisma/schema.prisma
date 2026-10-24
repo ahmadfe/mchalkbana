@@ -178,6 +178,19 @@ model RiskRegisterEntry {
   @@index([sessionDate])
 }
 
+// Engångskod via e-post innan register med personnummer får laddas ner
+model ExportCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model ExportLog {
   id        Int      @id @default(autoincrement())
   userId    Int

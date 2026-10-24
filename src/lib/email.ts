@@ -1248,3 +1248,52 @@ export async function sendSlotChangeLinkEmail(data: SlotChangeLinkEmailData): Pr
     console.error('[Email] Failed to send slot-change link email:', err);
   }
 }
+
+// ── Tillsyn export code ────────────────────────────────────────────────────
+
+/** Skickar en engångskod för nedladdning av register med personnummer. Returnerar false om mejlet inte kunde skickas. */
+export async function sendExportCodeEmail(data: { email: string; name: string; code: string }): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log('[Email] No RESEND_API_KEY — export code for', data.email, 'is', data.code);
+    return process.env.NODE_ENV !== 'production';
+  }
+  const html = `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${data.name}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Använd koden nedan för att ladda ner register till Transportstyrelsens tillsyn. Koden gäller i 10 minuter.</p>
+      <p style="font-family:monospace;font-size:34px;font-weight:700;letter-spacing:8px;text-align:center;color:#111827;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin:0 0 24px;">${data.code}</p>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Har du inte bett om koden? Logga in och byt lösenord – någon kan ha tillgång till ditt konto.</p>
+    </div>
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#4b5563;font-size:11px;margin:0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+        to: [data.email],
+        subject: `Din kod för nedladdning: ${data.code}`,
+        html,
+      }),
+    });
+    if (!res.ok) { console.error('[Email] Resend error (export code):', await res.text()); return false; }
+    return true;
+  } catch (err) {
+    console.error('[Email] Failed to send export code email:', err);
+    return false;
+  }
+}

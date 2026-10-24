@@ -19,6 +19,7 @@ interface KursRow {
   filialName: string;
   seatLimit: number;
   booked: number;
+  unpaid: number;
   status: string;
   visibility: string;
   reportToTS: boolean;
@@ -124,6 +125,9 @@ export default function KurserPage() {
                           {dayLabel(k.startTime)} {hm(k.startTime)}–{hm(k.endTime)} · {k.location}
                           {k.instructors.length > 0 && ` · ${k.instructors.join(', ')}`}
                         </p>
+                        {k.unpaid > 0 && k.status !== 'canceled' && (
+                          <p className="text-sm text-red-400 mt-0.5">{k.unpaid} inte betald{k.unpaid === 1 ? '' : 'a'}</p>
+                        )}
                       </div>
                       <span className={clsx(
                         'px-2.5 py-1 rounded-full text-xs font-bold shrink-0',
