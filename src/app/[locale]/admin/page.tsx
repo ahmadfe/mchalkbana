@@ -3835,7 +3835,7 @@ export default function AdminPage() {
                 <input type="number" className="input-field" placeholder="1500" value={newCourse.price} onChange={(e) => setNewCourse({ ...newCourse, price: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mötesplats</label>
                 <input type="text" className="input-field" placeholder="Uppsala Halkbana, Industrigatan 12" value={newCourse.location} onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })} />
               </div>
               <div>
@@ -3917,7 +3917,7 @@ export default function AdminPage() {
                 <input type="number" className="input-field" value={editCourseForm.price} onChange={(e) => setEditCourseForm({ ...editCourseForm, price: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Plats / Adress</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mötesplats</label>
                 <input type="text" className="input-field" value={editCourseForm.location} onChange={(e) => setEditCourseForm({ ...editCourseForm, location: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
