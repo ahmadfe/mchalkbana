@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, QrCode } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, QrCode, Calendar, MapPin } from 'lucide-react';
 import clsx from 'clsx';
 import { QRCodeSVG } from 'qrcode.react';
 import { fbq } from '@/components/MetaPixel';
@@ -361,14 +361,35 @@ function CheckoutContent() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
 
-      <main className="flex-1 py-10">
+      {/* pb: plats för den fasta betalknappen på mobilen */}
+      <main className="flex-1 pt-5 pb-36 lg:py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href={`/${locale}/courses`} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-8">
+          <Link href={`/${locale}/courses`} className="inline-flex items-center gap-2 h-10 text-sm text-gray-500 hover:text-gray-800 mb-2 lg:mb-6">
             <ArrowLeft className="w-4 h-4" />
             Tillbaka till kurser
           </Link>
 
-          <h1 className="text-2xl font-bold text-gray-900 mb-8">Slutför bokning</h1>
+          <h1 className="font-headline text-2xl font-extrabold text-gray-900 mb-5 lg:mb-8">Slutför bokning</h1>
+
+          {/* Mobil: vad man bokar, högst upp */}
+          <div className="lg:hidden bg-white rounded-2xl border border-gray-100 p-4 mb-5">
+            <p className="font-semibold text-gray-900">{title}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{courseSubtitle}</p>
+            <div className="mt-3 space-y-1.5 text-sm text-gray-600">
+              <p className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400 shrink-0" /><span className="capitalize">{dateStr}</span></p>
+              <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400 shrink-0" />{timeStr}</p>
+              <p className="flex items-start gap-2"><MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />{session.meetingPlace || course.location || session.school?.address || session.school?.name}</p>
+            </div>
+            <div className="flex items-baseline justify-between border-t border-gray-100 mt-3 pt-3">
+              <span className="text-sm text-gray-500">Totalt inkl. moms</span>
+              <span className="text-right">
+                {session.discountPrice != null && session.discountPrice < course.price && (
+                  <span className="text-sm line-through text-gray-400 mr-2">{course.price.toLocaleString('sv-SE')} kr</span>
+                )}
+                <span className="font-bold text-lg text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
+              </span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* Left: form */}
@@ -387,6 +408,7 @@ function CheckoutContent() {
                     type="text"
                     value={guest.name}
                     onChange={(e) => setGuest({ ...guest, name: e.target.value })}
+                    autoComplete="name"
                     placeholder="Anna Svensson"
                     className={clsx('input-field', guestErrors.name && 'border-red-400')}
                   />
@@ -399,7 +421,9 @@ function CheckoutContent() {
                     type="text"
                     value={guest.personnummer}
                     onChange={(e) => setGuest({ ...guest, personnummer: e.target.value })}
-                    placeholder="YYYYMMDD-XXXX"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="ÅÅÅÅMMDD-XXXX"
                     className={clsx('input-field font-mono', guestErrors.personnummer && 'border-red-400')}
                   />
                   {guestErrors.personnummer && <p className="text-xs text-red-600 mt-1">{guestErrors.personnummer}</p>}
@@ -411,6 +435,7 @@ function CheckoutContent() {
                     type="tel"
                     value={guest.phone}
                     onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
+                    autoComplete="tel"
                     placeholder="070-123 45 67"
                     className="input-field"
                   />
@@ -424,6 +449,8 @@ function CheckoutContent() {
                     type="email"
                     value={guest.email}
                     onChange={(e) => setGuest({ ...guest, email: e.target.value })}
+                    autoComplete="email"
+                    inputMode="email"
                     placeholder="anna@exempel.se"
                     className={clsx('input-field', guestErrors.email && 'border-red-400')}
                   />
@@ -449,6 +476,7 @@ function CheckoutContent() {
                     type="tel"
                     value={guest.swishPhone}
                     onChange={(e) => setGuest({ ...guest, swishPhone: e.target.value })}
+                    autoComplete="tel"
                     placeholder="070-123 45 67"
                     className={clsx('input-field', guestErrors.swishPhone && 'border-red-400')}
                   />
@@ -470,10 +498,12 @@ function CheckoutContent() {
                 <p>Betalningen sker säkert via Swish. Vi lagrar aldrig bankuppgifter.</p>
               </div>
 
+              {/* Mobil: betalknappen ligger fast längst ner */}
+              <div className="fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:static lg:z-auto lg:bg-transparent lg:backdrop-blur-none lg:border-0 lg:p-0">
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-swedish-yellow text-gray-900 font-bold text-lg py-4 rounded-xl hover:bg-yellow-300 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full bg-swedish-yellow text-gray-900 font-bold text-lg py-4 rounded-2xl lg:rounded-xl hover:bg-yellow-300 transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -482,10 +512,11 @@ function CheckoutContent() {
                 )}
                 {submitting ? 'Skickar...' : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
               </button>
+              </div>
             </form>
 
-            {/* Right: summary */}
-            <div className="lg:col-span-2">
+            {/* Right: summary – på mobilen visas den korta sammanfattningen överst i stället */}
+            <div className="hidden lg:block lg:col-span-2">
               <div className="bg-white rounded-2xl border border-gray-100 p-5 sticky top-24">
                 <h2 className="font-semibold text-gray-900 mb-4">Bokningssammanfattning</h2>
 

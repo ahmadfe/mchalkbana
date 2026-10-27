@@ -34,9 +34,9 @@ export default function Footer() {
   const base = `/${locale}`;
 
   return (
-    <footer className="bg-gray-900 pt-14 pb-8">
+    <footer className="bg-gray-900 pt-10 md:pt-14 pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto px-6 sm:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10 mb-8 md:mb-10">
 
           {/* Brand */}
           <div className="md:col-span-1">
@@ -44,21 +44,21 @@ export default function Footer() {
               <Image src="/logo.png" alt="Uppsala Halkbana" width={44} height={44} className="rounded-xl object-contain" />
               <span className="font-headline font-bold text-white text-sm leading-tight">Uppsala<br />Halkbana</span>
             </div>
-            <p className="text-sm text-gray-400 leading-relaxed mb-5">
+            <p className="hidden md:block text-sm text-gray-400 leading-relaxed mb-5">
               Professionell riskutbildning för bil och motorcykel i Uppsala. Godkänd av Transportstyrelsen.
             </p>
             <div className="space-y-2 text-sm text-gray-400">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-swedish-blue shrink-0" />
-                <span>Norrlövsta 147, 747 91 Alunda</span>
+                <a href="https://www.google.com/maps/search/?api=1&query=Norrl%C3%B6vsta%20147%2C%20747%2091%20Alunda" target="_blank" rel="noopener noreferrer" className="hover:text-white">Norrlövsta 147, 747 91 Alunda</a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-swedish-blue shrink-0" />
-                <span>info@uppsalahalkbana.se</span>
+                <a href="mailto:info@uppsalahalkbana.se" className="hover:text-white">info@uppsalahalkbana.se</a>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-swedish-blue shrink-0" />
-                <span>07 07 66 66 61</span>
+                <a href="tel:+46707666661" className="hover:text-white">07 07 66 66 61</a>
               </div>
             </div>
 
@@ -97,8 +97,18 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Mobil: bara de viktigaste länkarna */}
+          <nav className="md:hidden flex flex-wrap gap-2">
+            {[
+              [`${base}/courses`, 'Kurser'], [`${base}/about`, 'Om oss'], [`${base}/contact`, 'Kontakt'],
+              [`${base}/faq`, 'FAQ'], [`${base}/login`, 'För trafikskolor'],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} className="h-10 px-4 rounded-full bg-gray-800 text-sm text-gray-300 hover:text-white inline-flex items-center">{label}</Link>
+            ))}
+          </nav>
+
           {/* Quick links */}
-          <div>
+          <div className="hidden md:block">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider mb-4">Snabblänkar</h3>
             <ul className="space-y-2.5 text-sm">
               <li><Link href={`${base}/courses`} className="text-gray-400 hover:text-swedish-blue transition-colors">Kurser</Link></li>
@@ -109,7 +119,7 @@ export default function Footer() {
           </div>
 
           {/* External */}
-          <div>
+          <div className="hidden md:block">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider mb-4">Officiella länkar</h3>
             <ul className="space-y-2.5 text-sm">
               {[
@@ -129,7 +139,7 @@ export default function Footer() {
           </div>
 
           {/* Legal */}
-          <div>
+          <div className="hidden md:block">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider mb-4">Juridiskt</h3>
             <ul className="space-y-2.5 text-sm">
               <li><Link href="#" className="text-gray-400 hover:text-swedish-blue transition-colors">Integritetspolicy</Link></li>
