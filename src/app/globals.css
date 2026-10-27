@@ -176,3 +176,17 @@ html:has(.admin-dark) .status-bar-shim {
 @media (prefers-reduced-motion: reduce) {
   .sheet { animation: none; }
 }
+
+/* ── Utskrift av faktura: bara själva fakturan ──────────────────────── */
+@media print {
+  body * { visibility: hidden; }
+  .invoice-paper, .invoice-paper * { visibility: visible; }
+  .invoice-paper {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border-radius: 0;
+    padding: 0 !important;
+  }
+  .status-bar-shim { display: none; }
+}

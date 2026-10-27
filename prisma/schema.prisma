@@ -23,6 +23,10 @@ model User {
   assignedSessions Session[] @relation("AssignedSchoolSessions")
   schoolCoursePrices SchoolCoursePrice[]
   schoolAllocations  SessionSchoolAllocation[] @relation("SchoolAllocations")
+  invoices           Invoice[] @relation("SchoolInvoices")
+  // Faktureringsuppgifter för trafikskolor
+  orgNr              String    @default("")
+  billingAddress     String    @default("")
   createdAt        DateTime  @default(now())
 }
 
@@ -165,8 +169,11 @@ model Booking {
   checkInInstructorId   Int?
   checkInInstructorName String? // lärare som checkade in (kursens tilldelade lärare)
   payment              Payment?
+  invoiceId            Int?
+  invoice              Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([studentId])
+  @@index([invoiceId])
 }
 
 // Kopia av varje incheckning på riskutbildning. Sparas i fem år, även om eleven raderas.
@@ -276,4 +283,46 @@ model InfoCard {
   sortOrder          Int      @default(0)
   visible            Boolean  @default(true)
   createdAt          DateTime @default(now())
+}
+
+/// Faktura till en trafikskola. Säljare och köpare sparas som de såg ut när fakturan skapades.
+model Invoice {
+  id           Int       @id @default(autoincrement())
+  number       Int       @unique
+  schoolUserId Int
+  schoolUser   User      @relation("SchoolInvoices", fields: [schoolUserId], references: [id])
+  period       String    // "2026-11" – kursernas månad
+  status       String    @default("created") // created | sent | paid | credited
+  issueDate    DateTime
+  dueDate      DateTime
+  total        Int       // kr inkl. moms
+  vat          Int       // kr
+  buyerName    String
+  buyerEmail   String
+  buyerOrgNr   String    @default("")
+  buyerAddress String    @default("")
+  seller       String    // JSON med företagsuppgifterna
+  sentAt       DateTime?
+  paidAt       DateTime?
+  creditedAt   DateTime?
+  creditOfId   Int?      // kreditfaktura: vilken faktura den krediterar
+  lines        InvoiceLine[]
+  bookings     Booking[]
+  createdAt    DateTime  @default(now())
+
+  @@index([schoolUserId])
+  @@index([status])
+}
+
+model InvoiceLine {
+  id          Int       @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sessionId   Int?
+  date        DateTime?
+  description String
+  quantity    Int
+  unitPrice   Int       // kr inkl. moms
+  amount      Int       // kr inkl. moms
+  students    String    @default("") // namn, en per rad
 }

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import {
   BookOpen, Calendar, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
-  School, ShieldCheck, Tag, UserCircle2, UserCog, Users, X, type LucideIcon,
+  Receipt, School, ShieldCheck, Tag, UserCircle2, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -23,6 +23,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
       { tab: 'overview', label: 'Översikt', icon: Home },
       { href: '/admin/kurser', label: 'Kurser', icon: BookOpen },
       { href: '/admin/elever', label: 'Elever', icon: Users },
+      { href: '/admin/fakturor', label: 'Fakturor', icon: Receipt },
       { href: '/admin/tillsyn', label: 'Tillsyn', icon: ShieldCheck },
       { href: '/admin/filialer', label: 'Filialer', icon: MapPin },
     ],
@@ -73,7 +74,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
     const Icon = item.icon;
     const cls = (active: boolean) => clsx(
       rail
-        ? 'flex flex-col items-center justify-center gap-0.5 w-[68px] py-1.5 rounded-xl text-[11px] leading-tight transition text-center'
+        ? 'flex flex-col items-center justify-center gap-0.5 w-[68px] py-1 rounded-xl text-[11px] leading-tight transition text-center'
         : 'flex items-center gap-3 h-10 px-3 rounded-xl text-[15px] transition w-full text-left',
       active ? 'bg-white/10 text-white font-semibold' : 'text-white/60 hover:text-white hover:bg-white/5',
     );
@@ -133,7 +134,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
     <aside className="admin-dark hidden md:flex xl:hidden fixed inset-y-0 left-0 z-30 w-[84px] flex-col items-center bg-[#161618] border-r border-white/5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <nav className="flex-1 w-full overflow-y-auto flex flex-col items-center">
         {SECTIONS.map((s, i) => (
-          <div key={i} className={clsx('flex flex-col items-center gap-0.5', i > 0 && 'mt-1.5 pt-1.5 border-t border-white/5')}>
+          <div key={i} className={clsx('flex flex-col items-center', i > 0 && 'mt-1.5 pt-1.5 border-t border-white/5')}>
             {s.items.map(item => renderItem(item, true))}
           </div>
         ))}
