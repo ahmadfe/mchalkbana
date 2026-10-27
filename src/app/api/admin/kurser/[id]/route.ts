@@ -59,6 +59,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       result: b.result,
       checkedInAt: b.checkedInAt?.toISOString() ?? null,
       checkedInBy: b.checkedInBy?.name ?? null,
+      checkInInstructor: b.checkInInstructorName,
       idType: b.idType,
     };
   });

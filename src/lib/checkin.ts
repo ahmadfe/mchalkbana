@@ -22,7 +22,30 @@ export async function canCheckIn(user: JWTPayload | null, sessionId: number): Pr
  * Checkar in en deltagare: sparar vilken legitimation som visades, markerar närvaro,
  * skriver en rad i riskregistret och fyller i elevens datum för riskutbildningen.
  */
-export async function checkIn(bookingId: number, user: JWTPayload, idType: string, personnummerInput?: string): Promise<Result> {
+/**
+ * "Incheckad av" är alltid kursens tilldelade lärare, oavsett vem som klickade.
+ * Utan lärare går det inte att checka in. Har kursen flera lärare används den som klickade
+ * om hen är en av dem, annars den admin valt.
+ */
+async function pickInstructor(sessionId: number, user: JWTPayload, chosenId?: number): Promise<{ id: number; name: string } | { error: string }> {
+  const instructors = await prisma.user.findMany({
+    where: { role: 'instructor', assignedSessions: { some: { id: sessionId } } },
+    select: { id: true, name: true },
+    orderBy: { name: 'asc' },
+  });
+  if (instructors.length === 0) return { error: 'Kursen har ingen lärare tilldelad – tilldela en lärare innan du checkar in' };
+  const self = instructors.find(i => i.id === user.userId);
+  if (self) return self;
+  if (chosenId) {
+    const chosen = instructors.find(i => i.id === chosenId);
+    if (!chosen) return { error: 'Den valda läraren är inte tilldelad kursen' };
+    return chosen;
+  }
+  if (instructors.length === 1) return instructors[0];
+  return { error: 'Välj vilken lärare som checkar in' };
+}
+
+export async function checkIn(bookingId: number, user: JWTPayload, idType: string, personnummerInput?: string, instructorId?: number): Promise<Result> {
   if (!ID_TYPES.includes(idType as IdType)) return { ok: false, status: 400, error: 'Välj legitimation' };
 
   const booking = await prisma.booking.findUnique({
@@ -34,6 +57,8 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
   if (booking.status === 'Canceled') return { ok: false, status: 400, error: 'Bokningen är avbokad' };
   if (booking.session.status === 'canceled') return { ok: false, status: 400, error: 'Kursen är inställd' };
   if (booking.checkedInAt) return { ok: false, status: 409, error: 'Deltagaren är redan incheckad' };
+  const instructor = await pickInstructor(booking.sessionId, user, instructorId);
+  if ('error' in instructor) return { ok: false, status: 400, error: instructor.error };
 
   // Personnumret kan rättas vid incheckningen om det saknas eller var fel
   const corrected = personnummerInput ? normalizePersonnummer(personnummerInput) : null;
@@ -59,6 +84,8 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
         checkedInAt: now,
         checkedInById: user.userId,
         idType,
+        checkInInstructorId: instructor.id,
+        checkInInstructorName: instructor.name,
         attendance: 'attended',
         ...(pnrChanged ? { personnummer: formatPersonnummer(pnr), studentId: null } : {}),
       },
@@ -77,6 +104,8 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
         checkedInAt: now,
         checkedInById: user.userId,
         checkedInByName: user.name,
+        instructorId: instructor.id,
+        instructorName: instructor.name,
       },
     })] : []),
   ]);
@@ -111,7 +140,7 @@ export async function undoCheckIn(bookingId: number, user: JWTPayload): Promise<
   await prisma.$transaction([
     prisma.booking.update({
       where: { id: bookingId },
-      data: { checkedInAt: null, checkedInById: null, idType: null, attendance: 'registered' },
+      data: { checkedInAt: null, checkedInById: null, idType: null, checkInInstructorId: null, checkInInstructorName: null, attendance: 'registered' },
     }),
     prisma.riskRegisterEntry.deleteMany({ where: { bookingId } }),
   ]);

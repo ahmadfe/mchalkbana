@@ -51,6 +51,7 @@ interface Participant {
   result: string | null;
   checkedInAt: string | null;
   checkedInBy: string | null;
+  checkInInstructor: string | null;
   idType: string | null;
 }
 
@@ -221,7 +222,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
                 </span>
               </div>
               <div className="divide-y divide-white/5 -mx-5 sm:-mx-6">
-                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} />)}
+                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} instructors={kurs.instructors} />)}
                 {shown.length === 0 && <p className="px-6 py-4 text-sm text-white/50">Alla har betalat.</p>}
               </div>
             </>
@@ -323,12 +324,13 @@ const ATTENDANCE_OPTIONS = [
   { value: 'late_cancel', label: 'Sen avanmälan' },
 ];
 
-function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn }: {
+function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructors }: {
   p: Participant;
   locale: string;
   onChange: () => Promise<void>;
   behorighet: string;
   canCheckIn: boolean;
+  instructors: { id: number; name: string }[];
 }) {
   const [checkingIn, setCheckingIn] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -404,7 +406,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn }: {
 
       <p className={clsx('text-sm mt-3', p.checkedInAt ? 'text-emerald-300/90' : 'text-amber-300/90')}>
         {p.checkedInAt
-          ? `Incheckad ${hm(p.checkedInAt)}${p.idType ? ` med ${ID_LABEL[p.idType] ?? p.idType}` : ''}${p.checkedInBy ? ` av ${p.checkedInBy}` : ''}`
+          ? `Incheckad ${hm(p.checkedInAt)}${p.idType ? ` med ${ID_LABEL[p.idType] ?? p.idType}` : ''}${p.checkInInstructor || p.checkedInBy ? ` av ${p.checkInInstructor || p.checkedInBy}` : ''}${p.checkInInstructor && p.checkedInBy && p.checkedInBy !== p.checkInInstructor ? ` · registrerad av ${p.checkedInBy}` : ''}`
           : 'Inte incheckad – legitimation och personnummer ska kontrolleras'}
       </p>
 
@@ -437,6 +439,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn }: {
           person={{ bookingId: p.bookingId, name: p.name, email: p.email, phone: p.phone, personnummer: p.personnummer, behorighet }}
           onClose={() => setCheckingIn(false)}
           onDone={async () => { setCheckingIn(false); await onChange(); }}
+          instructors={instructors}
         />
       )}
     </div>

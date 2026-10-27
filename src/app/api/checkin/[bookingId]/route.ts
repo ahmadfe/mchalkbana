@@ -7,8 +7,8 @@ import { checkIn, undoCheckIn } from '@/lib/checkin';
 export async function POST(request: Request, { params }: { params: { bookingId: string } }) {
   const user = await getAuthUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Ej inloggad' }, { status: 401 });
-  const { idType, personnummer } = await request.json();
-  const result = await checkIn(Number(params.bookingId), user, idType, personnummer || undefined);
+  const { idType, personnummer, instructorId } = await request.json();
+  const result = await checkIn(Number(params.bookingId), user, idType, personnummer || undefined, instructorId ? Number(instructorId) : undefined);
   return result.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: result.error }, { status: result.status });
 }
 

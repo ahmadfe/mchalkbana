@@ -161,6 +161,8 @@ model Booking {
   checkedInById        Int?
   checkedInBy          User?    @relation("BookingCheckedInBy", fields: [checkedInById], references: [id])
   idType               String?  // korkort | pass | nationellt_id | id_kort
+  checkInInstructorId   Int?
+  checkInInstructorName String? // lärare som checkade in (kursens tilldelade lärare)
   payment              Payment?
 
   @@index([studentId])
@@ -180,7 +182,9 @@ model RiskRegisterEntry {
   idType          String
   checkedInAt     DateTime
   checkedInById   Int?
-  checkedInByName String
+  checkedInByName String   // registrerad av (den som klickade)
+  instructorId    Int?
+  instructorName  String   @default("") // "Incheckad av" – kursens lärare
   createdAt       DateTime @default(now())
 
   @@index([sessionDate])

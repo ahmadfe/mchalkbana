@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     attendance: b.attendance,
     result: b.result,
     checkedInAt: b.checkedInAt?.toISOString() ?? null,
-    checkedInBy: b.checkedInBy?.name ?? null,
+    checkedInBy: b.checkInInstructorName ?? b.checkedInBy?.name ?? null, // kursens lärare
     idType: b.idType,
     payment: b.payment,
   }));

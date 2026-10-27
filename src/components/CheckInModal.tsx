@@ -22,11 +22,19 @@ const ID_OPTIONS = [
 ];
 
 /** Incheckning: kontrollera legitimation och personnummer innan deltagaren får vara med. Används av admin och lärare. */
-export default function CheckInModal({ person, onClose, onDone }: { person: CheckInPerson; onClose: () => void; onDone: () => void }) {
+export default function CheckInModal({ person, onClose, onDone, instructors }: {
+  person: CheckInPerson;
+  onClose: () => void;
+  onDone: () => void;
+  /** Kursens lärare – skickas från admin. Läraren som checkar in själv behöver inte välja. */
+  instructors?: { id: number; name: string }[];
+}) {
   const original = normalizePersonnummer(person.personnummer);
   const [editing, setEditing] = useState(!original);
   const [pnrInput, setPnrInput] = useState(original ? formatPersonnummer(original) : '');
   const [idType, setIdType] = useState('');
+  const [instructorId, setInstructorId] = useState(instructors?.[0]?.id ?? 0);
+  const noInstructor = !!instructors && instructors.length === 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,7 +53,11 @@ export default function CheckInModal({ person, onClose, onDone }: { person: Chec
     const res = await fetch(`/api/checkin/${person.bookingId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idType, ...(editing && pnr !== original ? { personnummer: pnrInput } : {}) }),
+      body: JSON.stringify({
+        idType,
+        ...(editing && pnr !== original ? { personnummer: pnrInput } : {}),
+        ...(instructors && instructorId ? { instructorId } : {}),
+      }),
     });
     setBusy(false);
     if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
@@ -122,13 +134,36 @@ export default function CheckInModal({ person, onClose, onDone }: { person: Chec
           ))}
         </div>
 
+        {instructors && (
+          noInstructor ? (
+            <p className="text-sm text-amber-300 bg-amber-500/10 rounded-xl px-4 py-3 mt-5">
+              Kursen har ingen lärare tilldelad. Tilldela en lärare (Redigera kursen) innan du checkar in – läraren står som &quot;Incheckad av&quot; i riskregistret.
+            </p>
+          ) : (
+            <div className="mt-5">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60 mb-2">Incheckad av (kursens lärare)</p>
+              {instructors.length === 1 ? (
+                <p className="h-12 px-4 rounded-2xl border border-white/10 flex items-center font-semibold">{instructors[0].name}</p>
+              ) : (
+                <select
+                  value={instructorId}
+                  onChange={e => setInstructorId(Number(e.target.value))}
+                  className="w-full h-12 px-4 rounded-2xl bg-[#26262a] border border-white/10 text-white font-semibold [color-scheme:dark] focus:outline-none focus:border-white/40"
+                >
+                  {instructors.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              )}
+            </div>
+          )
+        )}
+
         {error && <p className="text-sm text-red-400 mt-4">{error}</p>}
 
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} disabled={busy} className="h-12 px-6 rounded-full bg-white/10 font-bold hover:bg-white/15">Avbryt</button>
           <button
             onClick={confirm}
-            disabled={!idType || !pnr || busy}
+            disabled={!idType || !pnr || busy || noInstructor}
             className="flex-1 h-12 rounded-full bg-white text-black font-bold hover:bg-white/90 disabled:bg-white/10 disabled:text-white/30"
           >
             {busy ? 'Checkar in…' : 'Bekräfta'}

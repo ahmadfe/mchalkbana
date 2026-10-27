@@ -152,7 +152,7 @@ export default function TillsynPage() {
             </RegisterCard>
             <RegisterCard
               title="Riskutbildning"
-              text="Registret över deltagare de senaste fem åren: namn, personnummer, vilken legitimation som kontrollerades, när och av vem. Finns kvar även om eleven har raderats."
+              text="Registret över deltagare de senaste fem åren: namn, personnummer, vilken legitimation som kontrollerades, när och av vilken lärare. Finns kvar även om eleven har raderats."
             >
               <Button onClick={() => download({ kind: 'riskregister', format: 'csv' })} disabled={!!busy}>Riskregister (CSV)</Button>
               <Button onClick={() => download({ kind: 'riskregister', format: 'pdf' })} disabled={!!busy}>PDF</Button>

@@ -69,7 +69,7 @@ export async function verifyExportToken(token: string | null, userId: number): P
 
 // ── Översikt och brister ────────────────────────────────────────────────
 
-export interface Issue { kind: 'unreported' | 'missing_pnr' | 'no_checkin' | 'attendance'; sessionId: number; text: string; date: string }
+export interface Issue { kind: 'unreported' | 'missing_pnr' | 'no_checkin' | 'attendance' | 'no_instructor'; sessionId: number; text: string; date: string }
 
 const dateSv = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
 
@@ -107,6 +107,17 @@ export async function tillsynOverview(period: Period) {
       const noCheckin = s.bookings.filter(b => b.attendance === 'attended' && !b.checkedInAt).length;
       if (noCheckin) issues.push({ ...base, kind: 'no_checkin', text: `${label}: ${noCheckin} deltog utan incheckning (legitimation ej kontrollerad)` });
     }
+  }
+
+  // Incheckningar utan lärare ("Incheckad av" ska alltid vara kursens lärare)
+  const withoutInstructor = await prisma.riskRegisterEntry.groupBy({
+    by: ['sessionId', 'courseTitle', 'sessionDate'],
+    where: { sessionDate: { gte: period.from, lt: period.to }, instructorName: '' },
+    _count: true,
+  });
+  for (const g of withoutInstructor) {
+    if (!g.sessionId) continue;
+    issues.push({ kind: 'no_instructor', sessionId: g.sessionId, date: g.sessionDate.toISOString(), text: `${g.courseTitle} ${dateSv(g.sessionDate)}: ${g._count} incheckning${g._count === 1 ? '' : 'ar'} saknar lärare – tilldela en lärare till kursen` });
   }
 
   const riskEntries = await prisma.riskRegisterEntry.count({ where: { sessionDate: { gte: period.from, lt: period.to } } });
@@ -203,7 +214,7 @@ export async function riskregister(): Promise<Table> {
   const entries = await prisma.riskRegisterEntry.findMany({ where: { sessionDate: { gte: since } }, orderBy: { sessionDate: 'asc' } });
   return {
     title: 'Riskregister (senaste fem åren)',
-    columns: ['Kursdatum', 'Kurs', 'Typ', 'Namn', 'Personnummer', 'Legitimation', 'Incheckad', 'Incheckad av'],
+    columns: ['Kursdatum', 'Kurs', 'Typ', 'Namn', 'Personnummer', 'Legitimation', 'Incheckad', 'Incheckad av', 'Registrerad av'],
     rows: entries.map(e => [
       dateSv(e.sessionDate),
       e.courseTitle,
@@ -212,7 +223,8 @@ export async function riskregister(): Promise<Table> {
       decrypt(e.personnummerEnc),
       ID_LABEL[e.idType] ?? e.idType,
       `${dateSv(e.checkedInAt)} ${hm(e.checkedInAt)}`,
-      e.checkedInByName,
+      e.instructorName || e.checkedInByName, // kursens lärare
+      e.checkedInByName, // den som klickade
     ]),
   };
 }
