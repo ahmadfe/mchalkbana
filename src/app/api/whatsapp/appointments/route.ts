@@ -37,12 +37,12 @@ export async function GET(request: Request) {
       courseNameEn: b.session.course.titleEn,
       date,
       time,
-      location: b.session.course.location || b.session.school.name,
+      location: b.session.meetingPlace || b.session.course.location || b.session.school.name,
       status: b.status,
       statusEmoji,
       price: b.session.course.price,
-      lineSv: `${statusEmoji} Bokning #${b.id} — ${b.session.course.titleSv}\n   📅 ${date} · ${time}\n   📍 ${b.session.course.location || b.session.school.name}\n   Status: ${b.status}`,
-      lineEn: `${statusEmoji} Booking #${b.id} — ${b.session.course.titleEn}\n   📅 ${date} · ${time}\n   📍 ${b.session.course.location || b.session.school.name}\n   Status: ${b.status}`,
+      lineSv: `${statusEmoji} Bokning #${b.id} — ${b.session.course.titleSv}\n   📅 ${date} · ${time}\n   📍 ${b.session.meetingPlace || b.session.course.location || b.session.school.name}\n   Status: ${b.status}`,
+      lineEn: `${statusEmoji} Booking #${b.id} — ${b.session.course.titleEn}\n   📅 ${date} · ${time}\n   📍 ${b.session.meetingPlace || b.session.course.location || b.session.school.name}\n   Status: ${b.status}`,
     };
   });
 

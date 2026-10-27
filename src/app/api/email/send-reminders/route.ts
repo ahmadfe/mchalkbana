@@ -57,7 +57,7 @@ export async function POST(request: Request) {
           weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm',
         }),
         courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-        location: await meetingPlaceFor(booking, booking.session.course.location || booking.session.school.name),
+        location: await meetingPlaceFor(booking, booking.session.meetingPlace || booking.session.course.location || booking.session.school.name),
         customMessage: booking.session.receiptMessage || booking.session.course.receiptMessage || '',
       });
 

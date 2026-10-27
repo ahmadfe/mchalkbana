@@ -18,7 +18,7 @@ export async function GET(_: Request, { params }: { params: { bookingId: string 
 
   const session = booking.session;
   const courseName = `Uppsala Halkbana – ${session.course.titleSv} (${session.course.behorighet})`;
-  const location = await meetingPlaceFor(booking, session.course.location || session.school.name);
+  const location = await meetingPlaceFor(booking, session.meetingPlace || session.course.location || session.school.name);
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const now = new Date();

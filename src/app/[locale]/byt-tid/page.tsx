@@ -15,6 +15,7 @@ interface SessionInfo {
   startTime: string;
   endTime: string;
   seatsAvailable: number;
+  meetingPlace?: string;
   seatLimit: number;
   course: { titleSv: string; titleEn: string; behorighet: string; location: string; type: string };
   school: { name: string } | null;
@@ -224,10 +225,10 @@ function BytTidContent() {
                     <Clock className="w-4 h-4 text-gray-400 shrink-0" />
                     {formatTime(booking.session.startTime, booking.session.endTime)}
                   </span>
-                  {(booking.session.course.location || booking.session.school?.name) && (
+                  {(booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name) && (
                     <span className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
-                      {booking.session.course.location || booking.session.school?.name}
+                      {booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name}
                     </span>
                   )}
                 </div>
@@ -301,10 +302,10 @@ function BytTidContent() {
                                         <Clock className="w-3 h-3" />
                                         {formatTime(session.startTime, session.endTime)}
                                       </span>
-                                      {(session.course.location || session.school?.name) && (
+                                      {(session.meetingPlace || session.course.location || session.school?.name) && (
                                         <span className="flex items-center gap-1">
                                           <MapPin className="w-3 h-3" />
-                                          {session.course.location || session.school?.name}
+                                          {session.meetingPlace || session.course.location || session.school?.name}
                                         </span>
                                       )}
                                       <span className={clsx(

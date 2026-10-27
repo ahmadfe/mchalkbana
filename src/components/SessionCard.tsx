@@ -80,12 +80,12 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
             <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(course.location || session.school?.name || '')}`}
+              href={`https://maps.google.com/?q=${encodeURIComponent(session.meetingPlace || course.location || session.school?.name || '')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-swedish-blue hover:underline"
             >
-              {course.location || session.school?.name}
+              {session.meetingPlace || course.location || session.school?.name}
             </a>
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">

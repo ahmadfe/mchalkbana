@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const end = new Date(session.endTime);
   const courseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
   const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-  const location = session.course.location || session.school.name;
+  const location = session.meetingPlace || session.course.location || session.school.name;
   const customMessage = session.receiptMessage || session.course.receiptMessage || '';
 
   const sent: number[] = [];

@@ -86,15 +86,15 @@ function SessionRow({ session, locale }: { session: Session; locale: string }) {
                     {timeStr}
                   </span>
                 )}
-                {(course.location || session.school?.name) && (
+                {(session.meetingPlace || course.location || session.school?.name) && (
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(course.location || session.school?.name || '')}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(session.meetingPlace || course.location || session.school?.name || '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 min-w-0 text-swedish-blue hover:underline"
                   >
                     <MapPin className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{course.location || session.school?.name}</span>
+                    <span className="truncate">{session.meetingPlace || course.location || session.school?.name}</span>
                   </a>
                 )}
                 <span className={clsx(

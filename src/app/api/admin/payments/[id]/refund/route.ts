@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const rfCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
     const rfCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
     const rfCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const rfLocation = booking.session.course.location || booking.session.school?.name || '';
+    const rfLocation = booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '';
     if (recipientEmail) {
       sendCancellationEmail({
         recipientEmail,

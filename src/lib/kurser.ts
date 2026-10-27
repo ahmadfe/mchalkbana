@@ -45,6 +45,7 @@ export interface KursData {
   reportToTS?: boolean;
   internalNotes?: string;
   receiptMessage?: string;
+  meetingPlace?: string;
   discountPrice?: number | null;
   comboRisk1SessionId?: number | null;
   comboRisk2SessionId?: number | null;
@@ -88,6 +89,7 @@ export async function parseKursInput(
   if (!partial || has('reportToTS')) data.reportToTS = body.reportToTS !== false;
   if (has('internalNotes')) data.internalNotes = String(body.internalNotes ?? '');
   if (has('receiptMessage')) data.receiptMessage = String(body.receiptMessage ?? '');
+  if (has('meetingPlace')) data.meetingPlace = String(body.meetingPlace ?? '').trim();
   if (has('discountPrice')) {
     const v = body.discountPrice;
     if (v === '' || v === null) data.discountPrice = null;
@@ -113,6 +115,7 @@ export async function parseKursInput(
 export function courseEmailInfo(session: {
   startTime: Date;
   endTime: Date;
+  meetingPlace: string;
   course: { titleSv: string; behorighet: string; location: string };
   school: { name: string };
 }) {
@@ -122,7 +125,7 @@ export function courseEmailInfo(session: {
     courseName: `${session.course.titleSv} (${session.course.behorighet})`,
     courseDate: session.startTime.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...tz }),
     courseTime: `${hm(session.startTime)} – ${hm(session.endTime)}`,
-    location: session.course.location || session.school.name,
+    location: session.meetingPlace || session.course.location || session.school.name,
   };
 }
 

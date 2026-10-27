@@ -103,6 +103,7 @@ model Session {
   discountPrice        Int?
   visibility           String    @default("public")
   receiptMessage       String    @default("")
+  meetingPlace         String    @default("") // tom = kursslagets mötesplats
   status               String    @default("planned") // planned | completed | canceled
   reportToTS           Boolean   @default(true)
   reportedAt           DateTime?

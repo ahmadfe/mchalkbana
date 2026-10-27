@@ -1388,7 +1388,7 @@ export default function AdminPage() {
                         )}
                       </div>
                       <p className="text-sm text-white/50 mt-1 truncate">
-                        {startT}–{endT} · {s.course?.location || s.school?.name}
+                        {startT}–{endT} · {s.meetingPlace || s.course?.location || s.school?.name}
                         {s.course?.price ? ` · ${((s as any).discountPrice ?? s.course.price).toLocaleString('sv-SE')} kr` : ''}
                         {instructors.length > 0 && ` · ${instructors.map((u: any) => u.name).join(', ')}`}
                       </p>

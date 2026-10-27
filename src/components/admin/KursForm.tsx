@@ -18,6 +18,8 @@ export interface KursFormValues {
   reportToTS: boolean;
   internalNotes: string;
   receiptMessage: string;
+  /** Tom = kursslagets mötesplats */
+  meetingPlace: string;
   comboRisk1SessionId: string;
   comboRisk2SessionId: string;
   /** Skolreservationer – bara när kursen skapas */
@@ -28,7 +30,7 @@ export function emptyKurs(): KursFormValues {
   return {
     courseId: '', schoolId: '', date: new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }),
     start: '09:00', end: '13:00', instructorIds: [], seatLimit: '8', discountPrice: '',
-    selfBooking: true, reportToTS: true, internalNotes: '', receiptMessage: '',
+    selfBooking: true, reportToTS: true, internalNotes: '', receiptMessage: '', meetingPlace: '',
     comboRisk1SessionId: '', comboRisk2SessionId: '', reservations: [],
   };
 }
@@ -47,6 +49,7 @@ export function kursPayload(v: KursFormValues) {
     reportToTS: v.reportToTS,
     internalNotes: v.internalNotes,
     receiptMessage: v.receiptMessage,
+    meetingPlace: v.meetingPlace,
     comboRisk1SessionId: v.comboRisk1SessionId,
     comboRisk2SessionId: v.comboRisk2SessionId,
     reservations: v.reservations.map(reservationPayload),
@@ -63,6 +66,7 @@ export default function KursForm({ values, onChange, isNew }: { values: KursForm
   const [filialer, setFilialer] = useState<Filial[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [upcoming, setUpcoming] = useState<SessionOption[]>([]);
+  const [places, setPlaces] = useState<string[]>([]);
 
   useEffect(() => {
     Promise.all([
@@ -70,11 +74,13 @@ export default function KursForm({ values, onChange, isNew }: { values: KursForm
       fetch('/api/admin/filialer').then(r => r.json()),
       fetch('/api/admin/instructors').then(r => r.json()),
       fetch('/api/admin/kurser?view=upcoming').then(r => r.json()),
-    ]).then(([c, f, i, k]) => {
+      fetch('/api/admin/motesplatser').then(r => r.json()),
+    ]).then(([c, f, i, k, m]) => {
       setCourses(c.courses ?? []);
       setFilialer(f.filialer ?? []);
       setInstructors(i.instructors ?? []);
       setUpcoming(k.kurser ?? []);
+      setPlaces(m.motesplatser ?? []);
     });
   }, []);
 
@@ -116,6 +122,10 @@ export default function KursForm({ values, onChange, isNew }: { values: KursForm
                 {filialer.length === 0 && <option value="">Laddar…</option>}
                 {filialer.filter(f => f.active || String(f.id) === values.schoolId).map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </Select>
+            </Field>
+            <Field label="Mötesplats" hint={course?.location ? `Lämna tomt för kursslagets mötesplats (${course.location}).` : 'Där eleverna ska vara när kursen börjar. Visas på webbplatsen och i mejlen.'}>
+              <Input list="kurs-motesplatser" {...text('meetingPlace')} placeholder={course?.location || 'Välj eller skriv en adress'} />
+              <datalist id="kurs-motesplatser">{places.map(p => <option key={p} value={p} />)}</datalist>
             </Field>
             {isKombo && (
               <div className="grid sm:grid-cols-2 gap-4">

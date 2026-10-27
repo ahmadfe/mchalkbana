@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const start = new Date(booking.session.startTime);
     const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
     const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
-    const location = await meetingPlaceFor(booking, booking.session.course.location || booking.session.school.name);
+    const location = await meetingPlaceFor(booking, booking.session.meetingPlace || booking.session.course.location || booking.session.school.name);
 
     const msg =
       `⏰ *Påminnelse – imorgon!*\n` +

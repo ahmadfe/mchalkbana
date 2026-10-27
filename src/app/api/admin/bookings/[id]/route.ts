@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       const end = new Date(updated.session.endTime);
       const cancelCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
       const cancelCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-      const cancelLocation = await meetingPlaceFor(updated, updated.session.course.location || updated.session.school?.name || '');
+      const cancelLocation = await meetingPlaceFor(updated, updated.session.meetingPlace || updated.session.course.location || updated.session.school?.name || '');
       const cancelCourseName = `${updated.session.course.titleSv} (${updated.session.course.behorighet})`;
       if (recipientEmail) {
         await sendCancellationEmail({
@@ -117,7 +117,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const delCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
     const delCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
     const delCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const delLocation = await meetingPlaceFor(booking, booking.session.course.location || booking.session.school?.name || '');
+    const delLocation = await meetingPlaceFor(booking, booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '');
     if (recipientEmail) {
       sendCancellationEmail({
         recipientEmail,
@@ -196,7 +196,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const end = new Date(session.endTime);
   const courseDate = start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
   const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-  const location = session.course.location || session.school.name;
+  const location = session.meetingPlace || session.course.location || session.school.name;
 
   // Send confirmation email if email provided
   if (guestEmail) {

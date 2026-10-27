@@ -73,7 +73,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       behorighet: s.course.behorighet,
       coursePrice: s.course.price,
       discountPrice: s.discountPrice,
-      location: s.course.location || s.school.address,
+      location: s.meetingPlace || s.course.location || s.school.address,
       filial: s.school,
       startTime: s.startTime.toISOString(),
       endTime: s.endTime.toISOString(),
@@ -85,6 +85,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       reportedAt: s.reportedAt?.toISOString() ?? null,
       internalNotes: s.internalNotes,
       receiptMessage: s.receiptMessage,
+      meetingPlace: s.meetingPlace,
       instructors: s.assignedSchoolUsers,
       schoolAllocations: s.schoolAllocations.map(a => ({
         schoolUserId: a.schoolUserId,

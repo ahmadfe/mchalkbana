@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
     courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
     courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-    location: booking.session.course.location || booking.session.school?.name || '',
+    location: booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '',
     price: booking.session.course.price,
     startTimeIso: start.toISOString(),
     endTimeIso: end.toISOString(),

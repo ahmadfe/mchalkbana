@@ -48,7 +48,7 @@ export async function GET(request: Request) {
       title: s.course.titleSv,
       courseType: s.course.type,
       behorighet: s.course.behorighet,
-      location: s.course.location || s.school.name,
+      location: s.meetingPlace || s.course.location || s.school.name,
       filialName: s.school.name,
       seatLimit: s.seatLimit,
       booked: s.bookings.length,

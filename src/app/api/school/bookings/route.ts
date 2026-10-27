@@ -125,7 +125,7 @@ export async function POST(request: Request) {
       courseName: `${session.course.titleSv} (${session.course.behorighet})`,
       courseDate,
       courseTime,
-      location: allocation?.meetingPlace || session.course.location || session.school.name,
+      location: allocation?.meetingPlace || session.meetingPlace || session.course.location || session.school.name,
       schoolName: schoolUser?.name || session.school.name,
       personnummer,
       phone: guestPhone || null,
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     courseName: `${session.course.titleSv} (${session.course.behorighet})`,
     courseDate,
     courseTime,
-    location: allocation?.meetingPlace || session.course.location || session.school.name,
+    location: allocation?.meetingPlace || session.meetingPlace || session.course.location || session.school.name,
     bookedBy: 'school',
     status: 'Confirmed',
   }).catch((err) => console.error('[School booking] Internal notification failed:', err));

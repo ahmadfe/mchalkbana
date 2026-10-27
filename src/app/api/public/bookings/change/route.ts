@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       courseName: `${newSession.course.titleSv} (${newSession.course.behorighet})`,
       courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
       courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-      location: newSession.course.location || newSession.school?.name || '',
+      location: newSession.meetingPlace || newSession.course.location || newSession.school?.name || '',
       personnummer: booking.personnummer,
       phone: booking.guestPhone,
       customMessage: newSession.receiptMessage || newSession.course.receiptMessage || '',

@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       startTime: s.startTime,
       seatsAvailable: s.seatsAvailable,
       price: s.course.price,
-      location: s.course.location || s.school.name,
+      location: s.meetingPlace || s.course.location || s.school.name,
       // Pre-formatted line for WhatsApp message
       lineSv: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} platser · ${s.course.price.toLocaleString('sv-SE')} kr`,
       lineEn: `${i + 1}️⃣  ${date} · ${time} · ${s.seatsAvailable} seats · ${s.course.price.toLocaleString('sv-SE')} SEK`,

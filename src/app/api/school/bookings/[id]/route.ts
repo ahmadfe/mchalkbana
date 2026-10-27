@@ -41,7 +41,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     const scCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
     const scCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
     const scCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const scLocation = await meetingPlaceFor(booking, booking.session.course.location || booking.session.school?.name || '');
+    const scLocation = await meetingPlaceFor(booking, booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '');
     if (recipientEmail) {
       sendCancellationEmail({
         recipientEmail,

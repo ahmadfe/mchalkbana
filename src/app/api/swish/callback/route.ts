@@ -88,7 +88,7 @@ export async function POST(request: Request) {
           weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm',
         }),
         courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-        location: booking.session.course.location || booking.session.school?.name || '',
+        location: booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '',
         price: booking.session.course.price,
         startTimeIso: new Date(booking.session.startTime).toISOString(),
         endTimeIso: new Date(booking.session.endTime).toISOString(),
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
         courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
         courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
         courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-        location: booking.session.course.location || booking.session.school?.name || '',
+        location: booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '',
         bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
         status: 'Paid',
       }).catch((err) => console.error('[Swish] Internal notification failed:', err));
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
         const start = new Date(booking.session.startTime);
         const dateStrSv = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
         const timeStr = start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' });
-        const location = booking.session.course?.location || booking.session.school?.name || '';
+        const location = booking.session.meetingPlace || booking.session.course?.location || booking.session.school?.name || '';
         const msg =
           `✅ *Betalning bekräftad!*\n` +
           `Bokning *#${bookingId}* är nu bekräftad.\n\n` +
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
         courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
         courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
         courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-        location: booking.session.course.location || booking.session.school?.name || '',
+        location: booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '',
         bookedBy: (booking.bookedByRole as 'guest' | 'user' | 'admin' | 'school') ?? 'guest',
         status: 'Canceled',
         cancelledBy: 'user',

@@ -280,7 +280,7 @@ export default function SchoolPage() {
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                               <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
                               <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
-                              <span>📍 {s.course?.location || s.school?.name}</span>
+                              <span>📍 {s.meetingPlace || s.course?.location || s.school?.name}</span>
                               <span className="text-swedish-blue font-medium">{list.length} elev{list.length !== 1 ? 'er' : ''}</span>
                             </div>
                           </div>
@@ -317,7 +317,7 @@ export default function SchoolPage() {
                   // Efter "fyll senast" kan skolan inte lägga till fler elever
                   const deadlinePassed = !!reservation && (reservation.released || (!!reservation.fillBy && new Date(reservation.fillBy) < new Date()));
                   const locked = full || deadlinePassed;
-                  const meetingPlace = reservation?.meetingPlace || s.course?.location || s.school?.name;
+                  const meetingPlace = reservation?.meetingPlace || s.meetingPlace || s.course?.location || s.school?.name;
                   const isOpen = expanded.has(s.id);
                   const courseId = s.course?.id;
                   const customPrice = courseId !== undefined ? priceMap[courseId] : undefined;

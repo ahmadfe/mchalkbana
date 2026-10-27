@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       courseName: `${session.course.titleSv} (${session.course.behorighet})`,
       courseDate: start.toLocaleDateString('sv-SE'),
       courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })}`,
-      location: session.course.location || session.school.name,
+      location: session.meetingPlace || session.course.location || session.school.name,
       personnummer,
       phone: guestPhone || null,
     });

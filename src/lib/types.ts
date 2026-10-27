@@ -48,6 +48,7 @@ export interface Session {
   endTime: string;
   seatLimit: number;
   seatsAvailable: number;
+  meetingPlace?: string;
   discountPrice?: number | null;
   visibility: string;
   receiptMessage?: string;
