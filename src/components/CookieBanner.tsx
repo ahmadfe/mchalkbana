@@ -27,7 +27,7 @@ export default function CookieBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6">
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
       <div className="max-w-3xl mx-auto bg-gray-900 text-white rounded-2xl shadow-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Cookie className="w-8 h-8 text-swedish-yellow shrink-0" />
         <p className="text-sm flex-1 leading-relaxed">

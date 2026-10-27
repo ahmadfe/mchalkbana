@@ -1,10 +1,11 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import CookieBanner from '@/components/CookieBanner';
 import { AuthProvider } from '@/context/AuthContext';
 import MetaPixel from '@/components/MetaPixel';
+import { PwaSetup } from '@/components/pwa';
 
 const locales = ['sv'];
 
@@ -33,6 +34,14 @@ export const metadata: Metadata = {
   creator: 'Uppsala Halkbana',
   publisher: 'Uppsala Halkbana',
   metadataBase: new URL(SITE_URL),
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Uppsala Halkbana',
+  appleWebApp: { capable: true, title: 'Halkbana', statusBarStyle: 'black-translucent' },
+  formatDetection: { telephone: false },
+  icons: {
+    icon: [{ url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' }, { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180' }],
+  },
   alternates: { canonical: '/' },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   openGraph: {
@@ -51,6 +60,14 @@ export const metadata: Metadata = {
     description: 'Boka riskutbildning Risk 1 & Risk 2 i Uppsala, Stockholm och Gävle.',
     images: ['/logo.png'],
   },
+};
+
+// viewportFit cover: appen ritar under notchen – sidhuvuden lägger själva till safe-area-marginalen
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#fbf9f8',
 };
 
 export default async function LocaleLayout({
@@ -74,6 +91,8 @@ export default async function LocaleLayout({
         <NextIntlClientProvider messages={messages}>
           <AuthProvider>
             <MetaPixel />
+            <PwaSetup />
+            <div className="status-bar-shim" aria-hidden />
             {children}
             <CookieBanner />
           </AuthProvider>

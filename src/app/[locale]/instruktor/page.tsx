@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { Clock, BookOpen, CheckCircle2, XCircle, ChevronRight, Send, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
+import { InstallAppButton } from '@/components/pwa';
 
 interface SessionSummary {
   id: number;
@@ -77,6 +78,7 @@ export default function InstruktorPage() {
             <p className="text-swedish-blue text-xs font-semibold uppercase tracking-wider mb-1 capitalize">{today}</p>
             <h1 className="text-2xl font-bold text-white">Instruktörsportal</h1>
             {user?.name && <p className="text-gray-400 text-sm mt-0.5">{user.name}</p>}
+            <InstallAppButton dark className="mt-4" />
 
             {sessions.length > 0 && (
               <div className="flex gap-4 mt-4">
@@ -165,7 +167,7 @@ export default function InstruktorPage() {
 
       {/* Sticky bottom approve-all */}
       {sessions.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 py-4 safe-area-inset-bottom">
+        <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <div className="max-w-2xl mx-auto space-y-2">
             {approveAllError && (
               <div className="flex items-center gap-2 text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-xl px-4 py-2.5">

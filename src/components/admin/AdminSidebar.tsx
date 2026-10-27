@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
+import { InstallAppButton } from '@/components/pwa';
 
 /** Flikar som fortfarande ligger i den äldre admin-sidan (/admin?tab=…). */
 export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'schools' | 'cards' | 'hero' | 'whatsapp' | 'instructors';
@@ -112,6 +113,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
             <p className="text-xs text-white/50">Administratör</p>
           </div>
         </div>
+        <InstallAppButton dark className="mt-3 w-full" />
         <button
           onClick={logout}
           className="mt-3 w-full h-10 rounded-full border border-white/15 text-sm font-semibold text-white hover:bg-white/5 inline-flex items-center justify-center gap-2"
@@ -125,13 +127,13 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
   return (
     <>
       {/* Dator: fast sidomeny */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-60 flex-col bg-[#161618] border-r border-white/5 px-3 py-5">
+      <aside className="admin-dark hidden lg:flex fixed inset-y-0 left-0 z-30 w-60 flex-col bg-[#161618] border-r border-white/5 px-3 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(1.25rem+env(safe-area-inset-bottom))] overflow-y-auto">
         <div className="px-2 mb-7">{brand}</div>
         {body}
       </aside>
 
       {/* Mobil: toppfält och utfällbar meny */}
-      <header className="lg:hidden sticky top-0 z-30 h-14 px-4 flex items-center justify-between bg-[#161618] border-b border-white/5">
+      <header className="admin-dark lg:hidden sticky top-[env(safe-area-inset-top)] z-30 h-14 px-4 flex items-center justify-between bg-[#161618] border-b border-white/5">
         {brand}
         <button onClick={() => setOpen(true)} aria-label="Öppna meny" className="w-10 h-10 -mr-2 flex items-center justify-center rounded-xl text-white hover:bg-white/5">
           <Menu className="w-5 h-5" />
@@ -139,7 +141,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
       </header>
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/60" onClick={() => setOpen(false)}>
-          <aside onClick={e => e.stopPropagation()} className="absolute inset-y-0 left-0 w-72 max-w-[85%] flex flex-col bg-[#161618] px-3 py-4">
+          <aside onClick={e => e.stopPropagation()} className="absolute inset-y-0 left-0 w-72 max-w-[85%] flex flex-col bg-[#161618] px-3 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1rem+env(safe-area-inset-bottom))] overflow-y-auto">
             <div className="flex items-center justify-between px-2 mb-6">
               {brand}
               <button onClick={() => setOpen(false)} aria-label="Stäng meny" className="w-10 h-10 flex items-center justify-center rounded-xl text-white hover:bg-white/5">

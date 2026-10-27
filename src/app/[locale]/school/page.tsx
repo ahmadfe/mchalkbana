@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
+import { InstallAppButton } from '@/components/pwa';
 
 interface StudentForm {
   name: string;
@@ -195,6 +196,7 @@ export default function SchoolPage() {
               <h1 className="text-2xl font-bold text-gray-900">{user?.name}</h1>
               <p className="text-sm text-gray-500">Trafikskolakonto</p>
             </div>
+            <InstallAppButton className="ml-auto" />
           </div>
 
           {/* Invoice notice */}

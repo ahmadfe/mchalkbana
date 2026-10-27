@@ -380,7 +380,7 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
       </main>
 
       {/* Sticky approve button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto">
           <button
             onClick={handleApprove}

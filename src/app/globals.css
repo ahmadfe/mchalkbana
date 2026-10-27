@@ -62,3 +62,45 @@
     @apply text-gray-500 text-lg;
   }
 }
+
+/* ── App-läge (installerad på hemskärmen) ───────────────────────────── */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Sidan börjar under statusfältet/notchen (0 i vanlig webbläsare) */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Bakgrund bakom klockan/batteriet när sidan rullas – samma färg som sidhuvudet */
+.status-bar-shim {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  z-index: 100;
+  background: #fbf9f8;
+  pointer-events: none;
+}
+html:has(.admin-dark) .status-bar-shim {
+  background: #161618;
+}
+
+/* iPhone zoomar in när man trycker på ett fält med text under 16 px */
+@media (pointer: coarse) {
+  input:is(.text-xs, .text-sm, .input-field):not([type='checkbox']):not([type='radio']),
+  select:is(.text-xs, .text-sm, .input-field),
+  textarea:is(.text-xs, .text-sm, .input-field) {
+    font-size: 16px;
+  }
+
+  /* Ikonknappar (penna, papperskorg, stäng) – större yta för fingret */
+  button:is(.p-1, .p-1\.5) {
+    padding: 0.625rem;
+  }
+}

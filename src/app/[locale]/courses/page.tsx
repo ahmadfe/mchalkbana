@@ -225,7 +225,7 @@ export default function CoursesPage() {
         </div>
       </section>
 
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-[env(safe-area-inset-top)] z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-2.5 flex flex-wrap gap-2 items-center">
           <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 shrink-0" />
 

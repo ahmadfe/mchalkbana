@@ -1195,14 +1195,14 @@ export default function AdminPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0b0d]">
+        <div className="w-8 h-8 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   // Pass och bokningar har fått den mörka listan från Kurser
-  const darkTab = tab === 'sessions';
+  const darkTab = tab === 'sessions' || tab === 'overview';
 
   return (
     <div className={clsx('min-h-screen', darkTab ? 'bg-[#0b0b0d]' : 'bg-gray-50')}>
@@ -1227,19 +1227,19 @@ export default function AdminPage() {
           {/* Overview */}
           {tab === 'overview' && stats && (
             <div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                 {[
-                  { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-swedish-blue bg-brand-50' },
-                  { label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-green-600 bg-green-50' },
-                  { label: t('upcoming_sessions'), value: stats.upcomingSessions, icon: <Calendar />, color: 'text-orange-600 bg-orange-50' },
-                  { label: t('students'), value: stats.totalStudents, icon: <Users />, color: 'text-purple-600 bg-purple-50' },
+                  { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-sky-300 bg-sky-400/10' },
+                  { label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-emerald-300 bg-emerald-400/10' },
+                  { label: t('upcoming_sessions'), value: stats.upcomingSessions, icon: <Calendar />, color: 'text-orange-300 bg-orange-400/10' },
+                  { label: t('students'), value: stats.totalStudents, icon: <Users />, color: 'text-purple-300 bg-purple-400/10' },
                 ].map((stat) => (
-                  <div key={stat.label} className="bg-white rounded-xl border border-gray-100 p-5">
-                    <div className={clsx('w-10 h-10 rounded-lg flex items-center justify-center mb-3', stat.color)}>
+                  <div key={stat.label} className="bg-[#1c1c1f] rounded-3xl p-5">
+                    <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center mb-3 [&>svg]:w-5 [&>svg]:h-5', stat.color)}>
                       {stat.icon}
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                    <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
+                    <div className="font-headline text-2xl font-extrabold text-white">{stat.value}</div>
+                    <div className="text-sm text-white/50 mt-1">{stat.label}</div>
                   </div>
                 ))}
               </div>
@@ -2393,12 +2393,12 @@ export default function AdminPage() {
                 ) : (
                   <ul className="space-y-3">
                     {schoolAccounts.map((acc) => (
-                      <li key={acc.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
-                        <div>
+                      <li key={acc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                        <div className="min-w-0">
                           <p className="font-medium text-gray-900 text-sm">{acc.name}</p>
-                          <p className="text-xs text-gray-500">{acc.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{acc.email}</p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1 -ml-2 sm:ml-0">
                           <button
                             onClick={() => openResetPwd(acc.id, acc.name, 'school')}
                             className="flex items-center gap-1 text-xs text-gray-500 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
