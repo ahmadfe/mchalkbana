@@ -48,6 +48,7 @@ export default function SchoolPage() {
 
   // Add student modal
   const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [activeRemaining, setActiveRemaining] = useState(0);
   const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -86,8 +87,9 @@ export default function SchoolPage() {
       return next;
     });
 
-  const openModal = (session: Session) => {
+  const openModal = (session: Session, remaining: number) => {
     setActiveSession(session);
+    setActiveRemaining(remaining);
     setStudents([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
     setSaveError('');
     setSaveSuccess(false);
@@ -311,6 +313,11 @@ export default function SchoolPage() {
                   const usedByMe = sessionStudents.length;
                   const remainingMySeats = myAllocation !== null ? myAllocation - usedByMe : s.seatsAvailable;
                   const full = myAllocation !== null ? usedByMe >= myAllocation : s.seatsAvailable === 0;
+                  const reservation = (s as any).myReservation as { meetingPlace: string; fillBy: string | null; message: string; released: boolean } | null;
+                  // Efter "fyll senast" kan skolan inte lägga till fler elever
+                  const deadlinePassed = !!reservation && (reservation.released || (!!reservation.fillBy && new Date(reservation.fillBy) < new Date()));
+                  const locked = full || deadlinePassed;
+                  const meetingPlace = reservation?.meetingPlace || s.course?.location || s.school?.name;
                   const isOpen = expanded.has(s.id);
                   const courseId = s.course?.id;
                   const customPrice = courseId !== undefined ? priceMap[courseId] : undefined;
@@ -335,10 +342,10 @@ export default function SchoolPage() {
                             <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
                               <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
                               <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
-                              <span>📍 {s.course?.location || s.school?.name}</span>
+                              <span>📍 {meetingPlace}</span>
                               {myAllocation !== null ? (
                                 <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
-                                  👤 {remainingMySeats}/{myAllocation} platser kvar (din kvot)
+                                  👤 {usedByMe} av {myAllocation} platser fyllda
                                 </span>
                               ) : (
                                 <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
@@ -351,25 +358,30 @@ export default function SchoolPage() {
                                   {customPrice !== undefined && <span className="ml-1 text-xs text-swedish-blue font-normal">(ert pris)</span>}
                                 </span>
                               )}
-                              {sessionStudents.length > 0 && (
-                                <span className="text-swedish-blue font-medium">{sessionStudents.length} elev{sessionStudents.length !== 1 ? 'er' : ''} bokade</span>
+                              {reservation?.fillBy && (
+                                <span className={clsx(deadlinePassed ? 'text-gray-400' : 'text-amber-600 font-medium')}>
+                                  ⏰ {deadlinePassed ? 'Stängt' : 'Fyll senast'} {new Date(reservation.fillBy).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' })}
+                                </span>
                               )}
                             </div>
+                            {reservation?.message && (
+                              <p className="text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 mt-2 whitespace-pre-wrap">💬 {reservation.message}</p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            disabled={full}
-                            onClick={() => openModal(s)}
+                            disabled={locked}
+                            onClick={() => openModal(s, remainingMySeats)}
                             className={clsx(
                               'px-3 py-2 text-sm font-semibold rounded-xl transition flex items-center gap-1.5',
-                              full
+                              locked
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 : 'bg-swedish-blue text-white hover:bg-swedish-dark'
                             )}
                           >
                             <Plus className="w-4 h-4" />
-                            {full ? 'Fullbokat' : 'Lägg till'}
+                            {deadlinePassed ? 'Stängt' : full ? 'Fullbokat' : 'Lägg till'}
                           </button>
                           <button
                             onClick={() => toggleExpand(s.id)}
@@ -463,7 +475,7 @@ export default function SchoolPage() {
               <div>
                 <h3 className="font-bold text-lg">Lägg till elever</h3>
                 <p className="text-sm text-gray-500">
-                  {locale === 'sv' ? activeSession.course?.titleSv : activeSession.course?.titleEn} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {activeSession.seatsAvailable} platser kvar
+                  {locale === 'sv' ? activeSession.course?.titleSv : activeSession.course?.titleEn} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {activeRemaining} platser kvar
                 </p>
               </div>
               <button onClick={() => setActiveSession(null)} className="text-gray-400 hover:text-gray-600">
@@ -537,7 +549,7 @@ export default function SchoolPage() {
                   ))}
                   <button
                     onClick={addStudentRow}
-                    disabled={students.length >= (activeSession.seatsAvailable || 0)}
+                    disabled={students.length >= activeRemaining}
                     className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-swedish-blue hover:text-swedish-blue transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />Lägg till fler elever

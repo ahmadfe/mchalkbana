@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { meetingPlaceFor } from '@/lib/allocations';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
@@ -66,7 +67,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const end = new Date(newSession.endTime);
     const courseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
     const courseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const location = newSession.course.location || newSession.school?.name || '';
+    const location = await meetingPlaceFor({ sessionId: newSession.id, bookedBySchoolUserId: booking.bookedBySchoolUserId }, newSession.course.location || newSession.school?.name || '');
     await sendBookingConfirmationEmail({
       recipientEmail,
       recipientName,

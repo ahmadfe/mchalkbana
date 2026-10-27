@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       course: true,
       school: true,
       assignedSchoolUsers: { select: { id: true } },
-      schoolAllocations: { where: { schoolUserId: authUser.userId }, select: { allocatedSeats: true } },
+      schoolAllocations: { where: { schoolUserId: authUser.userId }, select: { allocatedSeats: true, meetingPlace: true, fillBy: true, releasedAt: true } },
     },
   });
   if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
@@ -64,6 +64,11 @@ export async function POST(request: Request) {
   // For public sessions with allocation: allocation quota is the only limit
   if (session.visibility === 'school' && session.seatsAvailable <= 0) {
     return NextResponse.json({ error: 'Inga platser kvar' }, { status: 409 });
+  }
+
+  // Efter "fyll senast" är skolans platser låsta (outnyttjade har släppts till andra)
+  if (allocation && (allocation.releasedAt || (allocation.fillBy && allocation.fillBy < new Date()))) {
+    return NextResponse.json({ error: 'Sista dag att fylla platserna har passerat' }, { status: 400 });
   }
 
   // Enforce per-school allocation quota
@@ -120,7 +125,7 @@ export async function POST(request: Request) {
       courseName: `${session.course.titleSv} (${session.course.behorighet})`,
       courseDate,
       courseTime,
-      location: session.course.location || session.school.name,
+      location: allocation?.meetingPlace || session.course.location || session.school.name,
       schoolName: schoolUser?.name || session.school.name,
       personnummer,
       phone: guestPhone || null,
@@ -139,7 +144,7 @@ export async function POST(request: Request) {
     courseName: `${session.course.titleSv} (${session.course.behorighet})`,
     courseDate,
     courseTime,
-    location: session.course.location || session.school.name,
+    location: allocation?.meetingPlace || session.course.location || session.school.name,
     bookedBy: 'school',
     status: 'Confirmed',
   }).catch((err) => console.error('[School booking] Internal notification failed:', err));

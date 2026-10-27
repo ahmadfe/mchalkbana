@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { parseKursInput } from '@/lib/kurser';
+import { parseReservation, saveReservation, type ReservationInput } from '@/lib/allocations';
 
 /** Midnatt i Stockholm i dag – dagens kurser räknas som kommande hela dagen. */
 function startOfTodayStockholm(): Date {
@@ -64,9 +65,25 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
-  const parsed = await parseKursInput(await request.json(), { partial: false });
+  const body = await request.json();
+  const parsed = await parseKursInput(body, { partial: false });
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
   const { data, instructorIds } = parsed;
+
+  // Skolreservationer kontrolleras innan kursen skapas, så att inget halvfärdigt sparas
+  const reservations: ReservationInput[] = [];
+  for (const r of Array.isArray(body.reservations) ? body.reservations : []) {
+    const p = parseReservation(r);
+    if ('error' in p) return NextResponse.json({ error: p.error }, { status: 400 });
+    if (reservations.some(x => x.schoolUserId === p.data.schoolUserId)) {
+      return NextResponse.json({ error: 'Samma trafikskola är vald två gånger' }, { status: 400 });
+    }
+    reservations.push(p.data);
+  }
+  const reserved = reservations.reduce((s, r) => s + r.seats, 0);
+  if (reserved > data.seatLimit!) {
+    return NextResponse.json({ error: `${reserved} reserverade platser men kursen har bara ${data.seatLimit}` }, { status: 400 });
+  }
 
   const session = await prisma.session.create({
     data: {
@@ -75,5 +92,11 @@ export async function POST(request: Request) {
       ...(instructorIds?.length ? { assignedSchoolUsers: { connect: instructorIds.map(id => ({ id })) } } : {}),
     },
   });
+  for (const r of reservations) {
+    const result = await saveReservation(session.id, r, { notify: body.notifySchools !== false });
+    if ('error' in result) {
+      return NextResponse.json({ id: session.id, warning: `Kursen skapades men reservationen misslyckades: ${result.error}` }, { status: 201 });
+    }
+  }
   return NextResponse.json({ id: session.id }, { status: 201 });
 }

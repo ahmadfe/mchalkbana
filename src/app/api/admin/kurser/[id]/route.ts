@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { SESSION_STATUSES, expectedPrice, parseKursInput, recalcSeats, setInstructors } from '@/lib/kurser';
+import { releaseExpiredAllocations } from '@/lib/allocations';
 import { formatPersonnummer, normalizePersonnummer } from '@/lib/personnummer';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  await releaseExpiredAllocations(Number(params.id));
 
   const s = await prisma.session.findUnique({
     where: { id: Number(params.id) },
@@ -14,7 +16,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
       course: true,
       school: { select: { id: true, name: true, address: true, bana: true } },
       assignedSchoolUsers: { where: { role: 'instructor' }, select: { id: true, name: true } },
-      schoolAllocations: { select: { allocatedSeats: true, schoolUser: { select: { name: true } } } },
+      schoolAllocations: {
+        include: { schoolUser: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'asc' },
+      },
       comboRisk1Session: { select: { id: true, startTime: true } },
       comboRisk2Session: { select: { id: true, startTime: true } },
       bookings: {
@@ -80,7 +85,18 @@ export async function GET(request: Request, { params }: { params: { id: string }
       internalNotes: s.internalNotes,
       receiptMessage: s.receiptMessage,
       instructors: s.assignedSchoolUsers,
-      schoolAllocations: s.schoolAllocations.map(a => ({ name: a.schoolUser.name, seats: a.allocatedSeats })),
+      schoolAllocations: s.schoolAllocations.map(a => ({
+        schoolUserId: a.schoolUserId,
+        name: a.schoolUser.name,
+        email: a.schoolUser.email,
+        seats: a.allocatedSeats,
+        used: s.bookings.filter(b => b.bookedBySchoolUserId === a.schoolUserId && b.status !== 'Canceled').length,
+        meetingPlace: a.meetingPlace,
+        fillBy: a.fillBy?.toISOString() ?? null,
+        message: a.message,
+        notifiedAt: a.notifiedAt?.toISOString() ?? null,
+        releasedAt: a.releasedAt?.toISOString() ?? null,
+      })),
       comboRisk1Session: s.comboRisk1Session,
       comboRisk2Session: s.comboRisk2Session,
     },

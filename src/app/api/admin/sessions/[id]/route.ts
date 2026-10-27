@@ -48,18 +48,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   // Replace school allocations if provided
   if (Array.isArray(schoolAllocations)) {
-    await prisma.sessionSchoolAllocation.deleteMany({ where: { sessionId } });
-
     const toCreate = (schoolAllocations as { schoolUserId: number; seats: number }[])
       .filter((a) => a.seats > 0);
 
-    if (toCreate.length > 0) {
-      await prisma.sessionSchoolAllocation.createMany({
-        data: toCreate.map((a) => ({
-          sessionId,
-          schoolUserId: a.schoolUserId,
-          allocatedSeats: a.seats,
-        })),
+    // Update seats in place so mötesplats, fill-by date and message set on the course page are kept
+    await prisma.sessionSchoolAllocation.deleteMany({
+      where: { sessionId, schoolUserId: { notIn: toCreate.map((a) => a.schoolUserId) } },
+    });
+    for (const a of toCreate) {
+      await prisma.sessionSchoolAllocation.upsert({
+        where: { sessionId_schoolUserId: { sessionId, schoolUserId: a.schoolUserId } },
+        update: { allocatedSeats: a.seats },
+        create: { sessionId, schoolUserId: a.schoolUserId, allocatedSeats: a.seats },
       });
     }
 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { prisma } from '@/lib/db';
+import { releaseExpiredAllocations } from '@/lib/allocations';
 import { CITIES, getCityBySlug } from '@/lib/cities';
 import { CheckCircle2, MapPin, Clock, Car, Bike, ArrowRight, Star, ShieldCheck } from 'lucide-react';
 
@@ -146,6 +147,7 @@ export default async function CityPage({ params }: { params: { city: string; loc
   if (!city) notFound();
 
   const now = new Date();
+  await releaseExpiredAllocations().catch(() => {});
   const upcomingSessions = await prisma.session.findMany({
     where: { startTime: { gte: now }, visibility: 'public', status: { not: 'canceled' }, seatsAvailable: { gt: 0 } },
     orderBy: { startTime: 'asc' },

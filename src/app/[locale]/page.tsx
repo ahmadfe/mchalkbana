@@ -8,6 +8,7 @@ import SessionCard from '@/components/SessionCard';
 import HomeCardsSection from '@/components/HomeCardsSection';
 import { Shield, MapPin, CheckCircle2 } from 'lucide-react';
 import { prisma } from '@/lib/db';
+import { releaseExpiredAllocations } from '@/lib/allocations';
 import { getAuthUser } from '@/lib/auth';
 import type { Session } from '@/lib/types';
 
@@ -65,6 +66,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const t = await getTranslations('home');
 
   const now = new Date();
+  await releaseExpiredAllocations().catch(() => {});
   const [infoCards, authUser, upcomingSessions, heroSettings] = await Promise.all([
     prisma.infoCard.findMany({ orderBy: { sortOrder: 'asc' } }).catch(() => []),
     getAuthUser().catch(() => null),

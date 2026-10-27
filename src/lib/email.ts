@@ -1320,3 +1320,78 @@ export async function sendResultReportEmail(data: { subject: string; files: { fi
   if (!res.ok) console.error('[Email] Resend error (result report):', await res.text());
   else console.log('[Email] Result report email sent');
 }
+
+// ── Platser reserverade åt en trafikskola ─────────────────────────────────
+
+export async function sendSchoolReservationEmail(data: {
+  email: string;
+  schoolName: string;
+  courseName: string;
+  courseDate: string;
+  courseTime: string;
+  location: string;
+  seats: number;
+  fillBy: string | null; // ÅÅÅÅ-MM-DD
+  message: string;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { console.log('[Email] No RESEND_API_KEY — skipping school reservation email for', data.email); return; }
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://uppsalahalkbana.se';
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const fillBy = data.fillBy
+    ? new Date(`${data.fillBy}T12:00:00`).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
+    : null;
+  const row = (label: string, value: string) =>
+    `<tr><td style="color:#6b7280;padding:5px 0;width:40%;">${label}</td><td style="color:#111827;font-weight:600;text-align:right;">${value}</td></tr>`;
+  const html = `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">${data.seats} PLATSER RESERVERADE ÅT ER</p>
+    </div>
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${esc(data.schoolName)}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">Vi har reserverat platser åt er på en kurs. Logga in och lägg till era elever${fillBy ? ` senast ${fillBy}` : ''}.</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          ${row('Kurs', esc(data.courseName))}
+          ${row('Datum', esc(data.courseDate))}
+          ${row('Tid', esc(data.courseTime))}
+          ${row('Mötesplats', `<a href="https://maps.google.com/?q=${encodeURIComponent(data.location)}" style="color:#00C4D4;text-decoration:none;">📍 ${esc(data.location)}</a>`)}
+          ${row('Platser', String(data.seats))}
+          ${fillBy ? row('Fyll senast', esc(fillBy)) : ''}
+        </table>
+      </div>
+      ${data.message ? `<div style="border-left:4px solid #00C4D4;padding:12px 16px;background:#f0fbfc;border-radius:0 8px 8px 0;margin-bottom:24px;"><p style="margin:0;color:#0f172a;font-size:14px;white-space:pre-wrap;">${esc(data.message)}</p></div>` : ''}
+      <div style="text-align:center;margin-bottom:24px;">
+        <a href="${baseUrl}/login" target="_blank" style="display:inline-block;background:#00C4D4;color:#fff;font-weight:700;font-size:15px;padding:14px 36px;border-radius:10px;text-decoration:none;">Logga in och lägg till elever</a>
+      </div>
+      ${fillBy ? `<p style="color:#6b7280;font-size:13px;margin:0 0 8px;">Platser som inte är fyllda ${esc(fillBy)} släpps till andra.</p>` : ''}
+      <p style="color:#6b7280;font-size:13px;margin:0;">Frågor? Kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a> eller ring 07 07 66 66 61.</p>
+    </div>
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#4b5563;font-size:11px;margin:0;">Detta är ett automatiskt meddelande, vänligen svara inte på detta mail.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+      to: [data.email],
+      subject: `${data.seats} platser reserverade – ${data.courseName}, ${data.courseDate}`,
+      html,
+    }),
+  });
+  if (!res.ok) console.error('[Email] Resend error (school reservation):', await res.text());
+}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { courseKind } from '@/lib/courseKind';
 import { Card, Checkbox, Field, Input, Select, Textarea } from './ui';
+import { ReservationFields, newReservation, reservationPayload, useReservationData, defaultFillBy, type ReservationDraft } from './Reservations';
 
 export interface KursFormValues {
   courseId: string;
@@ -19,6 +20,8 @@ export interface KursFormValues {
   receiptMessage: string;
   comboRisk1SessionId: string;
   comboRisk2SessionId: string;
+  /** Skolreservationer – bara när kursen skapas */
+  reservations: ReservationDraft[];
 }
 
 export function emptyKurs(): KursFormValues {
@@ -26,7 +29,7 @@ export function emptyKurs(): KursFormValues {
     courseId: '', schoolId: '', date: new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }),
     start: '09:00', end: '13:00', instructorIds: [], seatLimit: '8', discountPrice: '',
     selfBooking: true, reportToTS: true, internalNotes: '', receiptMessage: '',
-    comboRisk1SessionId: '', comboRisk2SessionId: '',
+    comboRisk1SessionId: '', comboRisk2SessionId: '', reservations: [],
   };
 }
 
@@ -46,6 +49,7 @@ export function kursPayload(v: KursFormValues) {
     receiptMessage: v.receiptMessage,
     comboRisk1SessionId: v.comboRisk1SessionId,
     comboRisk2SessionId: v.comboRisk2SessionId,
+    reservations: v.reservations.map(reservationPayload),
   };
 }
 
@@ -185,7 +189,80 @@ export default function KursForm({ values, onChange, isNew }: { values: KursForm
             <Field label="Interna anteckningar"><Textarea {...text('internalNotes')} placeholder="Syns inte för eleverna" /></Field>
           </div>
         </Card>
+
+        {isNew && <ReservationsSection values={values} onChange={onChange} />}
       </div>
     </div>
+  );
+}
+
+/** Platser som reserveras åt trafikskolor redan när kursen skapas. */
+function ReservationsSection({ values, onChange }: { values: KursFormValues; onChange: (v: KursFormValues) => void }) {
+  const { schools, places, addSchool } = useReservationData();
+  const rows = values.reservations;
+  const total = Number(values.seatLimit) || 0;
+  const reserved = rows.reduce((s, r) => s + (Number(r.seats) || 0), 0);
+  const over = reserved > total;
+
+  // Följ kursdatumet för rader där "fyll senast" inte ändrats för hand
+  useEffect(() => {
+    if (!rows.some(r => r.fillByAuto)) return;
+    const next = defaultFillBy(values.date);
+    if (rows.every(r => !r.fillByAuto || r.fillBy === next)) return;
+    onChange({ ...values, reservations: rows.map(r => (r.fillByAuto ? { ...r, fillBy: next } : r)) });
+  }, [values.date]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const update = (key: string, r: ReservationDraft) => onChange({ ...values, reservations: rows.map(x => (x.key === key ? r : x)) });
+
+  return (
+    <Card title="Reservera platser åt trafikskolor">
+      {rows.length === 0 ? (
+        <p className="text-sm text-white/60 mb-4">
+          Reservera platser åt en eller flera trafikskolor. Skolan får ett mejl, loggar in och lägger till sina elever. Platser som inte fyllts släpps automatiskt efter &quot;fyll senast&quot;.
+        </p>
+      ) : (
+        <div className="space-y-4 mb-4">
+          {rows.map((r, i) => (
+            <div key={r.key} className="rounded-2xl border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-bold text-white/80">Trafikskola {i + 1}</p>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...values, reservations: rows.filter(x => x.key !== r.key) })}
+                  className="text-sm text-white/40 hover:text-red-400"
+                >
+                  Ta bort
+                </button>
+              </div>
+              <ReservationFields
+                value={r}
+                onChange={v => update(r.key, v)}
+                schools={schools}
+                places={places}
+                onSchoolCreated={addSchool}
+                maxSeats={Math.max(1, total - (reserved - (Number(r.seats) || 0)))}
+                takenSchoolIds={rows.map(x => x.schoolUserId).filter(Boolean)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => onChange({ ...values, reservations: [...rows, newReservation(values.date)] })}
+        disabled={reserved >= total}
+        className="w-full h-11 rounded-full border border-dashed border-white/20 text-sm font-semibold text-white/70 hover:text-white hover:border-white/40 disabled:opacity-40"
+      >
+        + Reservera platser åt en trafikskola
+      </button>
+
+      {rows.length > 0 && (
+        <p className={over ? 'text-sm text-red-400 mt-4' : 'text-sm text-white/60 mt-4'}>
+          {total} platser: <strong className="text-white">{reserved} reserverade</strong> för trafikskolor · <strong className="text-white">{Math.max(0, total - reserved)} publika</strong>
+          {over && ' – fler reserverade än kursen har platser'}
+        </p>
+      )}
+    </Card>
   );
 }

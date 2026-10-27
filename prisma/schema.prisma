@@ -125,6 +125,12 @@ model SessionSchoolAllocation {
   schoolUserId   Int
   schoolUser     User    @relation("SchoolAllocations", fields: [schoolUserId], references: [id], onDelete: Cascade)
   allocatedSeats Int
+  meetingPlace   String    @default("") // skolans egen mötesplats, annars kursens
+  fillBy         DateTime? // outnyttjade platser släpps efter detta
+  message        String    @default("")
+  notifiedAt     DateTime?
+  releasedAt     DateTime?
+  createdAt      DateTime  @default(now())
   @@unique([sessionId, schoolUserId])
 }
 

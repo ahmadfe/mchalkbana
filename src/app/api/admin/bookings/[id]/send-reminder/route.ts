@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { meetingPlaceFor } from '@/lib/allocations';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendReminderEmail } from '@/lib/email';
 
@@ -35,7 +36,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     courseName: `${booking.session.course.titleSv} (${booking.session.course.behorighet})`,
     courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' }),
     courseTime: `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`,
-    location: booking.session.course.location || booking.session.school?.name || '',
+    location: await meetingPlaceFor(booking, booking.session.course.location || booking.session.school?.name || ''),
     customMessage: booking.session.receiptMessage || booking.session.course.receiptMessage || '',
   });
 

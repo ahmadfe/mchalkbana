@@ -44,6 +44,7 @@ export default function RedigeraKursPage({ params }: { params: { id: string } })
         receiptMessage: kurs.receiptMessage,
         comboRisk1SessionId: kurs.comboRisk1Session ? String(kurs.comboRisk1Session.id) : '',
         comboRisk2SessionId: kurs.comboRisk2Session ? String(kurs.comboRisk2Session.id) : '',
+        reservations: [],
       });
     });
   }, [params.id]);

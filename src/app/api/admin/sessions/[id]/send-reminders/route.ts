@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { meetingPlaceFor } from '@/lib/allocations';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendReminderEmail } from '@/lib/email';
 
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         courseName: `${session.course.titleSv} (${session.course.behorighet})`,
         courseDate,
         courseTime,
-        location,
+        location: await meetingPlaceFor({ sessionId: session.id, bookedBySchoolUserId: booking.bookedBySchoolUserId }, location),
         customMessage,
       });
       sent.push(booking.id);

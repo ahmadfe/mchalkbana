@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { meetingPlaceFor } from '@/lib/allocations';
 
 function toIcsDate(date: Date): string {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -17,7 +18,7 @@ export async function GET(_: Request, { params }: { params: { bookingId: string 
 
   const session = booking.session;
   const courseName = `Uppsala Halkbana – ${session.course.titleSv} (${session.course.behorighet})`;
-  const location = session.course.location || session.school.name;
+  const location = await meetingPlaceFor(booking, session.course.location || session.school.name);
   const start = new Date(session.startTime);
   const end = new Date(session.endTime);
   const now = new Date();

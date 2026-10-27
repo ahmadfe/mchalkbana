@@ -10,6 +10,7 @@ import CheckInModal from '@/components/CheckInModal';
 import { buildTsReportXml, reportParts } from '@/lib/tsReport';
 import { normalizePersonnummer } from '@/lib/pnr';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
+import { ReservationFields, newReservation, reservationPayload, useReservationData, type ReservationDraft } from '@/components/admin/Reservations';
 
 interface Kurs {
   id: number;
@@ -29,7 +30,7 @@ interface Kurs {
   reportedAt: string | null;
   internalNotes: string;
   instructors: { id: number; name: string }[];
-  schoolAllocations: { name: string; seats: number }[];
+  schoolAllocations: Reservation[];
 }
 
 interface Participant {
@@ -278,14 +279,13 @@ export default function KursPage({ params }: { params: { id: string } }) {
             )}
           </Card>
 
+          <ReservationsCard kurs={kurs} participants={participants} onChange={load} />
+
           <Card title="Detaljer">
             <dl className="space-y-3 text-sm">
               <Detail label="Filial">{kurs.filial.name}</Detail>
               <Detail label="Lärare">{kurs.instructors.length ? kurs.instructors.map(i => i.name).join(', ') : 'Ingen tilldelad'}</Detail>
               <Detail label="Bokning">{kurs.selfBooking ? 'Syns på webbplatsen' : 'Bara admin och trafikskolor'}</Detail>
-              {kurs.schoolAllocations.length > 0 && (
-                <Detail label="Skolkvoter">{kurs.schoolAllocations.map(a => `${a.name} (${a.seats})`).join(', ')}</Detail>
-              )}
               {kurs.internalNotes && <Detail label="Anteckningar"><span className="whitespace-pre-wrap">{kurs.internalNotes}</span></Detail>}
             </dl>
           </Card>
@@ -524,5 +524,150 @@ function AddStudent({ kursId, onAdded, locale }: { kursId: number; onAdded: () =
       {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
       <Button variant="primary" className="mt-4" onClick={add} disabled={!picked || busy}>{busy ? 'Anmäler…' : 'Anmäl elev'}</Button>
     </div>
+  );
+}
+
+interface Reservation {
+  schoolUserId: number;
+  name: string;
+  email: string;
+  seats: number;
+  used: number;
+  meetingPlace: string;
+  fillBy: string | null;
+  message: string;
+  notifiedAt: string | null;
+  releasedAt: string | null;
+}
+
+/** Platser reserverade åt trafikskolor: lägg till, ändra och ta bort. */
+function ReservationsCard({ kurs, participants, onChange }: { kurs: Kurs; participants: Participant[]; onChange: () => Promise<void> }) {
+  const { schools, places, addSchool } = useReservationData();
+  const courseDate = new Date(kurs.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+  const [editing, setEditing] = useState<{ draft: ReservationDraft; isNew: boolean } | null>(null);
+  const [notify, setNotify] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const reservations = kurs.schoolAllocations;
+  const reserved = reservations.reduce((s, r) => s + r.seats, 0);
+  const publicBooked = participants.filter(p => p.status !== 'Canceled' && !p.schoolName).length;
+  const freePublic = Math.max(0, kurs.seatLimit - reserved - publicBooked);
+  const ymd = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+
+  const startEdit = (r: Reservation | null) => {
+    setError('');
+    setNotify(true);
+    setEditing(r
+      ? {
+          isNew: false,
+          draft: {
+            key: String(r.schoolUserId), schoolUserId: String(r.schoolUserId), seats: String(r.seats),
+            fillBy: r.fillBy ? ymd(r.fillBy) : '', fillByAuto: false, meetingPlace: r.meetingPlace, message: r.message,
+          },
+        }
+      : { isNew: true, draft: newReservation(courseDate) });
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    setBusy(true);
+    setError('');
+    const res = await fetch(`/api/admin/kurser/${kurs.id}/reservationer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...reservationPayload(editing.draft), notify }),
+    });
+    setBusy(false);
+    if (!res.ok) { setError((await res.json()).error ?? 'Kunde inte spara'); return; }
+    setEditing(null);
+    await onChange();
+  };
+
+  const remove = async (r: Reservation) => {
+    if (!confirm(`Ta bort reservationen för ${r.name}? De ${r.seats} platserna blir publika igen.`)) return;
+    const res = await fetch(`/api/admin/kurser/${kurs.id}/reservationer?schoolUserId=${r.schoolUserId}`, { method: 'DELETE' });
+    if (!res.ok) { alert((await res.json()).error ?? 'Kunde inte ta bort'); return; }
+    await onChange();
+  };
+
+  const editedSchool = editing ? reservations.find(r => String(r.schoolUserId) === editing.draft.schoolUserId) : undefined;
+  const maxSeats = Math.max(1, kurs.seatLimit - (reserved - (editedSchool?.seats ?? 0)) - publicBooked);
+
+  return (
+    <Card title="Trafikskolor">
+      <p className="text-sm text-white/60 mb-4">
+        {kurs.seatLimit} platser: <strong className="text-white">{reserved} reserverade</strong> · {publicBooked} bokade av elever · <strong className="text-white">{freePublic} lediga publika</strong>
+      </p>
+
+      {reservations.length > 0 && (
+        <div className="space-y-3 mb-4">
+          {reservations.map(r => (editing && !editing.isNew && editing.draft.schoolUserId === String(r.schoolUserId) ? null : (
+            <div key={r.schoolUserId} className="rounded-2xl bg-white/5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-bold truncate">{r.name}</p>
+                  <p className="text-sm text-white/60">
+                    {r.used} av {r.seats} platser fyllda
+                    {r.releasedAt
+                      ? ` · outnyttjade släpptes ${formatDate(r.releasedAt, { day: 'numeric', month: 'short' })}`
+                      : r.fillBy ? ` · fyll senast ${formatDate(r.fillBy, { day: 'numeric', month: 'short' })}` : ' · ingen sista dag'}
+                  </p>
+                </div>
+                {r.releasedAt ? <Badge>Släppt</Badge> : r.used >= r.seats ? <Badge tone="green">Fullt</Badge> : null}
+              </div>
+              <div className="h-1.5 rounded-full bg-white/10 mt-3 overflow-hidden">
+                <div className="h-full bg-sky-400 rounded-full" style={{ width: `${r.seats ? Math.min(100, (r.used / r.seats) * 100) : 0}%` }} />
+              </div>
+              <p className="text-sm text-white/60 mt-3">📍 {r.meetingPlace || 'Kursens mötesplats'}</p>
+              {r.message && <p className="text-sm text-white/60 mt-1 whitespace-pre-wrap">💬 {r.message}</p>}
+              <p className="text-xs text-white/40 mt-1">{r.notifiedAt ? `Mejlat ${formatDate(r.notifiedAt, { day: 'numeric', month: 'short' })} till ${r.email}` : 'Inget mejl skickat'}</p>
+              <div className="flex gap-2 mt-3">
+                <Button className="!h-9" onClick={() => startEdit(r)} disabled={!!editing}>Ändra</Button>
+                <Button variant="danger" className="!h-9" onClick={() => remove(r)} disabled={!!editing}>Ta bort</Button>
+              </div>
+            </div>
+          )))}
+        </div>
+      )}
+
+      {editing ? (
+        <div className="rounded-2xl border border-white/10 p-4">
+          <p className="font-bold mb-4">{editing.isNew ? 'Reservera platser åt en trafikskola' : `Ändra reservation – ${editedSchool?.name ?? ''}`}</p>
+          <ReservationFields
+            value={editing.draft}
+            onChange={draft => setEditing({ ...editing, draft })}
+            schools={schools}
+            places={places}
+            onSchoolCreated={addSchool}
+            maxSeats={maxSeats}
+            takenSchoolIds={editing.isNew ? reservations.map(r => String(r.schoolUserId)) : []}
+            lockSchool={!editing.isNew}
+          />
+          <div className="mt-4">
+            <Checkbox checked={notify} onChange={setNotify}>{editing.isNew ? 'Mejla skolan om platserna' : 'Mejla skolan om de får fler platser'}</Checkbox>
+          </div>
+          {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+          <div className="flex gap-2 mt-4">
+            <Button onClick={() => setEditing(null)} disabled={busy}>Avbryt</Button>
+            <Button variant="primary" className="flex-1" onClick={save} disabled={busy || !editing.draft.schoolUserId}>
+              {busy ? 'Sparar…' : editing.isNew ? 'Reservera' : 'Spara'}
+            </Button>
+          </div>
+          {editing.isNew && <p className="text-xs text-white/50 mt-3">Skolan får ett mejl och ser platserna direkt. De som inte fyllts släpps automatiskt efter &quot;fyll senast&quot;.</p>}
+        </div>
+      ) : (
+        kurs.status !== 'canceled' && (
+          <button
+            type="button"
+            onClick={() => startEdit(null)}
+            disabled={freePublic === 0}
+            className="w-full h-11 rounded-full border border-dashed border-white/20 text-sm font-semibold text-white/70 hover:text-white hover:border-white/40 disabled:opacity-40"
+          >
+            {freePublic === 0 ? 'Inga lediga platser att reservera' : '+ Reservera platser åt en trafikskola'}
+          </button>
+        )
+      )}
+    </Card>
   );
 }

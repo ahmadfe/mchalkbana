@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { meetingPlaceFor } from '@/lib/allocations';
 import { requireAdmin } from '@/lib/auth';
 import { ATTENDANCE_VALUES, courseEmailInfo, recalcSeats } from '@/lib/kurser';
 import { sendCancellationEmail } from '@/lib/email';
@@ -31,6 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { bookingId:
         recipientName: booking.guestName || 'Kund',
         bookingId: id,
         ...courseEmailInfo(booking.session),
+        location: await meetingPlaceFor(booking, courseEmailInfo(booking.session).location),
         cancelledBy: 'admin',
       }).catch(err => console.error('[Deltagare] Avbokningsmejl misslyckades:', err));
     }

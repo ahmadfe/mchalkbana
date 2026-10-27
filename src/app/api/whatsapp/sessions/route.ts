@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { releaseExpiredAllocations } from '@/lib/allocations';
 import { validateWhatsappApiKey } from '@/lib/whatsapp-auth';
 
 // GET /api/whatsapp/sessions
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
 
   const cutoff = new Date(Date.now() + 60 * 60 * 1000); // hide sessions starting within 1h
 
+  await releaseExpiredAllocations();
   const sessions = await prisma.session.findMany({
     where: {
       visibility: 'public',

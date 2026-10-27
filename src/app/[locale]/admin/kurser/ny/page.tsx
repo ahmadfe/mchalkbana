@@ -25,6 +25,7 @@ export default function NyKursPage() {
     const data = await res.json();
     setSaving(false);
     if (!res.ok) { setError(data.error ?? 'Något gick fel'); return; }
+    if (data.warning) alert(data.warning);
     router.push(`/${locale}/admin/kurser/${data.id}`);
   };
 
@@ -34,7 +35,7 @@ export default function NyKursPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 mt-6">
         {error && <p className="text-sm text-red-400 sm:mr-auto">{error}</p>}
         <Button onClick={() => router.push(`/${locale}/admin/kurser`)}>Avbryt</Button>
-        <Button variant="primary" onClick={save} disabled={saving || !values.courseId || !values.schoolId}>
+        <Button variant="primary" onClick={save} disabled={saving || !values.courseId || !values.schoolId || values.reservations.some(r => !r.schoolUserId)}>
           {saving ? 'Skapar…' : 'Skapa kurs'}
         </Button>
       </div>
