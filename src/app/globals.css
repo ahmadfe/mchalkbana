@@ -104,3 +104,46 @@ html:has(.admin-dark) .status-bar-shim {
     padding: 0.625rem;
   }
 }
+
+/* ── Äldre adminflikar i mörkt tema ─────────────────────────────────── */
+.admin-old .input-field {
+  background-color: #1c1c1f;
+  border-color: rgb(255 255 255 / 0.1);
+  color: #fff;
+  color-scheme: dark;
+}
+.admin-old .input-field::placeholder {
+  color: rgb(255 255 255 / 0.3);
+}
+.admin-old .input-field:focus {
+  --tw-ring-color: rgb(255 255 255 / 0.25);
+}
+.admin-old .input-field:disabled {
+  background-color: rgb(255 255 255 / 0.05);
+  color: rgb(255 255 255 / 0.5);
+}
+.admin-old select option {
+  background-color: #1c1c1f;
+  color: #fff;
+}
+.admin-old input[type='checkbox'],
+.admin-old input[type='radio'],
+.admin-old input[type='date'],
+.admin-old input[type='time'] {
+  color-scheme: dark;
+}
+.admin-old .btn-outline {
+  border-color: rgb(255 255 255 / 0.2);
+  color: #fff;
+}
+.admin-old .btn-outline:hover {
+  background-color: rgb(255 255 255 / 0.1);
+}
+.admin-old .card {
+  background-color: #1c1c1f;
+  border-color: rgb(255 255 255 / 0.05);
+}
+.admin-old .btn-primary,
+.admin-old .btn-secondary {
+  --tw-ring-offset-color: #0b0b0d;
+}

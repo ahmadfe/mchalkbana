@@ -1201,11 +1201,9 @@ export default function AdminPage() {
     );
   }
 
-  // Pass och bokningar har fått den mörka listan från Kurser
-  const darkTab = tab === 'sessions' || tab === 'overview';
-
+  // admin-old: mörka varianter av .input-field m.fl. (globals.css)
   return (
-    <div className={clsx('min-h-screen', darkTab ? 'bg-[#0b0b0d]' : 'bg-gray-50')}>
+    <div className="admin-old min-h-screen bg-[#0b0b0d] text-white">
       <AdminSidebar activeTab={tab as OldTab} onOldTab={selectTab} />
 
       <div className="md:pl-[84px] xl:pl-60">
@@ -1213,11 +1211,11 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className={clsx('font-headline text-3xl font-extrabold tracking-tight', darkTab ? 'text-white' : 'text-gray-900')}>{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
-              <p className={clsx('text-sm mt-1', darkTab ? 'text-white/50' : 'text-gray-500')}>Uppsala Halkbana</p>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white">{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
+              <p className="text-sm mt-1 text-white/50">Uppsala Halkbana</p>
             </div>
             {saved && (
-              <div className="flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-xl text-sm font-medium">
+              <div className="flex items-center gap-2 bg-emerald-500/15 text-emerald-300 px-4 py-2 rounded-xl text-sm font-medium">
                 <CheckCircle2 className="w-4 h-4" />
                 Sparat!
               </div>
@@ -1252,7 +1250,7 @@ export default function AdminPage() {
           {tab === 'courses' && (
             <div>
               <div className="flex justify-between items-center mb-5">
-                <h2 className="font-bold text-gray-900">Kurser ({courses.length})</h2>
+                <h2 className="font-bold text-white">Kurser ({courses.length})</h2>
                 <button
                   onClick={() => setShowAddCourse(true)}
                   className="btn-primary flex items-center gap-2 text-sm py-2"
@@ -1261,9 +1259,9 @@ export default function AdminPage() {
                   {t('add_course')}
                 </button>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
+                  <thead className="bg-white/5 text-white/50 text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-left py-3 px-5">Kurs</th>
                       <th className="text-left py-3 px-5">Typ</th>
@@ -1273,35 +1271,35 @@ export default function AdminPage() {
                       <th className="text-left py-3 px-5">Åtgärder</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-white/5">
                     {courses.map((c) => (
-                      <tr key={c.id} className="hover:bg-gray-50">
+                      <tr key={c.id} className="hover:bg-white/5">
                         <td className="py-3 px-5 font-medium">{locale === 'sv' ? c.titleSv : c.titleEn}</td>
                         <td className="py-3 px-5">
                           <span className={clsx(
                             'px-2.5 py-1 rounded-full text-xs font-semibold',
-                            c.type === 'Risk1' ? 'bg-brand-100 text-brand-800' :
-                            c.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
-                            c.type === 'Combo' ? 'bg-purple-100 text-purple-700' :
-                            c.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-700'
+                            c.type === 'Risk1' ? 'bg-sky-500/15 text-sky-200' :
+                            c.type === 'Risk2' ? 'bg-orange-500/15 text-orange-300' :
+                            c.type === 'Combo' ? 'bg-purple-500/15 text-purple-300' :
+                            c.type === 'AM' ? 'bg-yellow-500/15 text-yellow-200' :
+                            'bg-white/10 text-white/80'
                           )}>
                             {c.type === 'Combo' ? 'Kombo' : c.type}
                           </span>
                         </td>
-                        <td className="py-3 px-5 text-gray-500">
+                        <td className="py-3 px-5 text-white/50">
                           {c.vehicle === 'Car' ? '🚗 Bil' : c.vehicle === 'Motorcycle' ? '🏍️ Motorcykel' : c.vehicle === 'Moped' ? '🛵 Moped' : c.vehicle}
                         </td>
                         <td className="py-3 px-5 font-mono font-semibold text-swedish-blue">{c.behorighet}</td>
                         <td className="py-3 px-5 font-semibold">{c.price.toLocaleString('sv-SE')} kr</td>
                         <td className="py-3 px-5">
                           <div className="flex gap-2">
-                            <button onClick={() => openEditCourse(c)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50" title="Redigera kurs">
+                            <button onClick={() => openEditCourse(c)} className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10" title="Redigera kurs">
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteCourse(c.id)}
-                              className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                              className="p-1.5 text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1757,7 +1755,7 @@ export default function AdminPage() {
               <div>
                 <div className="flex flex-col gap-3 mb-5">
                   <div className="flex justify-between items-center flex-wrap gap-3">
-                    <h2 className="font-bold text-gray-900">Alla bokningar ({filtered.length})</h2>
+                    <h2 className="font-bold text-white">Alla bokningar ({filtered.length})</h2>
                     <button onClick={exportCsv} className="flex items-center gap-2 btn-outline text-sm py-2">
                       <Download className="w-4 h-4" />
                       {t('export_csv')}
@@ -1769,12 +1767,12 @@ export default function AdminPage() {
                       placeholder="Sök namn, personnummer eller ID..."
                       value={bookingSearch}
                       onChange={(e) => setBookingSearch(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue w-64"
+                      className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-[#1c1c1f] text-white/80 focus:outline-none focus:ring-2 focus:ring-swedish-blue w-64"
                     />
                     <select
                       value={bookingStatusFilter}
                       onChange={(e) => setBookingStatusFilter(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                      className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-[#1c1c1f] text-white/80 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
                     >
                       <option value="all">Alla statusar</option>
                       <option value="Pending">Pending</option>
@@ -1785,14 +1783,14 @@ export default function AdminPage() {
                     <select
                       value={bookingYear}
                       onChange={(e) => { setBookingYear(e.target.value); setBookingMonth('all'); }}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                      className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-[#1c1c1f] text-white/80 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
                     >
                       {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                     <select
                       value={bookingMonth}
                       onChange={(e) => setBookingMonth(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                      className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-[#1c1c1f] text-white/80 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
                     >
                       <option value="all">Alla månader</option>
                       {MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
@@ -1800,7 +1798,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 {monthKeys.length === 0 && (
-                  <div className="text-center py-16 text-gray-400 text-sm">Inga bokningar för vald period.</div>
+                  <div className="text-center py-16 text-white/40 text-sm">Inga bokningar för vald period.</div>
                 )}
                 {monthKeys.map((dayKey) => {
                   const dayLabelStr = new Date(dayKey + 'T12:00:00').toLocaleDateString('sv-SE', {
@@ -1813,10 +1811,10 @@ export default function AdminPage() {
                       className="w-full flex items-center gap-3 mb-3 group"
                       onClick={() => setCollapsedBookingDays(prev => { const n = new Set(prev); n.has(dayKey) ? n.delete(dayKey) : n.add(dayKey); return n; })}
                     >
-                      <h3 className="text-sm font-semibold text-gray-500 capitalize group-hover:text-gray-700">{dayLabelStr}</h3>
-                      <div className="flex-1 h-px bg-gray-200" />
-                      <span className="text-xs text-gray-400">{groups[dayKey].length} bokningar</span>
-                      {isCollapsedBooking ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
+                      <h3 className="text-sm font-semibold text-white/50 capitalize group-hover:text-white/80">{dayLabelStr}</h3>
+                      <div className="flex-1 h-px bg-white/15" />
+                      <span className="text-xs text-white/40">{groups[dayKey].length} bokningar</span>
+                      {isCollapsedBooking ? <ChevronDown className="w-4 h-4 text-white/40" /> : <ChevronUp className="w-4 h-4 text-white/40" />}
                     </button>
                     {!isCollapsedBooking && (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1836,24 +1834,24 @@ export default function AdminPage() {
                           const isPaidOrConfirmed = b.status === 'Paid' || b.status === 'Confirmed';
                           const canRefundBooking = payment?.status === 'Succeeded';
                           return (
-                            <div key={b.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col">
+                            <div key={b.id} className="bg-[#1c1c1f] rounded-xl border border-white/5 overflow-hidden flex flex-col">
                               {/* Header */}
-                              <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-50 bg-gray-50/60">
-                                <span className="text-xs text-gray-400 font-mono">#{b.id}</span>
+                              <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-white/5 bg-gray-50/60">
+                                <span className="text-xs text-white/40 font-mono">#{b.id}</span>
                                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                                   {b.bookedByRole === 'school' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold"><School className="w-3 h-3" />{(b as any).bookedBySchoolUser?.name || 'Skola'}</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 text-xs font-semibold"><School className="w-3 h-3" />{(b as any).bookedBySchoolUser?.name || 'Skola'}</span>
                                   ) : b.bookedByRole === 'admin' ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold"><Lock className="w-3 h-3" />Admin</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 text-xs font-semibold"><Lock className="w-3 h-3" />Admin</span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">Elev</span>
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 text-white/50 text-xs font-semibold">Elev</span>
                                   )}
                                   <span className={clsx(
                                     'px-2 py-0.5 rounded-full text-xs font-semibold',
-                                    b.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                                    b.status === 'Canceled' ? 'bg-red-100 text-red-700' :
-                                    b.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' :
-                                    'bg-yellow-100 text-yellow-700'
+                                    b.status === 'Paid' ? 'bg-emerald-500/15 text-emerald-300' :
+                                    b.status === 'Canceled' ? 'bg-red-500/15 text-red-300' :
+                                    b.status === 'Confirmed' ? 'bg-sky-500/15 text-sky-300' :
+                                    'bg-yellow-500/15 text-yellow-300'
                                   )}>{b.status}</span>
                                 </div>
                               </div>
@@ -1861,20 +1859,20 @@ export default function AdminPage() {
                               <div className="flex-1 p-4 space-y-3">
                                 {/* Student info */}
                                 <div>
-                                  <p className="font-semibold text-gray-900 text-sm">{name}</p>
-                                  {b.personnummer && <p className="font-mono text-xs text-gray-500 mt-0.5">{b.personnummer}</p>}
+                                  <p className="font-semibold text-white text-sm">{name}</p>
+                                  {b.personnummer && <p className="font-mono text-xs text-white/50 mt-0.5">{b.personnummer}</p>}
                                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                                    {phone && <p className="text-xs text-gray-500">{phone}</p>}
-                                    {email && <p className="text-xs text-gray-500 truncate max-w-[180px]">{email}</p>}
+                                    {phone && <p className="text-xs text-white/50">{phone}</p>}
+                                    {email && <p className="text-xs text-white/50 truncate max-w-[180px]">{email}</p>}
                                   </div>
                                 </div>
 
                                 {/* Session info */}
                                 {b.session && (
-                                  <div className="bg-gray-50 rounded-lg px-3 py-2">
-                                    <p className="text-xs font-semibold text-gray-800 mb-0.5">{courseTitle}</p>
-                                    <p className="text-xs text-gray-500">{sessionDate} · {sessionTime}</p>
-                                    {schoolName && <p className="text-xs text-gray-400">{schoolName}</p>}
+                                  <div className="bg-white/5 rounded-lg px-3 py-2">
+                                    <p className="text-xs font-semibold text-white/90 mb-0.5">{courseTitle}</p>
+                                    <p className="text-xs text-white/50">{sessionDate} · {sessionTime}</p>
+                                    {schoolName && <p className="text-xs text-white/40">{schoolName}</p>}
                                   </div>
                                 )}
 
@@ -1882,8 +1880,8 @@ export default function AdminPage() {
                                 {payment && (
                                   <div className="flex items-center justify-between gap-2">
                                     <div>
-                                      <p className="text-xs font-semibold text-gray-800">{payment.amount.toLocaleString('sv-SE')} kr</p>
-                                      <p className="text-xs text-gray-400">{payment.provider} · {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}</p>
+                                      <p className="text-xs font-semibold text-white/90">{payment.amount.toLocaleString('sv-SE')} kr</p>
+                                      <p className="text-xs text-white/40">{payment.provider} · {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}</p>
                                     </div>
                                     {canRefundBooking && (
                                       <button
@@ -1907,7 +1905,7 @@ export default function AdminPage() {
                                             },
                                           },
                                         })}
-                                        className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 font-medium border border-red-200 hover:border-red-400 px-2.5 py-1 rounded-lg transition"
+                                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-medium border border-red-500/30 hover:border-red-400 px-2.5 py-1 rounded-lg transition"
                                       >
                                         <RotateCcw className="w-3 h-3" />
                                         Återbetala
@@ -1918,13 +1916,13 @@ export default function AdminPage() {
                               </div>
 
                               {/* Actions */}
-                              <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-gray-50 bg-gray-50/40 flex-wrap">
+                              <div className="flex items-center gap-1.5 px-4 py-2.5 border-t border-white/5 bg-gray-50/40 flex-wrap">
                                 {email && isPaidOrConfirmed && (
                                   <>
                                     <button
                                       onClick={() => handleResendReceipt(b.id)}
                                       disabled={!!emailSending[b.id]}
-                                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-swedish-blue font-medium px-2 py-1 rounded-lg hover:bg-brand-50 transition disabled:opacity-50"
+                                      className="flex items-center gap-1 text-xs text-white/50 hover:text-swedish-blue font-medium px-2 py-1 rounded-lg hover:bg-sky-500/10 transition disabled:opacity-50"
                                       title="Skicka om kvitto"
                                     >
                                       <FileText className="w-3 h-3" />
@@ -1934,7 +1932,7 @@ export default function AdminPage() {
                                     <button
                                       onClick={() => handleSendReminder(b.id)}
                                       disabled={!!emailSending[b.id]}
-                                      className="flex items-center gap-1 text-xs text-gray-500 hover:text-swedish-blue font-medium px-2 py-1 rounded-lg hover:bg-brand-50 transition disabled:opacity-50"
+                                      className="flex items-center gap-1 text-xs text-white/50 hover:text-swedish-blue font-medium px-2 py-1 rounded-lg hover:bg-sky-500/10 transition disabled:opacity-50"
                                       title="Skicka påminnelse"
                                     >
                                       <MessageCircle className="w-3 h-3" />
@@ -1944,10 +1942,10 @@ export default function AdminPage() {
                                   </>
                                 )}
                                 <div className="flex-1" />
-                                <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 transition" title="Redigera">
+                                <button onClick={() => openEditBooking(b)} className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10 transition" title="Redigera">
                                   <Pencil className="w-3.5 h-3.5" />
                                 </button>
-                                <button onClick={() => handleDeleteBooking(b.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="Ta bort">
+                                <button onClick={() => handleDeleteBooking(b.id)} className="p-1.5 text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition" title="Ta bort">
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
@@ -1985,15 +1983,15 @@ export default function AdminPage() {
 
                 {/* ──── Left dark sidebar ──── */}
                 <div className={clsx(
-                  'lg:w-96 flex-shrink-0 flex flex-col rounded-[2rem] border border-white/10 p-5 shadow-2xl',
-                  'bg-brand-950',
+                  'lg:w-96 flex-shrink-0 flex flex-col rounded-3xl p-5',
+                  'bg-[#1c1c1f]',
                   selected ? 'hidden lg:flex' : 'flex',
                 )}>
                   {/* Active / Archived toggle */}
                   <div className="flex p-1 bg-black/20 rounded-xl gap-1 mb-5 border border-white/5">
                     {(['active', 'archived'] as const).map(v => (
                       <button key={v} onClick={() => { setStudentView(v); setSelectedStudentKey(null); }}
-                        className={clsx('flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all',
+                        className={clsx('flex-1 py-2 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all',
                           studentView === v ? 'bg-white/10 text-white shadow-sm' : 'text-white/30 hover:text-white/60')}>
                         {v === 'active' ? 'AKTIVA' : 'ARKIVERADE'}
                       </button>
@@ -2066,13 +2064,13 @@ export default function AdminPage() {
                     {/* Back button (mobile only) */}
                     <button
                       onClick={() => setSelectedStudentKey(null)}
-                      className="lg:hidden flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"
+                      className="lg:hidden flex items-center gap-2 text-sm text-white/50 hover:text-white/90 mb-4"
                     >
                       <ChevronDown className="w-4 h-4 rotate-90" /> Tillbaka
                     </button>
 
                     {/* Profile header */}
-                    <div className="bg-gradient-to-r from-brand-950 to-brand-900 rounded-2xl p-6 mb-4 text-white">
+                    <div className="bg-[#1c1c1f] rounded-3xl p-6 mb-4 text-white">
                       <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-2xl bg-swedish-blue/20 border border-swedish-blue/30 flex items-center justify-center shrink-0">
                           <span className="text-2xl font-black text-swedish-blue">{selected.name.charAt(0).toUpperCase()}</span>
@@ -2103,8 +2101,8 @@ export default function AdminPage() {
                     </div>
 
                     {/* Booking history */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
-                      <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-5 mb-4">
+                      <h3 className="font-bold text-white mb-4 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-swedish-blue" />
                         Bokningshistorik
                       </h3>
@@ -2122,24 +2120,24 @@ export default function AdminPage() {
                             return (
                               <div key={b.id} className={clsx(
                                 'flex items-start gap-3 p-3 rounded-xl border',
-                                isPast ? 'bg-gray-50 border-gray-100' : 'bg-brand-50 border-brand-100',
+                                isPast ? 'bg-white/5 border-white/5' : 'bg-sky-500/10 border-brand-100',
                               )}>
-                                <div className={clsx('w-2 h-2 rounded-full mt-1.5 shrink-0', isPast ? 'bg-gray-300' : 'bg-swedish-blue')} />
+                                <div className={clsx('w-2 h-2 rounded-full mt-1.5 shrink-0', isPast ? 'bg-white/20' : 'bg-swedish-blue')} />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-sm font-semibold text-gray-900 truncate">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</p>
+                                    <p className="text-sm font-semibold text-white truncate">{locale === 'sv' ? b.session?.course?.titleSv : b.session?.course?.titleEn}</p>
                                     {b.session?.course?.behorighet && (
                                       <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-swedish-blue/10 text-swedish-blue border border-swedish-blue/20">{b.session.course.behorighet}</span>
                                     )}
                                     <span className={clsx(
                                       'ml-auto text-[9px] font-bold uppercase px-2 py-0.5 rounded-full',
-                                      b.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                                      b.status === 'Canceled' ? 'bg-red-100 text-red-600' :
-                                      b.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' : 'bg-yellow-100 text-yellow-700'
+                                      b.status === 'Paid' ? 'bg-emerald-500/15 text-emerald-300' :
+                                      b.status === 'Canceled' ? 'bg-red-500/15 text-red-400' :
+                                      b.status === 'Confirmed' ? 'bg-sky-500/15 text-sky-300' : 'bg-yellow-500/15 text-yellow-300'
                                     )}>{b.status}</span>
                                   </div>
-                                  <p className="text-xs text-gray-500 mt-0.5">{dateStr} · {timeStr}</p>
-                                  {b.session?.school?.name && <p className="text-xs text-gray-400">{b.session.school.name}</p>}
+                                  <p className="text-xs text-white/50 mt-0.5">{dateStr} · {timeStr}</p>
+                                  {b.session?.school?.name && <p className="text-xs text-white/40">{b.session.school.name}</p>}
                                   {/* Add payment button for confirmed bookings with no payment */}
                                   {!payment && b.status === 'Confirmed' && (
                                     <button
@@ -2149,7 +2147,7 @@ export default function AdminPage() {
                                         setAddPaymentForm({ amount: String(price), provider: 'Swish', transactionId: '' });
                                         setAddPaymentError('');
                                       }}
-                                      className="mt-1.5 flex items-center gap-1.5 text-[10px] font-bold text-swedish-blue hover:text-swedish-dark border border-swedish-blue/30 hover:border-swedish-blue bg-brand-50 px-2.5 py-1 rounded-lg transition"
+                                      className="mt-1.5 flex items-center gap-1.5 text-[10px] font-bold text-swedish-blue hover:text-swedish-dark border border-swedish-blue/30 hover:border-swedish-blue bg-sky-500/10 px-2.5 py-1 rounded-lg transition"
                                     >
                                       <CreditCard className="w-3 h-3" /> Lägg till betalning
                                     </button>
@@ -2157,13 +2155,13 @@ export default function AdminPage() {
                                   {payment && (
                                     <div className="flex items-center justify-between gap-2 mt-1.5">
                                       <div>
-                                        <p className="text-xs text-gray-600 font-medium">
+                                        <p className="text-xs text-white/65 font-medium">
                                           {payment.amount.toLocaleString('sv-SE')} kr · {payment.provider}
-                                          {paymentDate && <span className="text-gray-400 font-normal"> · {paymentDate}</span>}
+                                          {paymentDate && <span className="text-white/40 font-normal"> · {paymentDate}</span>}
                                         </p>
                                         <span className={clsx('text-[9px] font-bold uppercase',
-                                          payment.status === 'Succeeded' ? 'text-green-600' :
-                                          payment.status === 'Refunded' ? 'text-orange-500' : 'text-gray-400'
+                                          payment.status === 'Succeeded' ? 'text-emerald-400' :
+                                          payment.status === 'Refunded' ? 'text-orange-500' : 'text-white/40'
                                         )}>
                                           {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}
                                         </span>
@@ -2190,7 +2188,7 @@ export default function AdminPage() {
                                               },
                                             },
                                           })}
-                                          className="flex items-center gap-1 text-[10px] font-bold text-red-600 hover:text-red-800 border border-red-200 hover:border-red-400 px-2 py-1 rounded-lg transition whitespace-nowrap shrink-0"
+                                          className="flex items-center gap-1 text-[10px] font-bold text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-400 px-2 py-1 rounded-lg transition whitespace-nowrap shrink-0"
                                         >
                                           <RotateCcw className="w-2.5 h-2.5" /> Återbetala
                                         </button>
@@ -2200,10 +2198,10 @@ export default function AdminPage() {
                                   {/* Result badge + admin edit */}
                                   {(b as any).result && (
                                     <div className="mt-1.5 flex items-center gap-2">
-                                      <span className={clsx('text-[9px] font-bold uppercase px-2 py-0.5 rounded-full', (b as any).result === 'passed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600')}>
+                                      <span className={clsx('text-[9px] font-bold uppercase px-2 py-0.5 rounded-full', (b as any).result === 'passed' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-400')}>
                                         {(b as any).result === 'passed' ? '✓ Godkänd' : '✗ Underkänd'}
                                       </span>
-                                      {(b as any).resultNote && <span className="text-xs text-gray-400 truncate">{(b as any).resultNote}</span>}
+                                      {(b as any).resultNote && <span className="text-xs text-white/40 truncate">{(b as any).resultNote}</span>}
                                     </div>
                                   )}
                                   {/* Admin result override */}
@@ -2215,7 +2213,7 @@ export default function AdminPage() {
                                         const res = await fetch(`/api/admin/bookings/${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ result: newResult }) });
                                         if (res.ok) setBookings((prev) => prev.map((bk) => bk.id === b.id ? { ...bk, result: newResult } as any : bk));
                                       }}
-                                      className="text-[10px] border border-gray-200 rounded-lg px-1.5 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-swedish-blue/30 bg-white"
+                                      className="text-[10px] border border-white/10 rounded-lg px-1.5 py-1 text-white/65 focus:outline-none focus:ring-1 focus:ring-swedish-blue/30 bg-[#1c1c1f]"
                                     >
                                       <option value="">– Resultat –</option>
                                       <option value="passed">Godkänd</option>
@@ -2228,13 +2226,13 @@ export default function AdminPage() {
                                     <button
                                       onClick={() => handleResendReceipt(b.id)}
                                       disabled={!!emailSending[b.id]}
-                                      className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 transition disabled:opacity-50"
+                                      className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10 transition disabled:opacity-50"
                                       title="Skicka om kvitto"
                                     >
                                       <FileText className="w-3.5 h-3.5" />
                                     </button>
                                   )}
-                                  <button onClick={() => openEditBooking(b)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50 transition" title="Redigera">
+                                  <button onClick={() => openEditBooking(b)} className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10 transition" title="Redigera">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
@@ -2248,27 +2246,27 @@ export default function AdminPage() {
                     <div className="flex flex-wrap gap-2 mb-4">
                       {selected.email && (
                         <a href={`mailto:${selected.email}`}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#1c1c1f] border border-white/10 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
                           <Mail className="w-4 h-4" /> Skicka e-post
                         </a>
                       )}
                       {selected.phone && (
                         <a href={`tel:${selected.phone}`}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-white border border-gray-200 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#1c1c1f] border border-white/10 rounded-xl hover:border-swedish-blue hover:text-swedish-blue transition">
                           <Phone className="w-4 h-4" /> Ring
                         </a>
                       )}
                     </div>
 
                     {/* Notes */}
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                    <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                        <h3 className="font-bold text-white flex items-center gap-2 text-sm">
                           <FileText className="w-4 h-4 text-swedish-blue" />
                           Anteckningar
                         </h3>
                         {studentNoteSaved && (
-                          <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                          <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
                             <CheckCircle2 className="w-3.5 h-3.5" /> Sparat
                           </span>
                         )}
@@ -2279,7 +2277,7 @@ export default function AdminPage() {
                         onChange={e => setStudentNote(e.target.value)}
                         onBlur={handleSaveStudentNote}
                         placeholder="Lägg till anteckningar om eleven..."
-                        className="w-full text-sm text-gray-700 placeholder-gray-300 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-swedish-blue/30 focus:border-swedish-blue transition"
+                        className="w-full text-sm text-white/80 placeholder-gray-300 border border-white/10 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-swedish-blue/30 focus:border-swedish-blue transition"
                       />
                       <div className="flex justify-end mt-2">
                         <button
@@ -2298,10 +2296,10 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex-1 hidden lg:flex items-center justify-center text-gray-300">
+                  <div className="flex-1 hidden lg:flex items-center justify-center text-white/30">
                     <div className="text-center">
-                      <UserCircle2 className="w-20 h-20 mx-auto mb-4 text-gray-200" />
-                      <p className="text-sm font-medium text-gray-400">Välj en elev för att se profil</p>
+                      <UserCircle2 className="w-20 h-20 mx-auto mb-4 text-white/20" />
+                      <p className="text-sm font-medium text-white/40">Välj en elev för att se profil</p>
                     </div>
                   </div>
                 )}
@@ -2314,19 +2312,19 @@ export default function AdminPage() {
             <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Create form */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <School className="w-5 h-5 text-swedish-blue" />
-                  <h2 className="font-bold text-gray-900">Skapa trafikskola-konto</h2>
+                  <h2 className="font-bold text-white">Skapa trafikskola-konto</h2>
                 </div>
                 {schoolAccountError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">
                     {schoolAccountError}
                   </div>
                 )}
                 <form className="space-y-4" onSubmit={handleCreateSchoolAccount}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Trafikskolans namn</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">Trafikskolans namn</label>
                     <input
                       type="text"
                       className="input-field"
@@ -2337,7 +2335,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">E-postadress</label>
                     <input
                       type="email"
                       className="input-field"
@@ -2348,7 +2346,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Lösenord</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">Lösenord</label>
                     <div className="relative">
                       <input
                         type={showSchoolPwd ? 'text' : 'password'}
@@ -2362,7 +2360,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => setShowSchoolPwd(!showSchoolPwd)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65"
                       >
                         {showSchoolPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -2383,46 +2381,46 @@ export default function AdminPage() {
               </div>
 
               {/* Existing accounts */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Befintliga trafikskolor ({schoolAccounts.length})</h2>
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
+                <h2 className="font-bold text-white mb-5">Befintliga trafikskolor ({schoolAccounts.length})</h2>
                 {schoolAccounts.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <School className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                  <div className="text-center py-12 text-white/40">
+                    <School className="w-10 h-10 mx-auto mb-3 text-white/20" />
                     <p className="text-sm">Inga trafikskola-konton ännu.</p>
                   </div>
                 ) : (
                   <ul className="space-y-3">
                     {schoolAccounts.map((acc) => (
-                      <li key={acc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                      <li key={acc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition">
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 text-sm">{acc.name}</p>
-                          <p className="text-xs text-gray-500 truncate">{acc.email}</p>
+                          <p className="font-medium text-white text-sm">{acc.name}</p>
+                          <p className="text-xs text-white/50 truncate">{acc.email}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-1 -ml-2 sm:ml-0">
                           <button
                             onClick={() => openResetPwd(acc.id, acc.name, 'school')}
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            className="flex items-center gap-1 text-xs text-white/50 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Återställ lösenord"
                           >
                             <KeyRound className="w-3.5 h-3.5" />Lösenord
                           </button>
                           <button
                             onClick={() => openPricesModal(acc)}
-                            className="flex items-center gap-1 text-xs text-gray-600 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            className="flex items-center gap-1 text-xs text-white/65 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Ange priser per kurs"
                           >
                             <Tag className="w-3.5 h-3.5" />Priser
                           </button>
                           <button
                             onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
-                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-brand-50 px-2 py-1.5 rounded-lg transition font-medium"
+                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-sky-500/10 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Rapport & Faktura"
                           >
                             <FileText className="w-3.5 h-3.5" />Faktura
                           </button>
                           <button
                             onClick={() => handleDeleteSchoolAccount(acc.id)}
-                            className="text-gray-400 hover:text-red-500 transition p-1"
+                            className="text-white/40 hover:text-red-500 transition p-1"
                             title="Ta bort konto"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2439,26 +2437,26 @@ export default function AdminPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
               {/* Create staff */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
                 <div className="flex items-center gap-2 mb-5">
                   <Lock className="w-5 h-5 text-orange-500" />
-                  <h2 className="font-bold text-gray-900">Skapa adminanvändare</h2>
+                  <h2 className="font-bold text-white">Skapa adminanvändare</h2>
                 </div>
-                <p className="text-xs text-gray-500 mb-4">Adminanvändare har full behörighet, precis som huvudkontot.</p>
+                <p className="text-xs text-white/50 mb-4">Adminanvändare har full behörighet, precis som huvudkontot.</p>
                 {staffError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{staffError}</div>
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{staffError}</div>
                 )}
                 <form className="space-y-4" onSubmit={handleCreateStaff}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">Namn</label>
                     <input type="text" className="input-field" placeholder="Receptionist" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">E-postadress</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">E-postadress</label>
                     <input type="email" className="input-field" placeholder="reception@uppsalahalkbana.se" value={newStaff.email} onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Lösenord</label>
+                    <label className="block text-sm font-medium text-white/80 mb-1.5">Lösenord</label>
                     <div className="relative">
                       <input
                         type={showStaffPwd ? 'text' : 'password'}
@@ -2469,7 +2467,7 @@ export default function AdminPage() {
                         required
                         minLength={8}
                       />
-                      <button type="button" onClick={() => setShowStaffPwd(!showStaffPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button type="button" onClick={() => setShowStaffPwd(!showStaffPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65">
                         {showStaffPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
@@ -2481,30 +2479,30 @@ export default function AdminPage() {
               </div>
 
               {/* Staff list */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Adminanvändare ({staffList.length})</h2>
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
+                <h2 className="font-bold text-white mb-5">Adminanvändare ({staffList.length})</h2>
                 {staffList.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400">
-                    <Lock className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                  <div className="text-center py-12 text-white/40">
+                    <Lock className="w-10 h-10 mx-auto mb-3 text-white/20" />
                     <p className="text-sm">Inga adminanvändare ännu.</p>
                   </div>
                 ) : (
                   <ul className="space-y-3">
                     {staffList.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-50 hover:bg-orange-100 transition">
+                      <li key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-500/10 hover:bg-orange-500/15 transition">
                         <div>
-                          <p className="font-medium text-gray-900 text-sm">{s.name}</p>
-                          <p className="text-xs text-gray-500">{s.email}</p>
+                          <p className="font-medium text-white text-sm">{s.name}</p>
+                          <p className="text-xs text-white/50">{s.email}</p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => openResetPwd(s.id, s.name, 'staff')}
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:bg-gray-200 px-2 py-1.5 rounded-lg transition font-medium"
+                            className="flex items-center gap-1 text-xs text-white/50 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
                             title="Återställ lösenord"
                           >
                             <KeyRound className="w-3.5 h-3.5" />Lösenord
                           </button>
-                          <button onClick={() => handleDeleteStaff(s.id)} className="text-gray-400 hover:text-red-500 transition p-1" title="Ta bort">
+                          <button onClick={() => handleDeleteStaff(s.id)} className="text-white/40 hover:text-red-500 transition p-1" title="Ta bort">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -2533,26 +2531,26 @@ export default function AdminPage() {
               <div>
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
-                    <h2 className="font-bold text-gray-900">Betalningar ({filteredPayments.length})</h2>
+                    <h2 className="font-bold text-white">Betalningar ({filteredPayments.length})</h2>
                     <select
                       value={paymentStatusFilter}
                       onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
+                      className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-[#1c1c1f] text-white/80 focus:outline-none focus:ring-2 focus:ring-swedish-blue"
                     >
                       <option value="all">Alla statusar</option>
                       <option value="Succeeded">Betald</option>
                       <option value="Refunded">Återbetald</option>
                     </select>
                   </div>
-                  <div className="text-sm text-gray-500">
-                    Totalt intjänat: <span className="font-semibold text-gray-900">
+                  <div className="text-sm text-white/50">
+                    Totalt intjänat: <span className="font-semibold text-white">
                       {payments.filter(p => p.status === 'Succeeded').reduce((s, p) => s + p.amount, 0).toLocaleString('sv-SE')} kr
                     </span>
                   </div>
                 </div>
 
                 {monthKeys.length === 0 && (
-                  <div className="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400">
+                  <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-10 text-center text-white/40">
                     Inga betalningar registrerade ännu.
                   </div>
                 )}
@@ -2560,9 +2558,9 @@ export default function AdminPage() {
                 {monthKeys.map((month) => (
                   <div key={month} className="mb-8">
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide capitalize">{month}</h3>
-                      <div className="flex-1 h-px bg-gray-200" />
-                      <span className="text-sm font-semibold text-gray-700">
+                      <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wide capitalize">{month}</h3>
+                      <div className="flex-1 h-px bg-white/15" />
+                      <span className="text-sm font-semibold text-white/80">
                         {groups[month].filter(p => p.status === 'Succeeded').reduce((s, p) => s + p.amount, 0).toLocaleString('sv-SE')} kr
                       </span>
                     </div>
@@ -2572,19 +2570,19 @@ export default function AdminPage() {
                         const sessionDate = new Date(p.booking.session.startTime).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' });
                         const paymentDate = new Date(p.createdAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Stockholm' });
                         return (
-                          <div key={p.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col">
+                          <div key={p.id} className="bg-[#1c1c1f] rounded-xl border border-white/5 overflow-hidden flex flex-col">
                             {/* Header: amount + status */}
                             <div className={clsx(
                               'px-4 py-2.5 flex items-center justify-between gap-2',
-                              p.status === 'Succeeded' ? 'bg-green-50' :
-                              p.status === 'Refunded' ? 'bg-orange-50' : 'bg-gray-50'
+                              p.status === 'Succeeded' ? 'bg-emerald-500/10' :
+                              p.status === 'Refunded' ? 'bg-orange-500/10' : 'bg-white/5'
                             )}>
-                              <span className="font-bold text-gray-900 text-base">{p.amount.toLocaleString('sv-SE')} kr</span>
+                              <span className="font-bold text-white text-base">{p.amount.toLocaleString('sv-SE')} kr</span>
                               <span className={clsx(
                                 'px-2 py-0.5 rounded-full text-xs font-semibold',
-                                p.status === 'Succeeded' ? 'bg-green-100 text-green-700' :
-                                p.status === 'Refunded' ? 'bg-orange-100 text-orange-700' :
-                                'bg-gray-100 text-gray-500'
+                                p.status === 'Succeeded' ? 'bg-emerald-500/15 text-emerald-300' :
+                                p.status === 'Refunded' ? 'bg-orange-500/15 text-orange-300' :
+                                'bg-white/10 text-white/50'
                               )}>
                                 {p.status === 'Succeeded' ? 'Betald' : p.status === 'Refunded' ? 'Återbetald' : p.status}
                               </span>
@@ -2593,33 +2591,33 @@ export default function AdminPage() {
                             <div className="flex-1 p-4 space-y-2">
                               {/* Student */}
                               <div>
-                                <p className="font-semibold text-gray-900 text-sm">{name}</p>
-                                {p.booking.personnummer && <p className="font-mono text-xs text-gray-500">{p.booking.personnummer}</p>}
-                                {p.booking.guestEmail && <p className="text-xs text-gray-400 truncate">{p.booking.guestEmail}</p>}
+                                <p className="font-semibold text-white text-sm">{name}</p>
+                                {p.booking.personnummer && <p className="font-mono text-xs text-white/50">{p.booking.personnummer}</p>}
+                                {p.booking.guestEmail && <p className="text-xs text-white/40 truncate">{p.booking.guestEmail}</p>}
                               </div>
 
                               {/* Course & date */}
-                              <div className="bg-gray-50 rounded-lg px-3 py-2">
-                                <p className="text-xs font-semibold text-gray-800">{p.booking.session.course.titleSv}</p>
-                                <p className="text-xs text-gray-500">{sessionDate} · {p.booking.session.school.name}</p>
+                              <div className="bg-white/5 rounded-lg px-3 py-2">
+                                <p className="text-xs font-semibold text-white/90">{p.booking.session.course.titleSv}</p>
+                                <p className="text-xs text-white/50">{sessionDate} · {p.booking.session.school.name}</p>
                               </div>
 
                               {/* Payment ref */}
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <p className="text-xs text-gray-500">{p.provider} · {paymentDate}</p>
-                                  {p.transactionId && <p className="font-mono text-xs text-gray-400 break-all">{p.transactionId}</p>}
+                                  <p className="text-xs text-white/50">{p.provider} · {paymentDate}</p>
+                                  {p.transactionId && <p className="font-mono text-xs text-white/40 break-all">{p.transactionId}</p>}
                                 </div>
-                                <span className="text-xs text-gray-400 shrink-0">#{p.id}</span>
+                                <span className="text-xs text-white/40 shrink-0">#{p.id}</span>
                               </div>
                             </div>
 
                             {/* Refund action */}
                             {p.status === 'Succeeded' && (
-                              <div className="px-4 py-2.5 border-t border-gray-50">
+                              <div className="px-4 py-2.5 border-t border-white/5">
                                 <button
                                   onClick={() => setRefundTarget(p)}
-                                  className="flex items-center gap-1.5 text-xs text-red-600 hover:text-red-800 font-medium transition"
+                                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 font-medium transition"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5" />
                                   Återbetala
@@ -2640,7 +2638,7 @@ export default function AdminPage() {
           {tab === 'cards' && (
             <div>
               <div className="flex justify-between items-center mb-5">
-                <h2 className="font-bold text-gray-900">Informationskort ({infoCards.length})</h2>
+                <h2 className="font-bold text-white">Informationskort ({infoCards.length})</h2>
                 <button
                   onClick={() => { setShowAddCard(true); setCardForm(emptyCardForm); setEditCard(null); }}
                   className="btn-primary flex items-center gap-2 text-sm py-2"
@@ -2653,15 +2651,15 @@ export default function AdminPage() {
               {/* Card list */}
               <div className="space-y-4 mb-6">
                 {infoCards.map((card) => (
-                  <div key={card.id} className={clsx('bg-white rounded-2xl border border-gray-100 overflow-hidden flex shadow-sm', !card.visible && 'opacity-50')}>
+                  <div key={card.id} className={clsx('bg-[#1c1c1f] rounded-2xl border border-white/5 overflow-hidden flex shadow-sm', !card.visible && 'opacity-50')}>
                     {/* Thumbnail */}
-                    <div className="w-32 shrink-0 bg-gray-100 relative">
+                    <div className="w-32 shrink-0 bg-white/10 relative">
                       {card.videoUrl ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white text-xs font-medium gap-1"><Video className="w-4 h-4" />Video</div>
                       ) : card.imageUrl ? (
                         <img src={card.imageUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-300"><ImagePlus className="w-8 h-8" /></div>
+                        <div className="absolute inset-0 flex items-center justify-center text-white/30"><ImagePlus className="w-8 h-8" /></div>
                       )}
                     </div>
                     {/* Info */}
@@ -2669,16 +2667,16 @@ export default function AdminPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           {card.badge && <span className="text-xs text-swedish-blue font-medium">{card.badge}</span>}
-                          <h3 className="font-bold text-gray-900 text-sm truncate">{card.title}</h3>
-                          <p className="text-gray-500 text-xs line-clamp-1 mt-0.5">{card.description}</p>
+                          <h3 className="font-bold text-white text-sm truncate">{card.title}</h3>
+                          <p className="text-white/50 text-xs line-clamp-1 mt-0.5">{card.description}</p>
                           {card.price && <p className="text-orange-600 text-xs font-semibold mt-1">{card.price}</p>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+                          <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/50')}>
                             {card.visible ? 'Synlig' : 'Dold'}
                           </span>
-                          <button onClick={() => openEditCard(card)} className="p-1.5 text-gray-400 hover:text-swedish-blue rounded-lg hover:bg-brand-50"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => openEditCard(card)} className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10"><Pencil className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 text-white/40 hover:text-red-400 rounded-lg hover:bg-red-500/10"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
                     </div>
@@ -2686,8 +2684,8 @@ export default function AdminPage() {
                 ))}
 
                 {infoCards.length === 0 && (
-                  <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-gray-400">
-                    <Tag className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                  <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-12 text-center text-white/40">
+                    <Tag className="w-10 h-10 mx-auto mb-3 text-white/20" />
                     <p className="text-sm">Inga informationskort ännu. Klicka på "Lägg till kort" för att börja.</p>
                   </div>
                 )}
@@ -2698,15 +2696,15 @@ export default function AdminPage() {
           {/* Hero media */}
           {tab === 'hero' && (
             <div className="max-w-xl">
-              <h2 className="font-bold text-gray-900 mb-6">Hero-bakgrund</h2>
-              <div className="space-y-6 bg-white rounded-2xl border border-gray-100 p-6">
+              <h2 className="font-bold text-white mb-6">Hero-bakgrund</h2>
+              <div className="space-y-6 bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
 
                 {/* Image upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bakgrundsbild</label>
+                  <label className="block text-sm font-medium text-white/80 mb-2">Bakgrundsbild</label>
                   <div
                     onClick={() => heroFileRef.current?.click()}
-                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', heroForm.heroImageUrl && !heroForm.heroVideoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-gray-50')}
+                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', heroForm.heroImageUrl && !heroForm.heroVideoUrl ? 'border-transparent' : 'border-white/15 hover:border-swedish-blue bg-white/5')}
                     style={{ height: '160px' }}
                   >
                     {heroForm.heroImageUrl && !heroForm.heroVideoUrl ? (
@@ -2717,7 +2715,7 @@ export default function AdminPage() {
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-2">
                         <ImagePlus className="w-7 h-7" />
                         <span className="text-sm">Klicka för att välja bild</span>
                         <span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
@@ -2728,15 +2726,15 @@ export default function AdminPage() {
                 </div>
 
                 {/* Divider */}
-                <div className="flex items-center gap-3 text-gray-400">
-                  <div className="flex-1 h-px bg-gray-200" />
+                <div className="flex items-center gap-3 text-white/40">
+                  <div className="flex-1 h-px bg-white/15" />
                   <span className="text-xs font-medium">ELLER</span>
-                  <div className="flex-1 h-px bg-gray-200" />
+                  <div className="flex-1 h-px bg-white/15" />
                 </div>
 
                 {/* Video URL */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">
                     <Video className="w-3.5 h-3.5 inline mr-1" />
                     Bakgrundsvideo-URL (MP4)
                   </label>
@@ -2753,7 +2751,7 @@ export default function AdminPage() {
                 {(heroForm.heroVideoUrl || heroForm.heroImageUrl) && (
                   <button
                     onClick={() => setHeroForm({ heroVideoUrl: '', heroImageUrl: '' })}
-                    className="text-sm text-red-500 hover:text-red-700"
+                    className="text-sm text-red-500 hover:text-red-300"
                   >
                     Ta bort hero-media
                   </button>
@@ -2775,23 +2773,23 @@ export default function AdminPage() {
           {tab === 'whatsapp' && (
             <div className="max-w-2xl space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-                  <Smartphone className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                  <Smartphone className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-gray-900">WhatsApp Admin-nummer</h2>
-                  <p className="text-sm text-gray-500">Registrerade nummer kan boka direkt utan betalning</p>
+                  <h2 className="font-bold text-white">WhatsApp Admin-nummer</h2>
+                  <p className="text-sm text-white/50">Registrerade nummer kan boka direkt utan betalning</p>
                 </div>
               </div>
 
               {/* Add number form */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-green-600" />
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
+                <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-emerald-400" />
                   Lägg till admin-nummer
                 </h3>
                 {waError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{waError}</div>
+                  <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{waError}</div>
                 )}
                 <form onSubmit={handleAddWaNumber} className="flex gap-3">
                   <input
@@ -2811,38 +2809,38 @@ export default function AdminPage() {
                     Lägg till
                   </button>
                 </form>
-                <p className="text-xs text-gray-400 mt-2">Ange nummer med landskod, t.ex. +46701234567</p>
+                <p className="text-xs text-white/40 mt-2">Ange nummer med landskod, t.ex. +46701234567</p>
               </div>
 
               {/* Registered numbers list */}
-              <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">
+              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
+                <h3 className="font-semibold text-white mb-4">
                   Registrerade nummer ({waNumbers.length})
                 </h3>
                 {waNumbers.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400">
-                    <Smartphone className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                  <div className="text-center py-10 text-white/40">
+                    <Smartphone className="w-8 h-8 mx-auto mb-2 text-white/20" />
                     <p className="text-sm">Inga admin-nummer registrerade ännu.</p>
                   </div>
                 ) : (
                   <ul className="space-y-2">
                     {waNumbers.map((n) => (
-                      <li key={n.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                      <li key={n.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                            <MessageCircle className="w-4 h-4 text-green-600" />
+                          <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                            <MessageCircle className="w-4 h-4 text-emerald-400" />
                           </div>
                           <div>
-                            <p className="font-mono font-semibold text-gray-900 text-sm">{n.phone}</p>
-                            <p className="text-xs text-gray-400">Registrerad {new Date(n.createdAt).toLocaleDateString('sv-SE')}</p>
+                            <p className="font-mono font-semibold text-white text-sm">{n.phone}</p>
+                            <p className="text-xs text-white/40">Registrerad {new Date(n.createdAt).toLocaleDateString('sv-SE')}</p>
                           </div>
                         </div>
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 mr-2">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-300 mr-2">
                           Admin
                         </span>
                         <button
                           onClick={() => handleDeleteWaNumber(n.id)}
-                          className="text-gray-300 hover:text-red-500 transition p-1"
+                          className="text-white/30 hover:text-red-500 transition p-1"
                           title="Ta bort nummer"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -2854,17 +2852,17 @@ export default function AdminPage() {
               </div>
 
               {/* API info box for n8n */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">n8n API-information</p>
-                <div className="space-y-2 text-xs font-mono text-gray-600">
-                  <p><span className="text-gray-400">Header:</span> x-api-key: <span className="text-swedish-blue">WHATSAPP_API_KEY</span></p>
-                  <p><span className="text-gray-400">POST</span> /api/whatsapp/identify</p>
-                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/sessions</p>
-                  <p><span className="text-gray-400">POST</span> /api/whatsapp/booking</p>
-                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/appointments?phone=</p>
-                  <p><span className="text-gray-400">GET</span>  /api/whatsapp/conversation?phone=</p>
-                  <p><span className="text-gray-400">POST</span> /api/whatsapp/conversation</p>
-                  <p><span className="text-gray-400">POST</span> /api/whatsapp/cancel-expired</p>
+              <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+                <p className="text-xs font-bold text-white/50 uppercase tracking-wide mb-3">n8n API-information</p>
+                <div className="space-y-2 text-xs font-mono text-white/65">
+                  <p><span className="text-white/40">Header:</span> x-api-key: <span className="text-swedish-blue">WHATSAPP_API_KEY</span></p>
+                  <p><span className="text-white/40">POST</span> /api/whatsapp/identify</p>
+                  <p><span className="text-white/40">GET</span>  /api/whatsapp/sessions</p>
+                  <p><span className="text-white/40">POST</span> /api/whatsapp/booking</p>
+                  <p><span className="text-white/40">GET</span>  /api/whatsapp/appointments?phone=</p>
+                  <p><span className="text-white/40">GET</span>  /api/whatsapp/conversation?phone=</p>
+                  <p><span className="text-white/40">POST</span> /api/whatsapp/conversation</p>
+                  <p><span className="text-white/40">POST</span> /api/whatsapp/cancel-expired</p>
                 </div>
               </div>
             </div>
@@ -2875,8 +2873,8 @@ export default function AdminPage() {
             <div className="space-y-8">
 
               {/* Send invite */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Bjud in instruktör</h2>
+              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
+                <h2 className="font-bold text-white mb-5">Bjud in instruktör</h2>
                 <form onSubmit={async (e) => {
                   e.preventDefault();
                   setInviteSending(true);
@@ -2907,44 +2905,44 @@ export default function AdminPage() {
                 </form>
 
                 {createdInstructor && (
-                  <div className="mt-5 bg-green-50 border border-green-200 rounded-xl p-4">
+                  <div className="mt-5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-bold text-green-800">{createdInstructor.reset ? '✓ Nytt lösenord skapat — spara det nu!' : '✓ Kontot skapat — spara lösenordet nu!'}</p>
-                      <button onClick={() => setCreatedInstructor(null)} className="text-green-600 hover:text-green-800 text-xs">Stäng</button>
+                      <p className="text-sm font-bold text-emerald-300">{createdInstructor.reset ? '✓ Nytt lösenord skapat — spara det nu!' : '✓ Kontot skapat — spara lösenordet nu!'}</p>
+                      <button onClick={() => setCreatedInstructor(null)} className="text-emerald-400 hover:text-emerald-300 text-xs">Stäng</button>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-green-700 w-16 shrink-0">Namn</span>
-                        <span className="font-semibold text-green-900">{createdInstructor.name}</span>
+                        <span className="text-emerald-300 w-16 shrink-0">Namn</span>
+                        <span className="font-semibold text-emerald-200">{createdInstructor.name}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-green-700 w-16 shrink-0">E-post</span>
-                        <span className="font-semibold text-green-900">{createdInstructor.email}</span>
+                        <span className="text-emerald-300 w-16 shrink-0">E-post</span>
+                        <span className="font-semibold text-emerald-200">{createdInstructor.email}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-green-700 w-16 shrink-0">Lösenord</span>
-                        <span className="font-mono font-bold text-green-900 bg-white border border-green-300 px-3 py-1 rounded-lg text-base tracking-wide select-all">{createdInstructor.password}</span>
+                        <span className="text-emerald-300 w-16 shrink-0">Lösenord</span>
+                        <span className="font-mono font-bold text-emerald-200 bg-[#1c1c1f] border border-green-300 px-3 py-1 rounded-lg text-base tracking-wide select-all">{createdInstructor.password}</span>
                         <button
                           onClick={() => navigator.clipboard.writeText(createdInstructor.password)}
-                          className="text-xs bg-green-200 hover:bg-green-300 text-green-800 font-semibold px-2.5 py-1 rounded-lg transition"
+                          className="text-xs bg-green-200 hover:bg-green-300 text-emerald-300 font-semibold px-2.5 py-1 rounded-lg transition"
                         >
                           Kopiera
                         </button>
                       </div>
                     </div>
-                    <p className="text-xs text-green-600 mt-3">Lösenordet har skickats via e-post till instruktören.</p>
+                    <p className="text-xs text-emerald-400 mt-3">Lösenordet har skickats via e-post till instruktören.</p>
                   </div>
                 )}
               </div>
 
               {/* Active instructors */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Aktiva instruktörer ({instructors.length})</h2>
+              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
+                <h2 className="font-bold text-white mb-5">Aktiva instruktörer ({instructors.length})</h2>
                 {instructors.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">Inga instruktörer ännu.</p>
+                  <p className="text-sm text-white/40 text-center py-4">Inga instruktörer ännu.</p>
                 ) : (
                   <div className="space-y-2">
-                    {instrError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{instrError}</p>}
+                    {instrError && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">{instrError}</p>}
                     {instructors.map((instr) => {
                       const busy = instrBusy === instr.id;
                       const upcoming = instr._count?.assignedSessions ?? 0;
@@ -2968,7 +2966,7 @@ export default function AdminPage() {
                               setInstructors((prev) => prev.map((i) => i.id === instr.id ? { ...i, ...data.instructor } : i));
                               setEditInstr(null);
                             }}
-                            className="p-3 bg-gray-50 rounded-xl border border-swedish-blue/30 space-y-2"
+                            className="p-3 bg-white/5 rounded-xl border border-swedish-blue/30 space-y-2"
                           >
                             <div className="grid sm:grid-cols-3 gap-2">
                               <input required placeholder="Namn" value={editInstr.name} onChange={(e) => setEditInstr({ ...editInstr, name: e.target.value })} className="input-field text-sm" />
@@ -2976,7 +2974,7 @@ export default function AdminPage() {
                               <input type="tel" placeholder="Telefon" value={editInstr.phone} onChange={(e) => setEditInstr({ ...editInstr, phone: e.target.value })} className="input-field text-sm" />
                             </div>
                             <div className="flex justify-end gap-2">
-                              <button type="button" onClick={() => { setEditInstr(null); setInstrError(''); }} className="px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-white">Avbryt</button>
+                              <button type="button" onClick={() => { setEditInstr(null); setInstrError(''); }} className="px-4 py-2 text-sm border border-white/10 rounded-xl hover:bg-[#1c1c1f]">Avbryt</button>
                               <button type="submit" disabled={busy} className="btn-primary px-4 py-2 text-sm disabled:opacity-60">{busy ? 'Sparar...' : 'Spara'}</button>
                             </div>
                           </form>
@@ -2984,17 +2982,17 @@ export default function AdminPage() {
                       }
 
                       return (
-                        <div key={instr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div key={instr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white/5 rounded-xl">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">{instr.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{[instr.email, instr.phone].filter(Boolean).join(' · ')}</p>
-                            <p className="text-xs text-gray-400">{upcoming > 0 ? `${upcoming} kommande pass` : 'Inga kommande pass'}</p>
+                            <p className="text-sm font-semibold text-white">{instr.name}</p>
+                            <p className="text-xs text-white/50 truncate">{[instr.email, instr.phone].filter(Boolean).join(' · ')}</p>
+                            <p className="text-xs text-white/40">{upcoming > 0 ? `${upcoming} kommande pass` : 'Inga kommande pass'}</p>
                           </div>
                           <div className="flex flex-wrap gap-1.5 shrink-0">
                             <button
                               onClick={() => { setInstrError(''); setEditInstr({ id: instr.id, name: instr.name, email: instr.email, phone: instr.phone ?? '' }); }}
                               disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-lg hover:bg-gray-100"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-white/10 bg-[#1c1c1f] rounded-lg hover:bg-white/10"
                             >
                               <Pencil className="w-3.5 h-3.5" /> Redigera
                             </button>
@@ -3015,7 +3013,7 @@ export default function AdminPage() {
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }}
                               disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-lg hover:bg-gray-100"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-white/10 bg-[#1c1c1f] rounded-lg hover:bg-white/10"
                             >
                               <KeyRound className="w-3.5 h-3.5" /> Nytt lösenord
                             </button>
@@ -3031,7 +3029,7 @@ export default function AdminPage() {
                                 setInstructors((prev) => prev.filter((i) => i.id !== instr.id));
                               }}
                               disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-200 text-red-600 bg-white rounded-lg hover:bg-red-50"
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-500/30 text-red-400 bg-[#1c1c1f] rounded-lg hover:bg-red-500/10"
                             >
                               <Trash2 className="w-3.5 h-3.5" /> Ta bort
                             </button>
@@ -3044,19 +3042,19 @@ export default function AdminPage() {
               </div>
 
               {/* Invites list */}
-              <div className="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 className="font-bold text-gray-900 mb-5">Skickade inbjudningar ({instructorInvites.length})</h2>
+              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
+                <h2 className="font-bold text-white mb-5">Skickade inbjudningar ({instructorInvites.length})</h2>
                 {instructorInvites.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-4">Inga inbjudningar ännu.</p>
+                  <p className="text-sm text-white/40 text-center py-4">Inga inbjudningar ännu.</p>
                 ) : (
                   <div className="space-y-2">
                     {instructorInvites.map((inv) => (
-                      <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                      <div key={inv.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{inv.email}{inv.name ? ` (${inv.name})` : ''}</p>
-                          <p className="text-xs text-gray-400">Går ut: {new Date(inv.expiresAt).toLocaleDateString('sv-SE')}</p>
+                          <p className="text-sm font-semibold text-white">{inv.email}{inv.name ? ` (${inv.name})` : ''}</p>
+                          <p className="text-xs text-white/40">Går ut: {new Date(inv.expiresAt).toLocaleDateString('sv-SE')}</p>
                         </div>
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${inv.usedAt ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${inv.usedAt ? 'bg-emerald-500/15 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}`}>
                           {inv.usedAt ? 'Använd' : 'Väntar'}
                         </span>
                       </div>
@@ -3075,26 +3073,26 @@ export default function AdminPage() {
       {/* Reset Password Modal */}
       {resetPwdTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-bold text-lg">Återställ lösenord</h3>
-                <p className="text-sm text-gray-500">{resetPwdTarget.name}</p>
+                <p className="text-sm text-white/50">{resetPwdTarget.name}</p>
               </div>
-              <button onClick={() => setResetPwdTarget(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => setResetPwdTarget(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
             </div>
             {resetPwdDone ? (
               <div className="text-center py-6">
                 <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <p className="font-semibold text-gray-900">Lösenord uppdaterat!</p>
-                {resetPwdTarget.type === 'school' && <p className="text-sm text-gray-500 mt-1">Nytt lösenord har skickats via e-post.</p>}
+                <p className="font-semibold text-white">Lösenord uppdaterat!</p>
+                {resetPwdTarget.type === 'school' && <p className="text-sm text-white/50 mt-1">Nytt lösenord har skickats via e-post.</p>}
                 <button onClick={() => setResetPwdTarget(null)} className="mt-4 btn-primary px-6 py-2 text-sm">Stäng</button>
               </div>
             ) : (
               <>
-                {resetPwdError && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{resetPwdError}</div>}
+                {resetPwdError && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{resetPwdError}</div>}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Nytt lösenord</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Nytt lösenord</label>
                   <div className="relative">
                     <input
                       type={showResetPwd ? 'text' : 'password'}
@@ -3104,13 +3102,13 @@ export default function AdminPage() {
                       onChange={(e) => setResetPwdValue(e.target.value)}
                       minLength={8}
                     />
-                    <button type="button" onClick={() => setShowResetPwd(!showResetPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button type="button" onClick={() => setShowResetPwd(!showResetPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65">
                       {showResetPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setResetPwdTarget(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+                  <button onClick={() => setResetPwdTarget(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Avbryt</button>
                   <button
                     onClick={handleResetPassword}
                     disabled={resetPwdSaving || resetPwdValue.length < 8}
@@ -3129,26 +3127,26 @@ export default function AdminPage() {
       {/* School Prices Modal */}
       {pricesModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
               <div>
-                <h3 className="font-bold text-lg text-gray-900">Priser – {pricesModal.name}</h3>
-                <p className="text-sm text-gray-500">Lämna tomt för att använda kursens standardpris</p>
+                <h3 className="font-bold text-lg text-white">Priser – {pricesModal.name}</h3>
+                <p className="text-sm text-white/50">Lämna tomt för att använda kursens standardpris</p>
               </div>
-              <button onClick={() => setPricesModal(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setPricesModal(null)} className="text-white/40 hover:text-white/65">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-3">
               {courses.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-8">Inga kurser skapade ännu.</p>
+                <p className="text-sm text-white/40 text-center py-8">Inga kurser skapade ännu.</p>
               ) : (
                 courses.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-gray-50">
+                  <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-white/5">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{c.titleSv}</p>
-                      <p className="text-xs text-gray-400">Standardpris: {c.price.toLocaleString('sv-SE')} kr</p>
+                      <p className="text-sm font-medium text-white truncate">{c.titleSv}</p>
+                      <p className="text-xs text-white/40">Standardpris: {c.price.toLocaleString('sv-SE')} kr</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <input
@@ -3159,15 +3157,15 @@ export default function AdminPage() {
                         onChange={(e) => setSchoolPriceMap((prev) => ({ ...prev, [c.id]: e.target.value }))}
                         className="w-28 input-field text-sm py-1.5 text-right"
                       />
-                      <span className="text-sm text-gray-500">kr</span>
+                      <span className="text-sm text-white/50">kr</span>
                     </div>
                   </div>
                 ))
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-100 shrink-0 flex gap-3">
-              <button onClick={() => setPricesModal(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium">
+            <div className="p-6 border-t border-white/5 shrink-0 flex gap-3">
+              <button onClick={() => setPricesModal(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm font-medium">
                 Stäng
               </button>
               <button
@@ -3191,19 +3189,19 @@ export default function AdminPage() {
       {/* School Invoice Modal */}
       {invoiceSchool && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
               <div>
-                <h3 className="font-bold text-lg text-gray-900">Faktura – {invoiceSchool.name}</h3>
-                <p className="text-sm text-gray-500">{invoiceSchool.email}</p>
+                <h3 className="font-bold text-lg text-white">Faktura – {invoiceSchool.name}</h3>
+                <p className="text-sm text-white/50">{invoiceSchool.email}</p>
               </div>
-              <button onClick={() => setInvoiceSchool(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => setInvoiceSchool(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
             </div>
 
             {/* Month picker */}
-            <div className="px-6 py-4 border-b border-gray-100 shrink-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Välj månad</label>
+            <div className="px-6 py-4 border-b border-white/5 shrink-0">
+              <label className="block text-sm font-medium text-white/80 mb-1.5">Välj månad</label>
               <input
                 type="month"
                 className="input-field w-48"
@@ -3215,50 +3213,50 @@ export default function AdminPage() {
             {/* Report content */}
             <div className="flex-1 overflow-y-auto p-6">
               {invoiceLoading ? (
-                <div className="flex items-center justify-center py-16 text-gray-400">
+                <div className="flex items-center justify-center py-16 text-white/40">
                   <div className="w-6 h-6 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin mr-3" />
                   Laddar rapport...
                 </div>
               ) : !invoiceReport || invoiceReport.rows.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <FileText className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                <div className="text-center py-16 text-white/40">
+                  <FileText className="w-10 h-10 mx-auto mb-3 text-white/20" />
                   <p className="text-sm">Inga bokningar för denna månad.</p>
                 </div>
               ) : (
                 <>
                   <table className="w-full text-sm mb-6">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left text-xs text-gray-500 uppercase pb-2 font-semibold">Kurs</th>
-                        <th className="text-center text-xs text-gray-500 uppercase pb-2 font-semibold">Datum</th>
-                        <th className="text-center text-xs text-gray-500 uppercase pb-2 font-semibold">Elever</th>
-                        <th className="text-right text-xs text-gray-500 uppercase pb-2 font-semibold">Pris/elev</th>
-                        <th className="text-right text-xs text-gray-500 uppercase pb-2 font-semibold">Summa</th>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left text-xs text-white/50 uppercase pb-2 font-semibold">Kurs</th>
+                        <th className="text-center text-xs text-white/50 uppercase pb-2 font-semibold">Datum</th>
+                        <th className="text-center text-xs text-white/50 uppercase pb-2 font-semibold">Elever</th>
+                        <th className="text-right text-xs text-white/50 uppercase pb-2 font-semibold">Pris/elev</th>
+                        <th className="text-right text-xs text-white/50 uppercase pb-2 font-semibold">Summa</th>
                       </tr>
                     </thead>
                     <tbody>
                       {invoiceReport.rows.map((r, i) => (
-                        <tr key={i} className="border-b border-gray-50">
-                          <td className="py-2.5 text-gray-900 font-medium">{r.courseName}</td>
-                          <td className="py-2.5 text-gray-500 text-center">{r.sessionDate}</td>
-                          <td className="py-2.5 text-gray-500 text-center">{r.studentCount}</td>
-                          <td className="py-2.5 text-gray-500 text-right">{r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
-                          <td className="py-2.5 text-gray-900 font-semibold text-right">{r.subtotal.toLocaleString('sv-SE')} kr</td>
+                        <tr key={i} className="border-b border-white/5">
+                          <td className="py-2.5 text-white font-medium">{r.courseName}</td>
+                          <td className="py-2.5 text-white/50 text-center">{r.sessionDate}</td>
+                          <td className="py-2.5 text-white/50 text-center">{r.studentCount}</td>
+                          <td className="py-2.5 text-white/50 text-right">{r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
+                          <td className="py-2.5 text-white font-semibold text-right">{r.subtotal.toLocaleString('sv-SE')} kr</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  <div className="border-t-2 border-gray-200 pt-4 space-y-1">
-                    <div className="flex justify-between text-sm text-gray-500">
-                      <span>Totalt antal elever</span><span className="font-semibold text-gray-900">{invoiceReport.totalStudents}</span>
+                  <div className="border-t-2 border-white/10 pt-4 space-y-1">
+                    <div className="flex justify-between text-sm text-white/50">
+                      <span>Totalt antal elever</span><span className="font-semibold text-white">{invoiceReport.totalStudents}</span>
                     </div>
-                    <div className="flex justify-between text-sm text-gray-500">
+                    <div className="flex justify-between text-sm text-white/50">
                       <span>Exkl. moms</span><span>{Math.round(invoiceReport.totalAmount / 1.25).toLocaleString('sv-SE')} kr</span>
                     </div>
-                    <div className="flex justify-between text-sm text-gray-500">
+                    <div className="flex justify-between text-sm text-white/50">
                       <span>Moms (25%)</span><span>{(invoiceReport.totalAmount - Math.round(invoiceReport.totalAmount / 1.25)).toLocaleString('sv-SE')} kr</span>
                     </div>
-                    <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-200">
+                    <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-white/10">
                       <span>Totalt att betala</span>
                       <span className="text-swedish-blue">{invoiceReport.totalAmount.toLocaleString('sv-SE')} kr</span>
                     </div>
@@ -3268,8 +3266,8 @@ export default function AdminPage() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 shrink-0 flex gap-3">
-              <button onClick={() => setInvoiceSchool(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Stäng</button>
+            <div className="px-6 py-4 border-t border-white/5 shrink-0 flex gap-3">
+              <button onClick={() => setInvoiceSchool(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Stäng</button>
               <button
                 onClick={handleSendInvoice}
                 disabled={invoiceSending || invoiceLoading || !invoiceReport || invoiceReport.rows.length === 0 || invoiceSent}
@@ -3291,30 +3289,30 @@ export default function AdminPage() {
       {/* Edit Booking Modal */}
       {editBooking && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">Redigera bokning #{editBooking.id}</h3>
-              <button onClick={() => setEditBooking(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => setEditBooking(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Namn</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Namn</label>
                 <input type="text" className="input-field" value={editForm.guestName} onChange={(e) => setEditForm({ ...editForm, guestName: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Personnummer</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Personnummer</label>
                 <input type="text" className="input-field font-mono" value={editForm.personnummer} onChange={(e) => setEditForm({ ...editForm, personnummer: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefon</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Telefon</label>
                 <input type="tel" className="input-field" value={editForm.guestPhone} onChange={(e) => setEditForm({ ...editForm, guestPhone: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">E-post</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">E-post</label>
                 <input type="email" className="input-field" value={editForm.guestEmail} onChange={(e) => setEditForm({ ...editForm, guestEmail: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Status</label>
                 <select className="input-field" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
                   <option value="Pending">Pending</option>
                   <option value="Confirmed">Confirmed</option>
@@ -3324,7 +3322,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setEditBooking(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+              <button onClick={() => setEditBooking(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Avbryt</button>
               <button
                 onClick={handleEditBookingSave}
                 disabled={editSaving}
@@ -3341,21 +3339,21 @@ export default function AdminPage() {
       {/* Add Payment Modal */}
       {addPaymentBookingId !== null && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-swedish-blue" /> Lägg till betalning
               </h3>
-              <button onClick={() => setAddPaymentBookingId(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setAddPaymentBookingId(null)} className="text-white/40 hover:text-white/65">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleAddPayment} className="space-y-4">
               {addPaymentError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addPaymentError}</div>
+                <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{addPaymentError}</div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Belopp (kr) *</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Belopp (kr) *</label>
                 <input
                   type="number"
                   required
@@ -3367,7 +3365,7 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Betalningsmetod *</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Betalningsmetod *</label>
                 <select
                   value={addPaymentForm.provider}
                   onChange={e => setAddPaymentForm(f => ({ ...f, provider: e.target.value }))}
@@ -3381,7 +3379,7 @@ export default function AdminPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Referensnummer <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Referensnummer <span className="text-white/40 font-normal">(valfri)</span></label>
                 <input
                   type="text"
                   value={addPaymentForm.transactionId}
@@ -3391,7 +3389,7 @@ export default function AdminPage() {
                 />
               </div>
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setAddPaymentBookingId(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium">
+                <button type="button" onClick={() => setAddPaymentBookingId(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm font-medium">
                   Avbryt
                 </button>
                 <button
@@ -3411,29 +3409,29 @@ export default function AdminPage() {
       {/* Refund Confirm Modal */}
       {refundTarget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-red-500/15 rounded-full flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
               </div>
-              <h3 className="font-bold text-gray-900">Bekräfta återbetalning</h3>
+              <h3 className="font-bold text-white">Bekräfta återbetalning</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-white/65 mb-2">
               Är du säker på att du vill återbetala{' '}
               <strong>{refundTarget.amount.toLocaleString('sv-SE')} kr</strong> till{' '}
               <strong>{refundTarget.booking.guestName ?? refundTarget.booking.user?.name ?? 'kunden'}</strong>?
             </p>
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-white/40 mb-4">
               Bokning #{refundTarget.bookingId} kommer att avbokas och platsen återställas. Pengarna skickas automatiskt tillbaka via Swish.
             </p>
             {refundError && (
-              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">{refundError}</p>
+              <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 mb-4">{refundError}</p>
             )}
             <div className="flex gap-3">
               <button
                 onClick={() => { setRefundTarget(null); setRefundError(null); }}
                 disabled={refunding}
-                className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+                className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm font-medium disabled:opacity-50"
               >
                 Avbryt
               </button>
@@ -3457,7 +3455,7 @@ export default function AdminPage() {
       {/* Session Students Modal */}
       {(studentsData || studentsLoading) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-4xl w-full shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-4xl w-full shadow-2xl max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -3465,7 +3463,7 @@ export default function AdminPage() {
                   {studentsData ? `${locale === 'sv' ? studentsData.session.course.titleSv : studentsData.session.course.titleEn}` : 'Laddar...'}
                 </h3>
                 {studentsData && (
-                  <p className="text-sm text-gray-500 mt-0.5">
+                  <p className="text-sm text-white/50 mt-0.5">
                     {new Date(studentsData.session.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {studentsData.session.school.name} · {studentsData.students.length}/{studentsData.session.seatLimit} platser
                   </p>
                 )}
@@ -3501,7 +3499,7 @@ export default function AdminPage() {
                     <Plus className="w-4 h-4" />Lägg till elev
                   </button>
                 )}
-                <button onClick={() => { setStudentsData(null); setStudentsLoading(false); setShowAddStudent(false); setEmailSending({}); setEmailDone({}); setAllRemindersDone(false); }} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => { setStudentsData(null); setStudentsLoading(false); setShowAddStudent(false); setEmailSending({}); setEmailDone({}); setAllRemindersDone(false); }} className="text-white/40 hover:text-white/65">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -3509,28 +3507,28 @@ export default function AdminPage() {
 
             {/* Add student form */}
             {showAddStudent && studentsData && (
-              <form onSubmit={handleAddStudent} className="bg-gray-50 rounded-xl p-4 mb-4 grid grid-cols-2 gap-3">
+              <form onSubmit={handleAddStudent} className="bg-white/5 rounded-xl p-4 mb-4 grid grid-cols-2 gap-3">
                 {addStudentError && (
-                  <div className="col-span-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{addStudentError}</div>
+                  <div className="col-span-2 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{addStudentError}</div>
                 )}
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Namn *</label>
+                  <label className="block text-xs font-medium text-white/65 mb-1">Namn *</label>
                   <input type="text" className="input-field text-sm" placeholder="Anna Svensson" value={addStudentForm.name} onChange={(e) => setAddStudentForm({ ...addStudentForm, name: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Personnummer *</label>
+                  <label className="block text-xs font-medium text-white/65 mb-1">Personnummer *</label>
                   <input type="text" className="input-field text-sm" placeholder="YYYYMMDD-XXXX" value={addStudentForm.personnummer} onChange={(e) => setAddStudentForm({ ...addStudentForm, personnummer: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Telefon</label>
+                  <label className="block text-xs font-medium text-white/65 mb-1">Telefon</label>
                   <input type="text" className="input-field text-sm" placeholder="070-000 00 00" value={addStudentForm.phone} onChange={(e) => setAddStudentForm({ ...addStudentForm, phone: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">E-post</label>
+                  <label className="block text-xs font-medium text-white/65 mb-1">E-post</label>
                   <input type="email" className="input-field text-sm" placeholder="elev@example.se" value={addStudentForm.email} onChange={(e) => setAddStudentForm({ ...addStudentForm, email: e.target.value })} />
                 </div>
                 <div className="col-span-2 flex gap-2 justify-end">
-                  <button type="button" onClick={() => setShowAddStudent(false)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100">Avbryt</button>
+                  <button type="button" onClick={() => setShowAddStudent(false)} className="px-4 py-2 text-sm border border-white/10 rounded-lg hover:bg-white/10">Avbryt</button>
                   <button type="submit" disabled={addStudentSaving} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2">
                     {addStudentSaving ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</> : 'Lägg till'}
                   </button>
@@ -3547,13 +3545,13 @@ export default function AdminPage() {
             {studentsData && (
               <div className="overflow-auto flex-1">
                 {studentsData.students.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Users className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                  <div className="text-center py-12 text-white/50">
+                    <Users className="w-10 h-10 mx-auto mb-3 text-white/30" />
                     <p>Inga bokningar för detta pass ännu.</p>
                   </div>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide sticky top-0">
+                    <thead className="bg-white/5 text-white/50 text-xs uppercase tracking-wide sticky top-0">
                       <tr>
                         <th className="text-left py-3 px-4">#</th>
                         <th className="text-left py-3 px-4">Namn</th>
@@ -3565,10 +3563,10 @@ export default function AdminPage() {
                         <th className="text-left py-3 px-4"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-white/5">
                       {studentsData.students.map((s, i) => (
-                        <tr key={s.bookingId} className="hover:bg-gray-50">
-                          <td className="py-2.5 px-4 text-gray-400">{i + 1}</td>
+                        <tr key={s.bookingId} className="hover:bg-white/5">
+                          <td className="py-2.5 px-4 text-white/40">{i + 1}</td>
                           <td className="py-2.5 px-4 font-medium">
                             <button
                               onClick={() => {
@@ -3588,27 +3586,27 @@ export default function AdminPage() {
                               {s.name}
                             </button>
                           </td>
-                          <td className="py-2.5 px-4 font-mono text-xs text-gray-700">{s.personnummer}</td>
-                          <td className="py-2.5 px-4 text-gray-500 text-xs">{s.phone}</td>
-                          <td className="py-2.5 px-4 text-gray-500 text-xs">{s.email}</td>
+                          <td className="py-2.5 px-4 font-mono text-xs text-white/80">{s.personnummer}</td>
+                          <td className="py-2.5 px-4 text-white/50 text-xs">{s.phone}</td>
+                          <td className="py-2.5 px-4 text-white/50 text-xs">{s.email}</td>
                           <td className="py-2.5 px-4 text-xs">
                             {s.bookedByRole === 'school' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-semibold">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-semibold">
                                 <School className="w-3 h-3" />{s.bookedBySchool || 'Skola'}
                               </span>
                             ) : s.bookedByRole === 'admin' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-300 font-semibold">
                                 <Lock className="w-3 h-3" />Admin
                               </span>
                             ) : (
-                              <span className="text-gray-400">Elev</span>
+                              <span className="text-white/40">Elev</span>
                             )}
                           </td>
                           <td className="py-2.5 px-4">
                             <span className={clsx('px-2 py-0.5 rounded-full text-xs font-semibold',
-                              s.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                              s.status === 'Confirmed' ? 'bg-brand-100 text-brand-700' :
-                              'bg-yellow-100 text-yellow-700'
+                              s.status === 'Paid' ? 'bg-emerald-500/15 text-emerald-300' :
+                              s.status === 'Confirmed' ? 'bg-sky-500/15 text-sky-300' :
+                              'bg-yellow-500/15 text-yellow-300'
                             )}>{s.status}</span>
                           </td>
                           <td className="py-2.5 px-4">
@@ -3620,7 +3618,7 @@ export default function AdminPage() {
                                     disabled={!!emailSending[s.bookingId]}
                                     title="Skicka om kvitto"
                                     className={clsx('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition',
-                                      emailDone[s.bookingId] === 'receipt' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-50'
+                                      emailDone[s.bookingId] === 'receipt' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/65 hover:bg-sky-500/10 hover:text-sky-300 disabled:opacity-50'
                                     )}
                                   >
                                     {emailSending[s.bookingId] === 'receipt' ? (
@@ -3637,7 +3635,7 @@ export default function AdminPage() {
                                     disabled={!!emailSending[s.bookingId]}
                                     title="Skicka påminnelse"
                                     className={clsx('flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition',
-                                      emailDone[s.bookingId] === 'reminder' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50'
+                                      emailDone[s.bookingId] === 'reminder' ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/65 hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50'
                                     )}
                                   >
                                     {emailSending[s.bookingId] === 'reminder' ? (
@@ -3662,12 +3660,12 @@ export default function AdminPage() {
                                   setMoveTargetSessionId('');
                                   setMoveError('');
                                 }}
-                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition"
+                                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-white/10 text-white/65 hover:bg-sky-500/10 hover:text-sky-300 transition"
                                 title="Flytta till annat pass"
                               >
                                 <ArrowRightLeft className="w-3 h-3" />Flytta
                               </button>
-                              <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-gray-300 hover:text-red-500 transition ml-1" title="Ta bort">
+                              <button onClick={() => handleDeleteStudent(s.bookingId)} className="text-white/30 hover:text-red-500 transition ml-1" title="Ta bort">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -3677,7 +3675,7 @@ export default function AdminPage() {
                     </tbody>
                   </table>
                 )}
-                <p className="text-xs text-gray-400 mt-4 text-right">
+                <p className="text-xs text-white/40 mt-4 text-right">
                   Totalt: {studentsData.students.length} elev{studentsData.students.length !== 1 ? 'er' : ''} · {studentsData.session.seatsAvailable} platser kvar
                 </p>
               </div>
@@ -3689,25 +3687,25 @@ export default function AdminPage() {
       {/* Move Student Modal */}
       {moveBooking && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
                   <ArrowRightLeft className="w-5 h-5 text-swedish-blue" />Flytta elev
                 </h3>
-                <p className="text-sm text-gray-500 mt-0.5">{moveBooking.studentName}</p>
+                <p className="text-sm text-white/50 mt-0.5">{moveBooking.studentName}</p>
               </div>
-              <button onClick={() => setMoveBooking(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setMoveBooking(null)} className="text-white/40 hover:text-white/65">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleMoveStudent} className="space-y-4">
               {moveError && (
-                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{moveError}</div>
+                <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{moveError}</div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Välj nytt pass *</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Välj nytt pass *</label>
                 <select
                   required
                   value={moveTargetSessionId}
@@ -3730,11 +3728,11 @@ export default function AdminPage() {
                     })}
                 </select>
                 {sessions.filter((s) => s.id !== moveBooking.currentSessionId && new Date(s.endTime) >= new Date() && s.seatsAvailable > 0 && s.courseId === moveBooking.courseId).length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1.5">Inga tillgängliga pass för samma kurs.</p>
+                  <p className="text-xs text-amber-400 mt-1.5">Inga tillgängliga pass för samma kurs.</p>
                 )}
               </div>
               <div className="flex gap-2 justify-end pt-1">
-                <button type="button" onClick={() => setMoveBooking(null)} className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-100">Avbryt</button>
+                <button type="button" onClick={() => setMoveBooking(null)} className="px-4 py-2 text-sm border border-white/10 rounded-lg hover:bg-white/10">Avbryt</button>
                 <button
                   type="submit"
                   disabled={moveLoading || !moveTargetSessionId}
@@ -3751,62 +3749,62 @@ export default function AdminPage() {
       {/* Add/Edit Info Card Modal */}
       {(showAddCard || editCard) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
               <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Nytt kort'}</h3>
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
               {/* Badge */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Badge-text <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Badge-text <span className="text-white/40 font-normal">(valfri)</span></label>
                 <input type="text" className="input-field" placeholder="t.ex. Sveriges ledande riskutbildning" value={cardForm.badge} onChange={(e) => setCardForm({ ...cardForm, badge: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Rubrik *</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Rubrik *</label>
                 <input type="text" className="input-field" placeholder="Riskutbildning för körkort A & B" value={cardForm.title} onChange={(e) => setCardForm({ ...cardForm, title: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning *</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Beskrivning *</label>
                 <textarea rows={3} className="input-field resize-none" placeholder="Teori och praktik på vår moderna halkbana..." value={cardForm.description} onChange={(e) => setCardForm({ ...cardForm, description: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris <span className="text-gray-400 font-normal">(valfri)</span></label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Pris <span className="text-white/40 font-normal">(valfri)</span></label>
                 <input type="text" className="input-field" placeholder="2 500 kr" value={cardForm.price} onChange={(e) => setCardForm({ ...cardForm, price: e.target.value })} />
               </div>
 
               {/* Buttons */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-semibold text-gray-700">Knappar</p>
+              <div className="bg-white/5 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-white/80">Knappar</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Primär knapptext</label>
+                    <label className="block text-xs font-medium text-white/65 mb-1">Primär knapptext</label>
                     <input type="text" className="input-field text-sm" placeholder="Våra kurser" value={cardForm.primaryButtonText} onChange={(e) => setCardForm({ ...cardForm, primaryButtonText: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Primär länk</label>
+                    <label className="block text-xs font-medium text-white/65 mb-1">Primär länk</label>
                     <input type="text" className="input-field text-sm" placeholder="/courses" value={cardForm.primaryButtonLink} onChange={(e) => setCardForm({ ...cardForm, primaryButtonLink: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Sekundär knapptext <span className="text-gray-400">(valfri)</span></label>
+                    <label className="block text-xs font-medium text-white/65 mb-1">Sekundär knapptext <span className="text-white/40">(valfri)</span></label>
                     <input type="text" className="input-field text-sm" placeholder="Boka riskutbildning" value={cardForm.secondaryButtonText} onChange={(e) => setCardForm({ ...cardForm, secondaryButtonText: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Sekundär länk</label>
+                    <label className="block text-xs font-medium text-white/65 mb-1">Sekundär länk</label>
                     <input type="text" className="input-field text-sm" placeholder="/courses" value={cardForm.secondaryButtonLink} onChange={(e) => setCardForm({ ...cardForm, secondaryButtonLink: e.target.value })} />
                   </div>
                 </div>
               </div>
 
               {/* Media */}
-              <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                <p className="text-sm font-semibold text-gray-700">Media <span className="text-gray-400 font-normal">(bild eller video)</span></p>
+              <div className="bg-white/5 rounded-xl p-4 space-y-4">
+                <p className="text-sm font-semibold text-white/80">Media <span className="text-white/40 font-normal">(bild eller video)</span></p>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-2">Ladda upp bild</label>
+                  <label className="block text-xs font-medium text-white/65 mb-2">Ladda upp bild</label>
                   <div
                     onClick={() => cardFileRef.current?.click()}
-                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', cardForm.imageUrl && !cardForm.videoUrl ? 'border-transparent' : 'border-gray-300 hover:border-swedish-blue bg-white')}
+                    className={clsx('relative rounded-xl overflow-hidden border-2 border-dashed cursor-pointer transition group', cardForm.imageUrl && !cardForm.videoUrl ? 'border-transparent' : 'border-white/15 hover:border-swedish-blue bg-[#1c1c1f]')}
                     style={{ height: '140px' }}
                   >
                     {cardForm.imageUrl && !cardForm.videoUrl ? (
@@ -3817,39 +3815,39 @@ export default function AdminPage() {
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                      <div className="flex flex-col items-center justify-center h-full text-white/40 gap-2">
                         <ImagePlus className="w-7 h-7" /><span className="text-sm">Klicka för att välja bild</span><span className="text-xs">JPG, PNG, WebP · Max 5 MB</span>
                       </div>
                     )}
                   </div>
                   <input ref={cardFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleCardFileChange} />
                 </div>
-                <div className="flex items-center gap-3 text-gray-400">
-                  <div className="flex-1 h-px bg-gray-200" /><span className="text-xs font-medium">ELLER</span><div className="flex-1 h-px bg-gray-200" />
+                <div className="flex items-center gap-3 text-white/40">
+                  <div className="flex-1 h-px bg-white/15" /><span className="text-xs font-medium">ELLER</span><div className="flex-1 h-px bg-white/15" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Video-URL (MP4)</label>
+                  <label className="block text-xs font-medium text-white/65 mb-1.5">Video-URL (MP4)</label>
                   <input type="url" className="input-field text-sm" placeholder="https://example.com/video.mp4" value={cardForm.videoUrl} onChange={(e) => setCardForm({ ...cardForm, videoUrl: e.target.value, imageUrl: e.target.value ? '' : cardForm.imageUrl })} />
-                  <p className="text-xs text-gray-400 mt-1">Video används istället för bild om den anges.</p>
+                  <p className="text-xs text-white/40 mt-1">Video används istället för bild om den anges.</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Sortering</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Sortering</label>
                   <input type="number" className="input-field w-24" value={cardForm.sortOrder} onChange={(e) => setCardForm({ ...cardForm, sortOrder: parseInt(e.target.value) || 0 })} />
                 </div>
                 <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-700">Synlig</label>
-                  <button type="button" onClick={() => setCardForm({ ...cardForm, visible: !cardForm.visible })} className={clsx('relative inline-flex h-6 w-11 rounded-full transition-colors', cardForm.visible ? 'bg-swedish-blue' : 'bg-gray-300')}>
-                    <span className={clsx('inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-1', cardForm.visible ? 'translate-x-6' : 'translate-x-1')} />
+                  <label className="text-sm font-medium text-white/80">Synlig</label>
+                  <button type="button" onClick={() => setCardForm({ ...cardForm, visible: !cardForm.visible })} className={clsx('relative inline-flex h-6 w-11 rounded-full transition-colors', cardForm.visible ? 'bg-swedish-blue' : 'bg-white/20')}>
+                    <span className={clsx('inline-block h-4 w-4 rounded-full bg-[#1c1c1f] shadow transform transition-transform mt-1', cardForm.visible ? 'translate-x-6' : 'translate-x-1')} />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
-              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm">Avbryt</button>
+            <div className="flex gap-3 px-6 py-4 border-t border-white/5 shrink-0">
+              <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Avbryt</button>
               <button
                 onClick={handleSaveCard}
                 disabled={cardSaving || !cardForm.title || !cardForm.description}
@@ -3866,29 +3864,29 @@ export default function AdminPage() {
       {/* Add Course Modal */}
       {showAddCourse && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">{t('add_course')}</h3>
-              <button onClick={() => setShowAddCourse(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setShowAddCourse(false)} className="text-white/40 hover:text-white/65">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form className="space-y-4" onSubmit={handleAddCourse}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel (Svenska)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Titel (Svenska)</label>
                 <input type="text" className="input-field" placeholder="Risk 1 – Bil" value={newCourse.titleSv} onChange={(e) => setNewCourse({ ...newCourse, titleSv: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (English)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Title (English)</label>
                 <input type="text" className="input-field" placeholder="Risk 1 – Car" value={newCourse.titleEn} onChange={(e) => setNewCourse({ ...newCourse, titleEn: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Beskrivning</label>
                 <input type="text" className="input-field" value={newCourse.description} onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })} />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Typ</label>
                   <input list="course-types-new" className="input-field" value={newCourse.type} onChange={(e) => setNewCourse({ ...newCourse, type: e.target.value })} placeholder="Välj eller skriv..." />
                   <datalist id="course-types-new">
                     <option value="Risk1">Risk 1</option>
@@ -3900,7 +3898,7 @@ export default function AdminPage() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Fordon</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Fordon</label>
                   <select className="input-field" value={newCourse.vehicle} onChange={(e) => setNewCourse({ ...newCourse, vehicle: e.target.value })}>
                     <option value="Car">Bil</option>
                     <option value="Motorcycle">Motorcykel</option>
@@ -3909,7 +3907,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Behörighet</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Behörighet</label>
                   <select className="input-field" value={newCourse.behorighet} onChange={(e) => setNewCourse({ ...newCourse, behorighet: e.target.value })}>
                     <option value="B">B</option>
                     <option value="A">A</option>
@@ -3920,19 +3918,19 @@ export default function AdminPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (kr)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Pris (kr)</label>
                 <input type="number" className="input-field" placeholder="1500" value={newCourse.price} onChange={(e) => setNewCourse({ ...newCourse, price: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mötesplats</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Mötesplats</label>
                 <input type="text" className="input-field" placeholder="Uppsala Halkbana, Industrigatan 12" value={newCourse.location} onChange={(e) => setNewCourse({ ...newCourse, location: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Meddelande på kvitto</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Meddelande på kvitto</label>
                 <textarea className="input-field" rows={3} placeholder="T.ex. ta med körkort..." value={newCourse.receiptMessage} onChange={(e) => setNewCourse({ ...newCourse, receiptMessage: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddCourse(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
+                <button type="button" onClick={() => setShowAddCourse(false)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5">
                   Avbryt
                 </button>
                 <button type="submit" className="flex-1 btn-primary py-2.5">
@@ -3947,30 +3945,30 @@ export default function AdminPage() {
       {/* Edit Course Modal */}
       {editCourse && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">Redigera kurs</h3>
-              <button onClick={() => setEditCourse(null)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <button onClick={() => setEditCourse(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
             </div>
             {editCourseError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{editCourseError}</div>
+              <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{editCourseError}</div>
             )}
             <form className="space-y-4" onSubmit={handleSaveEditCourse}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Titel (Svenska)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Titel (Svenska)</label>
                 <input type="text" className="input-field" value={editCourseForm.titleSv} onChange={(e) => setEditCourseForm({ ...editCourseForm, titleSv: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Title (English)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Title (English)</label>
                 <input type="text" className="input-field" value={editCourseForm.titleEn} onChange={(e) => setEditCourseForm({ ...editCourseForm, titleEn: e.target.value })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Beskrivning</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Beskrivning</label>
                 <input type="text" className="input-field" value={editCourseForm.description} onChange={(e) => setEditCourseForm({ ...editCourseForm, description: e.target.value })} />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Typ</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Typ</label>
                   <input list="course-types-edit" className="input-field" value={editCourseForm.type} onChange={(e) => setEditCourseForm({ ...editCourseForm, type: e.target.value })} placeholder="Välj eller skriv..." />
                   <datalist id="course-types-edit">
                     <option value="Risk1">Risk 1</option>
@@ -3982,7 +3980,7 @@ export default function AdminPage() {
                   </datalist>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Fordon</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Fordon</label>
                   <select className="input-field" value={editCourseForm.vehicle} onChange={(e) => setEditCourseForm({ ...editCourseForm, vehicle: e.target.value })}>
                     <option value="Car">Bil</option>
                     <option value="Motorcycle">Motorcykel</option>
@@ -3991,7 +3989,7 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Behörighet</label>
+                  <label className="block text-sm font-medium text-white/80 mb-1.5">Behörighet</label>
                   <select className="input-field" value={editCourseForm.behorighet} onChange={(e) => setEditCourseForm({ ...editCourseForm, behorighet: e.target.value })}>
                     <option value="B">B</option>
                     <option value="A">A</option>
@@ -4002,15 +4000,15 @@ export default function AdminPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Pris (kr)</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Pris (kr)</label>
                 <input type="number" className="input-field" value={editCourseForm.price} onChange={(e) => setEditCourseForm({ ...editCourseForm, price: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Mötesplats</label>
+                <label className="block text-sm font-medium text-white/80 mb-1.5">Mötesplats</label>
                 <input type="text" className="input-field" value={editCourseForm.location} onChange={(e) => setEditCourseForm({ ...editCourseForm, location: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditCourse(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50">
+                <button type="button" onClick={() => setEditCourse(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5">
                   Avbryt
                 </button>
                 <button type="submit" disabled={editCourseSaving} className="flex-1 btn-primary py-2.5 disabled:opacity-60">
@@ -4025,11 +4023,11 @@ export default function AdminPage() {
       {/* Add Session Modal */}
       {showAddSession && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col">
+          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 shrink-0">
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5 shrink-0">
               <h3 className="font-bold text-lg">{t('add_session')}</h3>
-              <button onClick={() => setShowAddSession(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+              <button onClick={() => setShowAddSession(false)} className="text-white/40 hover:text-white/65 p-1 rounded-lg hover:bg-white/10">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -4037,7 +4035,7 @@ export default function AdminPage() {
             <form className="flex-1 overflow-y-auto px-6 py-5 space-y-5" onSubmit={handleAddSession}>
               {/* Course */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Kurs</label>
+                <label className="block text-sm font-semibold text-white/80 mb-1.5">Kurs</label>
                 <select className="input-field" value={newSession.courseId} onChange={(e) => {
                   const selected = courses.find((c) => String(c.id) === e.target.value);
                   const defaultSeats = selected?.vehicle === 'Motorcycle' ? '4' : '8';
@@ -4056,10 +4054,10 @@ export default function AdminPage() {
 
               {/* Combo sub-sessions — only shown when Combo course is selected */}
               {courses.find((c) => String(c.id) === newSession.courseId)?.type === 'Combo' && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">Kombo — välj ingående pass</p>
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-bold text-purple-300 uppercase tracking-wide">Kombo — välj ingående pass</p>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Risk 1 pass (valfritt)</label>
+                    <label className="block text-sm font-semibold text-white/80 mb-1.5">Risk 1 pass (valfritt)</label>
                     <select className="input-field" value={newSession.comboRisk1SessionId} onChange={(e) => setNewSession({ ...newSession, comboRisk1SessionId: e.target.value })}>
                       <option value="">Inget kopplat R1-pass</option>
                       {sessions
@@ -4073,7 +4071,7 @@ export default function AdminPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Risk 2 pass (valfritt)</label>
+                    <label className="block text-sm font-semibold text-white/80 mb-1.5">Risk 2 pass (valfritt)</label>
                     <select className="input-field" value={newSession.comboRisk2SessionId} onChange={(e) => setNewSession({ ...newSession, comboRisk2SessionId: e.target.value })}>
                       <option value="">Inget kopplat R2-pass</option>
                       {sessions
@@ -4091,9 +4089,9 @@ export default function AdminPage() {
 
               {/* School venue */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Plats / Anläggning</label>
+                <label className="block text-sm font-semibold text-white/80 mb-1.5">Plats / Anläggning</label>
                 {schools.length === 0 ? (
-                  <p className="text-sm text-orange-500 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                  <p className="text-sm text-orange-500 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2">
                     Inga anläggningar skapade. Gå till fliken <strong>Trafikskolor</strong> och lägg till en anläggning först.
                   </p>
                 ) : (
@@ -4108,9 +4106,9 @@ export default function AdminPage() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Datum</label>
+                <label className="block text-sm font-semibold text-white/80 mb-1.5">Datum</label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                   <input type="date" className="input-field pl-9" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} required />
                 </div>
               </div>
@@ -4118,9 +4116,9 @@ export default function AdminPage() {
               {/* Times */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Starttid</label>
+                  <label className="block text-sm font-semibold text-white/80 mb-1.5">Starttid</label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                     <input type="time" className="input-field pl-9" value={startHour} onChange={(e) => {
                       setStartHour(e.target.value);
                       if (isRisk2Bil(newSession.courseId)) {
@@ -4131,9 +4129,9 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sluttid</label>
+                  <label className="block text-sm font-semibold text-white/80 mb-1.5">Sluttid</label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
                     <input type="time" className="input-field pl-9" value={endHour} onChange={(e) => {
                       setEndHour(e.target.value);
                       if (isRisk2Bil(newSession.courseId)) {
@@ -4148,11 +4146,11 @@ export default function AdminPage() {
               {/* Seats + Visibility */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Platsgräns</label>
+                  <label className="block text-sm font-semibold text-white/80 mb-1.5">Platsgräns</label>
                   <input type="number" className="input-field" placeholder="20" min="1" value={newSession.seatLimit} onChange={(e) => setNewSession({ ...newSession, seatLimit: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Synlighet</label>
+                  <label className="block text-sm font-semibold text-white/80 mb-1.5">Synlighet</label>
                   <select className="input-field" value={newSession.visibility} onChange={(e) => setNewSession({ ...newSession, visibility: e.target.value, assignedSchoolUserIds: [] })}>
                     <option value="public">Offentlig</option>
                     <option value="school">Skolkonto</option>
@@ -4163,10 +4161,10 @@ export default function AdminPage() {
               {/* School assignment */}
               {newSession.visibility === 'school' && (
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tilldela trafikskolor</label>
-                  <div className="border border-gray-200 rounded-xl bg-white max-h-36 overflow-y-auto p-2 space-y-1">
+                  <label className="block text-sm font-semibold text-white/80 mb-1.5">Tilldela trafikskolor</label>
+                  <div className="border border-white/10 rounded-xl bg-[#1c1c1f] max-h-36 overflow-y-auto p-2 space-y-1">
                     {schoolAccounts.map((acc) => (
-                      <label key={acc.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-gray-50 text-sm">
+                      <label key={acc.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-white/5 text-sm">
                         <input
                           type="checkbox"
                           checked={newSession.assignedSchoolUserIds.includes(acc.id)}
@@ -4189,10 +4187,10 @@ export default function AdminPage() {
               )}
 
               {/* Recurrence */}
-              <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 px-4 py-3 flex items-center gap-2 border-b border-gray-100">
-                  <RefreshCw className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-semibold text-gray-700">Upprepa pass</span>
+              <div className="rounded-xl border border-white/10 overflow-hidden">
+                <div className="bg-white/5 px-4 py-3 flex items-center gap-2 border-b border-white/5">
+                  <RefreshCw className="w-4 h-4 text-white/50" />
+                  <span className="text-sm font-semibold text-white/80">Upprepa pass</span>
                 </div>
                 <div className="px-4 py-4 space-y-4">
                   {/* Repeat type buttons */}
@@ -4212,7 +4210,7 @@ export default function AdminPage() {
                           'px-3 py-2 rounded-xl text-sm font-medium border transition-all',
                           recurrence === opt.value
                             ? 'bg-swedish-blue text-white border-swedish-blue shadow-sm'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-swedish-blue hover:text-swedish-blue'
+                            : 'bg-[#1c1c1f] text-white/65 border-white/10 hover:border-swedish-blue hover:text-swedish-blue'
                         )}
                       >
                         {opt.label}
@@ -4224,23 +4222,23 @@ export default function AdminPage() {
                   {recurrence !== 'none' && (
                     <>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Antal upprepningar</label>
+                        <label className="block text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">Antal upprepningar</label>
                         <div className="flex items-center gap-3">
-                          <button type="button" onClick={() => setRecurrenceCount(c => Math.max(2, c - 1))} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 font-bold">−</button>
-                          <span className="text-xl font-bold text-gray-900 w-8 text-center">{recurrenceCount}</span>
-                          <button type="button" onClick={() => setRecurrenceCount(c => Math.min(52, c + 1))} className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 font-bold">+</button>
-                          <span className="text-sm text-gray-400">pass skapas</span>
+                          <button type="button" onClick={() => setRecurrenceCount(c => Math.max(2, c - 1))} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-white/65 hover:bg-white/10 font-bold">−</button>
+                          <span className="text-xl font-bold text-white w-8 text-center">{recurrenceCount}</span>
+                          <button type="button" onClick={() => setRecurrenceCount(c => Math.min(52, c + 1))} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-white/65 hover:bg-white/10 font-bold">+</button>
+                          <span className="text-sm text-white/40">pass skapas</span>
                         </div>
                       </div>
 
                       {sessionDate && (
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Förhandsgranskning</label>
+                          <label className="block text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">Förhandsgranskning</label>
                           <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                             {getSessionDates().map(({ start }, i) => {
                               const d = new Date(start);
                               return (
-                                <div key={i} className="flex items-center gap-2.5 text-sm text-gray-600">
+                                <div key={i} className="flex items-center gap-2.5 text-sm text-white/65">
                                   <span className="w-5 h-5 rounded-full bg-swedish-blue/10 text-swedish-blue text-xs flex items-center justify-center font-bold shrink-0">{i + 1}</span>
                                   <span>{d.toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })} · {startHour}–{endHour}</span>
                                 </div>
@@ -4256,8 +4254,8 @@ export default function AdminPage() {
 
               {/* Receipt message */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Meddelande på kvitto <span className="text-gray-400 font-normal">(valfri)</span>
+                <label className="block text-sm font-semibold text-white/80 mb-1.5">
+                  Meddelande på kvitto <span className="text-white/40 font-normal">(valfri)</span>
                 </label>
                 <textarea
                   className="input-field"
@@ -4275,7 +4273,7 @@ export default function AdminPage() {
 
               {/* Footer buttons */}
               <div className="flex gap-3 pt-1 pb-1">
-                <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 font-medium">
+                <button type="button" onClick={() => setShowAddSession(false)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 font-medium">
                   Avbryt
                 </button>
                 <button type="submit" className="flex-1 btn-primary py-2.5">
