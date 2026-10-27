@@ -113,8 +113,6 @@ export default function StudentForm({
               </Select>
             </Field>
             <div className="hidden sm:block" />
-            <Field label="Körkortstillstånd giltigt till"><Input {...text('permitValidUntil')} type="date" /></Field>
-            <Field label="Synintyg utfärdat"><Input {...text('synintygDate')} type="date" /></Field>
             <Field label="Riskutbildning del 1 gjord"><Input {...text('risk1DoneAt')} type="date" /></Field>
             <Field label="Riskutbildning del 2 gjord"><Input {...text('risk2DoneAt')} type="date" /></Field>
           </div>
