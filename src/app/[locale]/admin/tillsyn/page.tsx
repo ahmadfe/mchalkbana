@@ -307,7 +307,7 @@ function CodeModal({ onClose, onVerified }: { onClose: () => void; onVerified: (
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70" onClick={() => !busy && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Bekräfta med kod" onClick={e => e.stopPropagation()} className="w-full sm:max-w-md bg-[#1c1c1f] rounded-t-3xl sm:rounded-3xl p-6">
+      <div role="dialog" aria-modal="true" aria-label="Bekräfta med kod" onClick={e => e.stopPropagation()} className="sheet w-full sm:max-w-md bg-[#1c1c1f] rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60">Bekräfta nedladdning</p>

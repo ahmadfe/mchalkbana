@@ -1259,7 +1259,26 @@ export default function AdminPage() {
                   {t('add_course')}
                 </button>
               </div>
-              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 overflow-hidden">
+              {/* Mobil: kort i stället för tabell */}
+              <div className="md:hidden space-y-2">
+                {courses.map((c) => (
+                  <div key={c.id} className="flex items-center gap-3 rounded-2xl bg-[#1c1c1f] pl-4 pr-2 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">{locale === 'sv' ? c.titleSv : c.titleEn}</p>
+                      <p className="text-sm text-white/50 mt-0.5">
+                        {c.type === 'Combo' ? 'Kombo' : c.type} · {c.vehicle === 'Car' ? 'Bil' : c.vehicle === 'Motorcycle' ? 'Motorcykel' : c.vehicle === 'Moped' ? 'Moped' : c.vehicle} · {c.behorighet} · <span className="text-white font-semibold">{c.price.toLocaleString('sv-SE')} kr</span>
+                      </p>
+                    </div>
+                    <button onClick={() => openEditCourse(c)} aria-label="Redigera kurs" className="w-11 h-11 rounded-full text-white/60 hover:bg-white/10 flex items-center justify-center">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteCourse(c.id)} aria-label="Ta bort kurs" className="w-11 h-11 rounded-full text-white/40 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block bg-[#1c1c1f] rounded-xl border border-white/5 overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-white/5 text-white/50 text-xs uppercase tracking-wide">
                     <tr>
@@ -1482,16 +1501,16 @@ export default function AdminPage() {
               <div>
                 {/* Edit session modal */}
                 {editingSession && (
-                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEditingSession(null)}>
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setEditingSession(null)}>
+                    <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between mb-5">
-                        <h3 className="font-bold text-gray-900 text-base">Redigera pass #{editingSession.id}</h3>
-                        <button onClick={() => setEditingSession(null)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
+                        <h3 className="font-bold text-white text-base">Redigera pass #{editingSession.id}</h3>
+                        <button onClick={() => setEditingSession(null)} className="p-1.5 text-white/40 hover:text-white/80 rounded-lg hover:bg-white/10">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-xs text-gray-500 font-medium">{(editingSession as any).course?.titleSv} · {(editingSession as any).course?.behorighet}</p>
+                        <p className="text-xs text-white/50 font-medium">{(editingSession as any).course?.titleSv} · {(editingSession as any).course?.behorighet}</p>
                         {(editingSession as any).course && (
                           <button
                             type="button"
@@ -1506,59 +1525,59 @@ export default function AdminPage() {
                       <div className="space-y-4">
                         {/* Date */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Datum</label>
+                          <label className="block text-xs font-medium text-white/80 mb-1">Datum</label>
                           <input type="date" value={editSessionForm.date} onChange={(e) => setEditSessionForm({ ...editSessionForm, date: e.target.value })}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                            className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                         </div>
                         {/* Times */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Starttid</label>
+                            <label className="block text-xs font-medium text-white/80 mb-1">Starttid</label>
                             <input type="time" value={editSessionForm.startTime} onChange={(e) => setEditSessionForm({ ...editSessionForm, startTime: e.target.value })}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Sluttid</label>
+                            <label className="block text-xs font-medium text-white/80 mb-1">Sluttid</label>
                             <input type="time" value={editSessionForm.endTime} onChange={(e) => setEditSessionForm({ ...editSessionForm, endTime: e.target.value })}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                         </div>
                         {/* Seats */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Platser totalt</label>
+                            <label className="block text-xs font-medium text-white/80 mb-1">Platser totalt</label>
                             <input type="number" min="1" value={editSessionForm.seatLimit} onChange={(e) => setEditSessionForm({ ...editSessionForm, seatLimit: e.target.value })}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Lediga platser</label>
+                            <label className="block text-xs font-medium text-white/80 mb-1">Lediga platser</label>
                             <input type="number" min="0" value={editSessionForm.seatsAvailable} onChange={(e) => setEditSessionForm({ ...editSessionForm, seatsAvailable: e.target.value })}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
                           </div>
                         </div>
                         {/* Price */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Pris (kr)</label>
+                          <label className="block text-xs font-medium text-white/80 mb-1">Pris (kr)</label>
                           <input type="number" min="0" value={editSessionForm.price} onChange={(e) => setEditSessionForm({ ...editSessionForm, price: e.target.value })}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
-                          <p className="text-xs text-amber-600 mt-1">⚠️ Prisändring gäller alla pass med samma kurs</p>
+                            className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue" />
+                          <p className="text-xs text-amber-400 mt-1">⚠️ Prisändring gäller alla pass med samma kurs</p>
                         </div>
                         {/* Discount Price */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Rabatterat pris (kr) <span className="text-gray-400 font-normal">— valfritt, lämna tomt för att ta bort</span></label>
+                          <label className="block text-xs font-medium text-white/80 mb-1">Rabatterat pris (kr) <span className="text-white/40 font-normal">— valfritt, lämna tomt för att ta bort</span></label>
                           <input type="number" min="0" placeholder="t.ex. 1400" value={editSessionForm.discountPrice} onChange={(e) => setEditSessionForm({ ...editSessionForm, discountPrice: e.target.value })}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+                            className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
                         </div>
                         {/* Receipt message */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Meddelande (valfritt)</label>
+                          <label className="block text-xs font-medium text-white/80 mb-1">Meddelande (valfritt)</label>
                           <textarea rows={3} value={editSessionForm.receiptMessage} onChange={(e) => setEditSessionForm({ ...editSessionForm, receiptMessage: e.target.value })}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue resize-none" />
+                            className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue resize-none" />
                         </div>
                       </div>
 
                       <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={() => setEditingSession(null)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <button onClick={() => setEditingSession(null)} className="px-4 py-2 text-sm text-white/65 hover:text-white border border-white/10 rounded-lg hover:bg-white/5">
                           Avbryt
                         </button>
                         <button onClick={handleSaveEditSession} disabled={editSessionSaving}
@@ -1573,31 +1592,31 @@ export default function AdminPage() {
 
                 {/* Instructor assignment modal */}
                 {assigningInstructorSession !== null && (
-                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setAssigningInstructorSession(null)}>
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={() => setAssigningInstructorSession(null)}>
+                    <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 text-base">Tilldela instruktör</h3>
-                        <button onClick={() => setAssigningInstructorSession(null)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"><X className="w-4 h-4" /></button>
+                        <h3 className="font-bold text-white text-base">Tilldela instruktör</h3>
+                        <button onClick={() => setAssigningInstructorSession(null)} className="p-1.5 text-white/40 hover:text-white/80 rounded-lg hover:bg-white/10"><X className="w-4 h-4" /></button>
                       </div>
                       {instructors.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">Inga instruktörer hittades. Bjud in via fliken Instruktörer.</p>
+                        <p className="text-sm text-white/50 text-center py-4">Inga instruktörer hittades. Bjud in via fliken Instruktörer.</p>
                       ) : (
                         <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
                           {instructors.map((instr) => (
-                            <label key={instr.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-swedish-blue/30 cursor-pointer transition">
+                            <label key={instr.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 hover:border-swedish-blue/30 cursor-pointer transition">
                               <input type="checkbox" checked={assignInstructorIds.includes(instr.id)}
                                 onChange={(e) => setAssignInstructorIds((prev) => e.target.checked ? [...prev, instr.id] : prev.filter((id) => id !== instr.id))}
                                 className="accent-swedish-blue w-4 h-4" />
                               <div>
-                                <p className="text-sm font-medium text-gray-900">{instr.name}</p>
-                                <p className="text-xs text-gray-400">{instr.email}</p>
+                                <p className="text-sm font-medium text-white">{instr.name}</p>
+                                <p className="text-xs text-white/40">{instr.email}</p>
                               </div>
                             </label>
                           ))}
                         </div>
                       )}
                       <div className="flex gap-2">
-                        <button onClick={() => setAssigningInstructorSession(null)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2 rounded-xl text-sm hover:bg-gray-50 transition">Avbryt</button>
+                        <button onClick={() => setAssigningInstructorSession(null)} className="flex-1 border border-white/10 text-white/65 font-medium py-2 rounded-xl text-sm hover:bg-white/5 transition">Avbryt</button>
                         <button disabled={assignInstructorSaving} onClick={async () => {
                           setAssignInstructorSaving(true);
                           const res = await fetch(`/api/admin/sessions/${assigningInstructorSession}/instructors`, {
@@ -2653,7 +2672,7 @@ export default function AdminPage() {
                 {infoCards.map((card) => (
                   <div key={card.id} className={clsx('bg-[#1c1c1f] rounded-2xl border border-white/5 overflow-hidden flex shadow-sm', !card.visible && 'opacity-50')}>
                     {/* Thumbnail */}
-                    <div className="w-32 shrink-0 bg-white/10 relative">
+                    <div className="w-24 sm:w-32 shrink-0 bg-white/10 relative">
                       {card.videoUrl ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-white text-xs font-medium gap-1"><Video className="w-4 h-4" />Video</div>
                       ) : card.imageUrl ? (
@@ -2664,15 +2683,15 @@ export default function AdminPage() {
                     </div>
                     {/* Info */}
                     <div className="flex-1 p-4 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
                         <div className="min-w-0">
-                          {card.badge && <span className="text-xs text-swedish-blue font-medium">{card.badge}</span>}
+                          {card.badge && <span className="block truncate text-xs text-swedish-blue font-medium">{card.badge}</span>}
                           <h3 className="font-bold text-white text-sm truncate">{card.title}</h3>
                           <p className="text-white/50 text-xs line-clamp-1 mt-0.5">{card.description}</p>
-                          {card.price && <p className="text-orange-600 text-xs font-semibold mt-1">{card.price}</p>}
+                          {card.price && <p className="text-orange-300 text-xs font-semibold mt-1">{card.price}</p>}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/50')}>
+                        <div className="flex items-center gap-2 shrink-0 -ml-1.5 sm:ml-0">
+                          <span className={clsx('order-last sm:order-first text-xs font-medium px-2 py-0.5 rounded-full', card.visible ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/10 text-white/50')}>
                             {card.visible ? 'Synlig' : 'Dold'}
                           </span>
                           <button onClick={() => openEditCard(card)} className="p-1.5 text-white/40 hover:text-swedish-blue rounded-lg hover:bg-sky-500/10"><Pencil className="w-4 h-4" /></button>
@@ -3072,8 +3091,8 @@ export default function AdminPage() {
 
       {/* Reset Password Modal */}
       {resetPwdTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-bold text-lg">Återställ lösenord</h3>
@@ -3126,8 +3145,8 @@ export default function AdminPage() {
 
       {/* School Prices Modal */}
       {pricesModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-lg w-full max-h-[92dvh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
               <div>
                 <h3 className="font-bold text-lg text-white">Priser – {pricesModal.name}</h3>
@@ -3188,8 +3207,8 @@ export default function AdminPage() {
 
       {/* School Invoice Modal */}
       {invoiceSchool && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92dvh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
               <div>
@@ -3288,8 +3307,8 @@ export default function AdminPage() {
 
       {/* Edit Booking Modal */}
       {editBooking && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">Redigera bokning #{editBooking.id}</h3>
               <button onClick={() => setEditBooking(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
@@ -3338,8 +3357,8 @@ export default function AdminPage() {
 
       {/* Add Payment Modal */}
       {addPaymentBookingId !== null && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-swedish-blue" /> Lägg till betalning
@@ -3408,8 +3427,8 @@ export default function AdminPage() {
 
       {/* Refund Confirm Modal */}
       {refundTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-sm w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-500/15 rounded-full flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -3454,8 +3473,8 @@ export default function AdminPage() {
 
       {/* Session Students Modal */}
       {(studentsData || studentsLoading) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-4xl w-full shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-4xl w-full shadow-2xl max-h-[92dvh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -3686,8 +3705,8 @@ export default function AdminPage() {
 
       {/* Move Student Modal */}
       {moveBooking && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-[60] p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-bold text-lg flex items-center gap-2">
@@ -3748,8 +3767,8 @@ export default function AdminPage() {
 
       {/* Add/Edit Info Card Modal */}
       {(showAddCard || editCard) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
               <h3 className="font-bold text-lg">{editCard ? 'Redigera kort' : 'Nytt kort'}</h3>
               <button onClick={() => { setShowAddCard(false); setEditCard(null); }} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
@@ -3863,8 +3882,8 @@ export default function AdminPage() {
 
       {/* Add Course Modal */}
       {showAddCourse && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">{t('add_course')}</h3>
               <button onClick={() => setShowAddCourse(false)} className="text-white/40 hover:text-white/65">
@@ -3944,8 +3963,8 @@ export default function AdminPage() {
 
       {/* Edit Course Modal */}
       {editCourse && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-md w-full shadow-2xl max-h-[92dvh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-lg">Redigera kurs</h3>
               <button onClick={() => setEditCourse(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
@@ -4022,8 +4041,8 @@ export default function AdminPage() {
 
       {/* Add Session Modal */}
       {showAddSession && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1c1c1f] rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[92dvh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5 shrink-0">
               <h3 className="font-bold text-lg">{t('add_session')}</h3>

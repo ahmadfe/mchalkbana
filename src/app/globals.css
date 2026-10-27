@@ -147,3 +147,30 @@ html:has(.admin-dark) .status-bar-shim {
 .admin-old .btn-secondary {
   --tw-ring-offset-color: #0b0b0d;
 }
+
+/* ── Dialoger som glider upp från botten på mobilen (klassen .sheet) ── */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@media (max-width: 639px) {
+  .sheet {
+    position: relative;
+    animation: sheet-up 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  /* Handtag överst, som i appar */
+  .sheet::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}

@@ -71,7 +71,7 @@ export default function CheckInModal({ person, onClose, onDone, instructors }: {
         aria-modal="true"
         aria-label={`Checka in ${person.name}`}
         onClick={e => e.stopPropagation()}
-        className="w-full sm:max-w-lg bg-[#1c1c1f] text-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[95vh] overflow-y-auto"
+        className="sheet w-full sm:max-w-lg bg-[#1c1c1f] text-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[95vh] overflow-y-auto"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
