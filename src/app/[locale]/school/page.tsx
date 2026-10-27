@@ -4,15 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
 import {
-  Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2,
-  ChevronDown, ChevronUp, BarChart2, BookOpen, Archive, Lock,
+  Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2, ChevronRight,
+  BarChart2, Lock, MapPin, Clock, MessageSquare, AlarmClock, Mail, Phone,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 import { InstallAppButton } from '@/components/pwa';
+import { courseKind, type CourseKind } from '@/lib/courseKind';
 
 interface StudentForm {
   name: string;
@@ -35,6 +35,33 @@ interface SchoolBooking {
   session: Session & { course: { titleSv: string; titleEn: string } };
 }
 
+interface Reservation { meetingPlace: string; fillBy: string | null; message: string; released: boolean }
+
+/** Allt som behövs för att visa ett pass – i listan och i detaljvyn. */
+interface PassItem {
+  id: number;
+  session: Session;
+  title: string;
+  start: Date;
+  end: Date;
+  students: SchoolBooking[];
+  meetingPlace: string;
+  /** Arkiverade pass går inte att ändra */
+  readOnly: boolean;
+  myAllocation: number | null;
+  remaining: number;
+  full: boolean;
+  deadlinePassed: boolean;
+  locked: boolean;
+  reservation: Reservation | null;
+  price?: number;
+  customPrice: boolean;
+}
+
+const tz = { timeZone: 'Europe/Stockholm' } as const;
+const hm = (d: Date) => d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
+const emptyStudent = (): StudentForm => ({ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false });
+
 export default function SchoolPage() {
   const locale = useLocale();
   const router = useRouter();
@@ -44,19 +71,19 @@ export default function SchoolPage() {
   const [bookings, setBookings] = useState<SchoolBooking[]>([]);
   const [priceMap, setPriceMap] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [view, setView] = useState<'upcoming' | 'archived'>('upcoming');
+  // Valt pass: öppet kort på mobilen, detaljvyn till höger på surfplatta/dator
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Add student modal
+  // Lägg till elever
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [activeRemaining, setActiveRemaining] = useState(0);
-  const [students, setStudents] = useState<StudentForm[]>([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
+  const [students, setStudents] = useState<StudentForm[]>([emptyStudent()]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     const [sessionsRes, bookingsRes, pricesRes] = await Promise.all([
       fetch('/api/sessions?includeSchool=true'),
       fetch('/api/school/bookings'),
@@ -81,22 +108,15 @@ export default function SchoolPage() {
     if (!authLoading && user) loadData();
   }, [user, authLoading, locale, router, loadData]);
 
-  const toggleExpand = (id: number) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-
   const openModal = (session: Session, remaining: number) => {
     setActiveSession(session);
     setActiveRemaining(remaining);
-    setStudents([{ name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
+    setStudents([emptyStudent()]);
     setSaveError('');
     setSaveSuccess(false);
   };
 
-  const addStudentRow = () => setStudents((p) => [...p, { name: '', personnummer: '', phone: '', email: '', note: '', sendConfirmation: false }]);
+  const addStudentRow = () => setStudents((p) => [...p, emptyStudent()]);
   const removeStudentRow = (i: number) => setStudents((p) => p.filter((_, idx) => idx !== i));
   const updateStudentRow = (i: number, field: keyof StudentForm, value: string | boolean) =>
     setStudents((p) => p.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
@@ -134,8 +154,7 @@ export default function SchoolPage() {
     setSaving(false);
     setSaveSuccess(true);
     await loadData();
-    // Keep the session expanded after adding
-    if (activeSession) setExpanded((prev) => new Set(prev).add(activeSession.id));
+    setSelectedId(activeSession.id);
     setTimeout(() => {
       setActiveSession(null);
       setSaveSuccess(false);
@@ -147,21 +166,48 @@ export default function SchoolPage() {
     await loadData();
   };
 
-  // Group bookings by session id
   const bookingsBySession = bookings.reduce<Record<number, SchoolBooking[]>>((acc, b) => {
-    const sid = b.session.id;
-    if (!acc[sid]) acc[sid] = [];
-    acc[sid].push(b);
+    (acc[b.session.id] ??= []).push(b);
     return acc;
   }, {});
 
-  // Arkiverade pass = pass där skolan har elever och som redan har börjat. De går inte att ändra.
-  const archivedSessions = Object.values(bookingsBySession)
-    .filter((list) => new Date(list[0].session.startTime) <= new Date())
-    .map((list) => ({ session: list[0].session, students: list }))
-    .sort((a, b) => new Date(b.session.startTime).getTime() - new Date(a.session.startTime).getTime());
+  const titleOf = (s: Session) => (locale === 'sv' ? s.course?.titleSv : s.course?.titleEn) ?? '';
 
-  // Stats
+  const upcoming: PassItem[] = sessions.map((s) => {
+    const list = bookingsBySession[s.id] || [];
+    const myAllocation = (s as { myAllocation?: number | null }).myAllocation ?? null;
+    const reservation = (s as { myReservation?: Reservation | null }).myReservation ?? null;
+    const full = myAllocation !== null ? list.length >= myAllocation : s.seatsAvailable === 0;
+    // Efter "fyll senast" kan skolan inte lägga till fler elever
+    const deadlinePassed = !!reservation && (reservation.released || (!!reservation.fillBy && new Date(reservation.fillBy) < new Date()));
+    const custom = s.course?.id !== undefined ? priceMap[s.course.id] : undefined;
+    return {
+      id: s.id, session: s, title: titleOf(s), start: new Date(s.startTime), end: new Date(s.endTime), students: list,
+      meetingPlace: reservation?.meetingPlace || s.meetingPlace || s.course?.location || s.school?.name || '',
+      readOnly: false, myAllocation, remaining: myAllocation !== null ? myAllocation - list.length : s.seatsAvailable,
+      full, deadlinePassed, locked: full || deadlinePassed, reservation,
+      price: custom ?? s.course?.price, customPrice: custom !== undefined,
+    };
+  });
+
+  // Arkiverade pass = pass där skolan har elever och som redan har börjat. De går inte att ändra.
+  const archived: PassItem[] = Object.values(bookingsBySession)
+    .filter((list) => new Date(list[0].session.startTime) <= new Date())
+    .map((list) => {
+      const s = list[0].session;
+      return {
+        id: s.id, session: s, title: titleOf(s), start: new Date(s.startTime), end: new Date(s.endTime), students: list,
+        meetingPlace: s.meetingPlace || s.course?.location || s.school?.name || '',
+        readOnly: true, myAllocation: null, remaining: 0, full: false, deadlinePassed: false, locked: true, reservation: null, customPrice: false,
+      };
+    })
+    .sort((a, b) => b.start.getTime() - a.start.getTime());
+
+  const items = view === 'upcoming' ? upcoming : archived;
+  const selected = items.find((i) => i.id === selectedId) ?? null;
+  // Surfplatta/dator visar alltid ett pass till höger – det valda eller det första
+  const shown = selected ?? items[0] ?? null;
+
   const now = new Date();
   const studentsThisMonth = bookings.filter((b) => {
     const d = new Date(b.bookingTime);
@@ -175,312 +221,120 @@ export default function SchoolPage() {
         <main className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
         </main>
-        <Footer />
       </div>
     );
   }
+
+  const detail = (item: PassItem) => (
+    <PassDetail item={item} onAdd={() => openModal(item.session, item.remaining)} onDelete={item.readOnly ? undefined : handleDeleteStudent} />
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
 
-      <main className="flex-1 py-8">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <main className="flex-1 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
 
-          {/* Header */}
+          {/* Rubrik */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-swedish-blue flex items-center justify-center">
+            <div className="w-11 h-11 rounded-2xl bg-swedish-blue flex items-center justify-center shrink-0">
               <Building2 className="w-5 h-5 text-swedish-yellow" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{user?.name}</h1>
-              <p className="text-sm text-gray-500">Trafikskolakonto</p>
+            <div className="min-w-0">
+              <h1 className="font-headline text-2xl font-extrabold text-gray-900 truncate">{user?.name}</h1>
+              <p className="text-sm text-gray-500">Trafikskolekonto · faktureras den 26:e varje månad</p>
             </div>
-            <InstallAppButton className="ml-auto" />
+            <InstallAppButton className="ml-auto hidden sm:inline-flex" />
           </div>
 
-          {/* Invoice notice */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-            Bokningar faktureras den 26:e varje månad. Ingen betalning krävs vid bokning.
+          {/* Siffror */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <Stat icon={<Calendar className="w-5 h-5 text-swedish-blue" />} tint="bg-brand-100" value={sessions.length} label="Tillgängliga pass" />
+            <Stat icon={<Users className="w-5 h-5 text-green-600" />} tint="bg-green-100" value={bookings.length} label="Bokade elever" />
+            <Stat icon={<BarChart2 className="w-5 h-5 text-purple-600" />} tint="bg-purple-100" value={studentsThisMonth} label="Denna månad" />
+          </div>
+          <InstallAppButton className="w-full sm:hidden" />
+
+          {/* Kommande / Arkiverade */}
+          <div className="flex p-1 rounded-2xl bg-gray-200/70 sm:max-w-sm">
+            {([['upcoming', 'Kommande'], ['archived', `Arkiverade (${archived.length})`]] as const).map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => { setView(v); setSelectedId(null); }}
+                className={clsx('flex-1 h-10 rounded-xl text-sm font-semibold transition', view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-swedish-blue" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
-                <p className="text-xs text-gray-500">Tillgängliga pass</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <Users className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
-                <p className="text-xs text-gray-500">Totalt bokade elever</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <BarChart2 className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{studentsThisMonth}</p>
-                <p className="text-xs text-gray-500">Bokade denna månad</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Sessions */}
-          <div>
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-base font-semibold text-gray-700 flex items-center gap-2">
-                {view === 'upcoming' ? <BookOpen className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                {view === 'upcoming' ? 'Tillgängliga pass' : 'Arkiverade pass'}
-              </h2>
-              <div className="flex gap-0.5 bg-gray-100 rounded-lg p-1">
-                {([['upcoming', 'Kommande'], ['archived', `Arkiverade (${archivedSessions.length})`]] as const).map(([v, label]) => (
-                  <button
-                    key={v}
-                    onClick={() => setView(v)}
-                    className={clsx('px-3 py-1.5 text-xs rounded-md font-medium transition', view === v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800')}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {view === 'archived' ? (
-              archivedSessions.length === 0 ? (
-                <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
-                  <Archive className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                  <p className="font-medium">Inga arkiverade pass än</p>
-                  <p className="text-sm mt-1">Pass hamnar här när de har börjat.</p>
-                </div>
+          {items.length === 0 ? (
+            <div className="text-center py-16 px-6 text-gray-500 bg-white rounded-3xl border border-gray-100">
+              <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              {view === 'upcoming' ? (
+                <>
+                  <p className="font-semibold text-gray-700">Inga tillgängliga pass</p>
+                  <p className="text-sm mt-1">Kontakta oss för att få platser på ett pass.</p>
+                </>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-xs text-gray-500">Passen har redan börjat eller är genomförda och kan inte ändras. Kontakta oss om något behöver rättas.</p>
-                  {archivedSessions.map(({ session: s, students: list }) => {
-                    const start = new Date(s.startTime);
-                    const end = new Date(s.endTime);
-                    const isOpen = expanded.has(s.id);
-                    return (
-                      <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                        <button onClick={() => toggleExpand(s.id)} className="w-full p-4 flex items-center justify-between gap-4 text-left hover:bg-gray-50">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-gray-900">{locale === 'sv' ? s.course?.titleSv : s.course?.titleEn}</p>
-                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                                <Lock className="w-3 h-3" /> {end < new Date() ? 'Genomfört' : 'Pågår'}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
-                              <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
-                              <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
-                              <span>📍 {s.meetingPlace || s.course?.location || s.school?.name}</span>
-                              <span className="text-swedish-blue font-medium">{list.length} elev{list.length !== 1 ? 'er' : ''}</span>
-                            </div>
-                          </div>
-                          {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />}
-                        </button>
-                        {isOpen && (
-                          <div className="border-t border-gray-100">
-                            <StudentTable list={list} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            ) : sessions.length === 0 ? (
-              <div className="text-center py-16 text-gray-500 bg-white rounded-xl border border-gray-100">
-                <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                <p className="font-medium">Inga tillgängliga pass</p>
-                <p className="text-sm mt-1">Kontakta administratören för att tilldela pass till er skola.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sessions.map((s) => {
-                  const title = locale === 'sv' ? s.course?.titleSv : s.course?.titleEn;
-                  const start = new Date(s.startTime);
-                  const end = new Date(s.endTime);
-                  const sessionStudents = bookingsBySession[s.id] || [];
-                  const myAllocation = (s as any).myAllocation as number | null ?? null;
-                  const usedByMe = sessionStudents.length;
-                  const remainingMySeats = myAllocation !== null ? myAllocation - usedByMe : s.seatsAvailable;
-                  const full = myAllocation !== null ? usedByMe >= myAllocation : s.seatsAvailable === 0;
-                  const reservation = (s as any).myReservation as { meetingPlace: string; fillBy: string | null; message: string; released: boolean } | null;
-                  // Efter "fyll senast" kan skolan inte lägga till fler elever
-                  const deadlinePassed = !!reservation && (reservation.released || (!!reservation.fillBy && new Date(reservation.fillBy) < new Date()));
-                  const locked = full || deadlinePassed;
-                  const meetingPlace = reservation?.meetingPlace || s.meetingPlace || s.course?.location || s.school?.name;
-                  const isOpen = expanded.has(s.id);
-                  const courseId = s.course?.id;
-                  const customPrice = courseId !== undefined ? priceMap[courseId] : undefined;
-                  const displayPrice = customPrice ?? s.course?.price;
-
+                <>
+                  <p className="font-semibold text-gray-700">Inga arkiverade pass än</p>
+                  <p className="text-sm mt-1">Pass hamnar här när de har börjat.</p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="md:grid md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] md:gap-5 md:items-start">
+              {/* Passlista */}
+              <div className="space-y-2">
+                {view === 'archived' && (
+                  <p className="text-xs text-gray-500 px-1 pb-1">Passen har börjat eller är genomförda och kan inte ändras. Kontakta oss om något behöver rättas.</p>
+                )}
+                {items.map((item) => {
+                  const open = selectedId === item.id;
                   return (
-                    <div key={s.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                      {/* Session row */}
-                      <div className="p-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className={clsx(
-                            'w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0',
-                            s.course?.type === 'Risk1' ? 'bg-brand-100 text-swedish-blue' :
-                            s.course?.type === 'Risk2' ? 'bg-orange-100 text-orange-700' :
-                            s.course?.type === 'AM' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-600'
-                          )}>
-                            {s.course?.type === 'Risk1' ? 'R1' : s.course?.type === 'Risk2' ? 'R2' : s.course?.type === 'AM' ? 'AM' : s.course?.type?.slice(0, 2) || '?'}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-900">{title}</p>
-                            <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-1">
-                              <span>📅 {start.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })}</span>
-                              <span>🕐 {start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – {end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}</span>
-                              <span>📍 {meetingPlace}</span>
-                              {myAllocation !== null ? (
-                                <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
-                                  👤 {usedByMe} av {myAllocation} platser fyllda
-                                </span>
-                              ) : (
-                                <span className={clsx(full ? 'text-red-500 font-semibold' : 'text-green-600')}>
-                                  👤 {s.seatsAvailable}/{s.seatLimit} platser kvar
-                                </span>
-                              )}
-                              {displayPrice !== undefined && (
-                                <span className="text-gray-700 font-semibold">
-                                  {displayPrice.toLocaleString('sv-SE')} kr/elev
-                                  {customPrice !== undefined && <span className="ml-1 text-xs text-swedish-blue font-normal">(ert pris)</span>}
-                                </span>
-                              )}
-                              {reservation?.fillBy && (
-                                <span className={clsx(deadlinePassed ? 'text-gray-400' : 'text-amber-600 font-medium')}>
-                                  ⏰ {deadlinePassed ? 'Stängt' : 'Fyll senast'} {new Date(reservation.fillBy).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', timeZone: 'Europe/Stockholm' })}
-                                </span>
-                              )}
-                            </div>
-                            {reservation?.message && (
-                              <p className="text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 mt-2 whitespace-pre-wrap">💬 {reservation.message}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            disabled={locked}
-                            onClick={() => openModal(s, remainingMySeats)}
-                            className={clsx(
-                              'px-3 py-2 text-sm font-semibold rounded-xl transition flex items-center gap-1.5',
-                              locked
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-swedish-blue text-white hover:bg-swedish-dark'
-                            )}
-                          >
-                            <Plus className="w-4 h-4" />
-                            {deadlinePassed ? 'Stängt' : full ? 'Fullbokat' : 'Lägg till'}
-                          </button>
-                          <button
-                            onClick={() => toggleExpand(s.id)}
-                            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition"
-                            title={isOpen ? 'Stäng' : 'Visa elever'}
-                          >
-                            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Expanded student list */}
-                      {isOpen && (
-                        <div className="border-t border-gray-100">
-                          {sessionStudents.length === 0 ? (
-                            <div className="px-5 py-6 text-center text-sm text-gray-400">
-                              Inga elever bokade på detta pass ännu.
-                            </div>
-                          ) : (
-                            <StudentTable list={sessionStudents} onDelete={handleDeleteStudent} />
-                          )}
-                        </div>
-                      )}
+                    <div key={item.id}>
+                      <PassCard
+                        item={item}
+                        open={open}
+                        active={shown?.id === item.id}
+                        onClick={() => setSelectedId(open ? null : item.id)}
+                      />
+                      {/* Mobil: detaljerna öppnas under kortet */}
+                      {open && <div className="md:hidden mt-2">{detail(item)}</div>}
                     </div>
                   );
                 })}
               </div>
-            )}
-          </div>
 
-          {/* Monthly report */}
-          <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <BarChart2 className="w-4 h-4" />
-              Rapport – elever per månad
-            </h2>
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              {bookings.length === 0 ? (
-                <div className="px-5 py-8 text-center text-sm text-gray-400">Inga bokningar ännu.</div>
-              ) : (() => {
-                // Build month buckets
-                const buckets: Record<string, number> = {};
-                bookings.forEach((b) => {
-                  const d = new Date(b.bookingTime);
-                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                  buckets[key] = (buckets[key] || 0) + 1;
-                });
-                const sorted = Object.entries(buckets).sort((a, b) => b[0].localeCompare(a[0]));
-                const max = Math.max(...sorted.map(([, v]) => v));
-                return (
-                  <table className="w-full text-sm">
-                    <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
-                      <tr>
-                        <th className="text-left py-2.5 px-5">Månad</th>
-                        <th className="text-left py-2.5 px-5">Elever</th>
-                        <th className="py-2.5 px-5 w-48"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {sorted.map(([month, count]) => {
-                        const [year, mon] = month.split('-');
-                        const label = new Date(Number(year), Number(mon) - 1, 1).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
-                        const pct = Math.round((count / max) * 100);
-                        return (
-                          <tr key={month} className="hover:bg-gray-50">
-                            <td className="py-3 px-5 font-medium capitalize">{label}</td>
-                            <td className="py-3 px-5 font-bold text-swedish-blue">{count}</td>
-                            <td className="py-3 px-5">
-                              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-swedish-blue rounded-full" style={{ width: `${pct}%` }} />
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                );
-              })()}
+              {/* Surfplatta/dator: valt pass bredvid listan */}
+              {shown && <div className="hidden md:block md:sticky md:top-[calc(6rem+env(safe-area-inset-top))]">{detail(shown)}</div>}
             </div>
-          </div>
+          )}
 
+          <MonthlyReport bookings={bookings} />
         </div>
       </main>
 
-      {/* Add students modal */}
+      {/* Lägg till elever – glider upp från botten på mobilen */}
       {activeSession && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-xl w-full shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-bold text-lg">Lägg till elever</h3>
-                <p className="text-sm text-gray-500">
-                  {locale === 'sv' ? activeSession.course?.titleSv : activeSession.course?.titleEn} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })} · {activeRemaining} platser kvar
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={() => !saving && setActiveSession(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lägg till elever"
+            onClick={(e) => e.stopPropagation()}
+            className="sheet bg-white text-gray-900 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-xl w-full shadow-2xl max-h-[92dvh] flex flex-col"
+          >
+            <div className="flex items-start justify-between gap-3 mb-4 pt-2 sm:pt-0">
+              <div className="min-w-0">
+                <h3 className="font-headline font-extrabold text-xl">Lägg till elever</h3>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {titleOf(activeSession)} · {new Date(activeSession.startTime).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', ...tz })} · {activeRemaining} {activeRemaining === 1 ? 'plats' : 'platser'} kvar
                 </p>
               </div>
-              <button onClick={() => setActiveSession(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setActiveSession(null)} aria-label="Stäng" className="w-10 h-10 -mr-2 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -492,59 +346,54 @@ export default function SchoolPage() {
               </div>
             ) : (
               <>
-                <div className="overflow-auto flex-1 space-y-3 pr-1">
+                <div className="overflow-auto flex-1 space-y-3 -mx-1 px-1">
                   {saveError && (
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
                       {saveError}
                     </div>
                   )}
                   {students.map((s, i) => (
-                    <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                    <div key={i} className="rounded-2xl bg-gray-50 border border-gray-100 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-gray-700">Elev {i + 1}</span>
+                        <span className="text-sm font-bold text-gray-700">Elev {i + 1}</span>
                         {students.length > 1 && (
-                          <button onClick={() => removeStudentRow(i)} className="text-red-400 hover:text-red-600">
+                          <button onClick={() => removeStudentRow(i)} aria-label={`Ta bort elev ${i + 1}`} className="w-9 h-9 -mr-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 flex items-center justify-center">
                             <X className="w-4 h-4" />
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Namn *</label>
-                          <input type="text" className="input-field text-sm" placeholder="Anna Svensson" value={s.name} onChange={(e) => updateStudentRow(i, 'name', e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Personnummer *</label>
-                          <input type="text" className="input-field text-sm font-mono" placeholder="YYYYMMDD-XXXX" value={s.personnummer} onChange={(e) => updateStudentRow(i, 'personnummer', e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Telefon</label>
-                          <input type="tel" className="input-field text-sm" placeholder="070-123 45 67" value={s.phone} onChange={(e) => updateStudentRow(i, 'phone', e.target.value)} />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">E-post</label>
-                          <input type="email" className="input-field text-sm" placeholder="anna@skola.se" value={s.email} onChange={(e) => updateStudentRow(i, 'email', e.target.value)} />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Anteckning</label>
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <Labeled label="Namn *">
+                          <input type="text" className="input-field bg-white" placeholder="Anna Svensson" autoComplete="off" value={s.name} onChange={(e) => updateStudentRow(i, 'name', e.target.value)} />
+                        </Labeled>
+                        <Labeled label="Personnummer *">
+                          <input type="text" inputMode="numeric" className="input-field bg-white font-mono" placeholder="ÅÅÅÅMMDD-XXXX" autoComplete="off" value={s.personnummer} onChange={(e) => updateStudentRow(i, 'personnummer', e.target.value)} />
+                        </Labeled>
+                        <Labeled label="Telefon">
+                          <input type="tel" className="input-field bg-white" placeholder="070-123 45 67" value={s.phone} onChange={(e) => updateStudentRow(i, 'phone', e.target.value)} />
+                        </Labeled>
+                        <Labeled label="E-post">
+                          <input type="email" className="input-field bg-white" placeholder="anna@skola.se" value={s.email} onChange={(e) => updateStudentRow(i, 'email', e.target.value)} />
+                        </Labeled>
+                        <Labeled label="Anteckning" className="sm:col-span-2">
                           <textarea
-                            className="input-field text-sm min-h-[64px]"
+                            className="input-field bg-white min-h-[64px]"
                             placeholder="Valfritt – t.ex. behöver tolk, kommer lite sent, referens för fakturan"
                             maxLength={500}
                             value={s.note}
                             onChange={(e) => updateStudentRow(i, 'note', e.target.value)}
                           />
-                        </div>
+                        </Labeled>
                       </div>
                       {s.email && (
-                        <label className="flex items-center gap-2 cursor-pointer select-none mt-1">
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
                           <input
                             type="checkbox"
-                            className="w-4 h-4 rounded accent-swedish-blue"
+                            className="w-5 h-5 rounded accent-swedish-blue"
                             checked={s.sendConfirmation}
                             onChange={(e) => updateStudentRow(i, 'sendConfirmation', e.target.checked)}
                           />
-                          <span className="text-xs text-gray-600">Skicka bokningsbekräftelse via e-post</span>
+                          <span className="text-sm text-gray-600">Skicka bokningsbekräftelse via e-post</span>
                         </label>
                       )}
                     </div>
@@ -552,22 +401,22 @@ export default function SchoolPage() {
                   <button
                     onClick={addStudentRow}
                     disabled={students.length >= activeRemaining}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-swedish-blue hover:text-swedish-blue transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full h-12 flex items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-2xl text-sm font-semibold text-gray-500 hover:border-swedish-blue hover:text-swedish-blue transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Plus className="w-4 h-4" />Lägg till fler elever
                   </button>
                 </div>
 
-                <div className="flex gap-3 pt-4 mt-2 border-t border-gray-100">
-                  <button onClick={() => setActiveSession(null)} className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium">
+                <div className="flex gap-3 pt-4 mt-3 border-t border-gray-100">
+                  <button onClick={() => setActiveSession(null)} className="h-12 px-6 rounded-full bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200">
                     Avbryt
                   </button>
                   <button
                     onClick={handleSaveStudents}
                     disabled={saving}
-                    className="flex-1 btn-primary py-2.5 text-sm font-semibold disabled:opacity-60"
+                    className="flex-1 h-12 rounded-full bg-swedish-blue text-white font-bold hover:bg-swedish-dark disabled:opacity-60"
                   >
-                    {saving ? 'Sparar...' : `Spara ${students.length} elev${students.length !== 1 ? 'er' : ''}`}
+                    {saving ? 'Sparar…' : `Spara ${students.length} elev${students.length !== 1 ? 'er' : ''}`}
                   </button>
                 </div>
               </>
@@ -575,49 +424,210 @@ export default function SchoolPage() {
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }
 
-/** Elevlista för ett pass. Utan onDelete är listan skrivskyddad (arkiverade pass). */
-function StudentTable({ list, onDelete }: { list: SchoolBooking[]; onDelete?: (bookingId: number) => void }) {
+function Stat({ icon, tint, value, label }: { icon: React.ReactNode; tint: string; value: number; label: string }) {
   return (
-    <table className="w-full text-sm">
-      <thead className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 border-b border-gray-100">
-        <tr>
-          <th className="text-left py-2.5 px-5">Namn</th>
-          <th className="text-left py-2.5 px-5">Personnummer</th>
-          <th className="text-left py-2.5 px-5 hidden sm:table-cell">Telefon</th>
-          <th className="text-left py-2.5 px-5 hidden sm:table-cell">E-post</th>
-          {onDelete && <th className="py-2.5 px-5"></th>}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-50">
-        {list.map((b) => (
-          <tr key={b.id} className="hover:bg-gray-50 align-top">
-            <td className="py-3 px-5">
-              <p className="font-medium">{b.guestName || '–'}</p>
-              {b.note && <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1 mt-1 whitespace-pre-wrap">📝 {b.note}</p>}
-            </td>
-            <td className="py-3 px-5 font-mono text-xs text-gray-600">{b.personnummer || '–'}</td>
-            <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestPhone || '–'}</td>
-            <td className="py-3 px-5 text-gray-500 text-xs hidden sm:table-cell">{b.guestEmail || '–'}</td>
-            {onDelete && (
-              <td className="py-3 px-5 text-right">
-                <button
-                  onClick={() => confirm(`Ta bort ${b.guestName || 'eleven'} från passet?`) && onDelete(b.id)}
-                  className="text-gray-300 hover:text-red-500 transition"
-                  title="Ta bort elev"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+      <div className={clsx('w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0', tint)}>{icon}</div>
+      <div className="min-w-0">
+        <p className="font-headline text-2xl font-extrabold text-gray-900 leading-none">{value}</p>
+        <p className="text-xs text-gray-500 mt-1">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function Labeled({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <label className={clsx('block', className)}>
+      <span className="block text-xs font-semibold text-gray-600 mb-1">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const KIND: Record<CourseKind, { label: string; cls: string }> = {
+  risk1: { label: 'R1', cls: 'bg-brand-100 text-swedish-dark' },
+  risk2: { label: 'R2', cls: 'bg-orange-100 text-orange-700' },
+  kombo: { label: 'R1+2', cls: 'bg-purple-100 text-purple-700' },
+  other: { label: 'Kurs', cls: 'bg-gray-100 text-gray-600' },
+};
+
+/** Ett pass i listan: datum, kurs, tid och hur många platser som är fyllda. */
+function PassCard({ item, open, active, onClick }: { item: PassItem; open: boolean; active: boolean; onClick: () => void }) {
+  const kind = KIND[courseKind(item.session.course?.type ?? '')];
+  const status = item.readOnly
+    ? `${item.students.length} elev${item.students.length === 1 ? '' : 'er'}`
+    : item.myAllocation !== null
+      ? `${item.students.length} av ${item.myAllocation} platser`
+      : `${item.session.seatsAvailable} platser kvar`;
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        'w-full text-left flex items-center gap-3 rounded-2xl border p-3 sm:p-4 transition bg-white',
+        open ? 'border-swedish-blue ring-1 ring-swedish-blue' : 'border-gray-100 hover:border-gray-200',
+        active && 'md:border-swedish-blue md:ring-1 md:ring-swedish-blue',
+        !active && 'md:border-gray-100 md:ring-0',
+      )}
+    >
+      <div className="w-12 shrink-0 text-center rounded-xl bg-gray-50 py-1.5">
+        <p className="text-[11px] font-semibold uppercase text-gray-500 leading-none">{item.start.toLocaleDateString('sv-SE', { month: 'short', ...tz }).replace('.', '')}</p>
+        <p className="font-headline text-xl font-extrabold text-gray-900 leading-tight">{item.start.toLocaleDateString('sv-SE', { day: 'numeric', ...tz })}</p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={clsx('text-[11px] font-bold px-1.5 py-0.5 rounded-md shrink-0', kind.cls)}>{kind.label}</span>
+          <p className="font-semibold text-gray-900 truncate">{item.title}</p>
+        </div>
+        <p className="text-sm text-gray-500 mt-0.5 truncate">
+          {item.start.toLocaleDateString('sv-SE', { weekday: 'short', ...tz })} {hm(item.start)}–{hm(item.end)}
+        </p>
+        <p className={clsx('text-xs font-semibold mt-1', item.readOnly ? 'text-gray-400' : item.locked ? 'text-red-500' : 'text-green-600')}>
+          {item.readOnly ? <><Lock className="inline w-3 h-3 -mt-0.5" /> {item.end < new Date() ? 'Genomfört' : 'Pågår'} · {status}</> : item.deadlinePassed ? `Stängt · ${status}` : status}
+        </p>
+      </div>
+      <ChevronRight className={clsx('w-5 h-5 text-gray-300 shrink-0 transition md:rotate-0', open && 'rotate-90')} />
+    </button>
+  );
+}
+
+/** Ett pass i detalj: plats, pris, meddelande och skolans elever. */
+function PassDetail({ item, onAdd, onDelete }: { item: PassItem; onAdd: () => void; onDelete?: (bookingId: number) => void }) {
+  const r = item.reservation;
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 p-5 space-y-4">
+      <div>
+        <h2 className="font-headline text-xl font-extrabold text-gray-900">{item.title}</h2>
+        <p className="text-sm text-gray-600 mt-1 capitalize">
+          {item.start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', ...tz })}
+        </p>
+      </div>
+
+      <div className="space-y-2 text-sm text-gray-700">
+        <p className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400 shrink-0" />{hm(item.start)}–{hm(item.end)}</p>
+        {item.meetingPlace && <p className="flex items-start gap-2"><MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />{item.meetingPlace}</p>}
+        {item.price !== undefined && (
+          <p className="flex items-center gap-2">
+            <span className="w-4 text-center text-gray-400 font-bold shrink-0">kr</span>
+            <span className="font-semibold">{item.price.toLocaleString('sv-SE')} kr/elev</span>
+            {item.customPrice && <span className="text-xs text-swedish-dark">(ert pris)</span>}
+          </p>
+        )}
+        {r?.fillBy && (
+          <p className={clsx('flex items-center gap-2', item.deadlinePassed ? 'text-gray-400' : 'text-amber-700 font-medium')}>
+            <AlarmClock className="w-4 h-4 shrink-0" />
+            {item.deadlinePassed ? 'Stängt' : 'Fyll senast'} {new Date(r.fillBy).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', ...tz })}
+          </p>
+        )}
+      </div>
+
+      {r?.message && (
+        <p className="text-sm text-gray-700 bg-gray-50 rounded-2xl px-4 py-3 whitespace-pre-wrap flex gap-2">
+          <MessageSquare className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />{r.message}
+        </p>
+      )}
+
+      {!item.readOnly && (
+        <div>
+          {item.myAllocation !== null && (
+            <div className="mb-3">
+              <div className="flex justify-between text-xs font-semibold text-gray-500 mb-1.5">
+                <span>Era platser</span>
+                <span>{item.students.length} av {item.myAllocation} fyllda</span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div className={clsx('h-full rounded-full', item.full ? 'bg-green-500' : 'bg-swedish-blue')} style={{ width: `${Math.min(100, (item.students.length / Math.max(1, item.myAllocation)) * 100)}%` }} />
+              </div>
+            </div>
+          )}
+          <button
+            disabled={item.locked}
+            onClick={onAdd}
+            className="w-full h-12 rounded-full bg-swedish-blue text-white font-bold inline-flex items-center justify-center gap-2 hover:bg-swedish-dark disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-5 h-5" />
+            {item.deadlinePassed ? 'Stängt för nya elever' : item.full ? 'Fullbokat' : 'Lägg till elever'}
+          </button>
+        </div>
+      )}
+
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-2">
+          Era elever ({item.students.length})
+        </p>
+        {item.students.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">Inga elever bokade på detta pass ännu.</p>
+        ) : (
+          <ul className="space-y-2">
+            {item.students.map((b) => (
+              <li key={b.id} className="rounded-2xl bg-gray-50 px-4 py-3 flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-gray-900">{b.guestName || '–'}</p>
+                  <p className="text-sm font-mono text-gray-600">{b.personnummer || '–'}</p>
+                  {(b.guestPhone || b.guestEmail?.includes('@')) && (
+                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 mt-1">
+                      {b.guestPhone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{b.guestPhone}</span>}
+                      {b.guestEmail?.includes('@') && <span className="inline-flex items-center gap-1 break-all"><Mail className="w-3 h-3 shrink-0" />{b.guestEmail}</span>}
+                    </div>
+                  )}
+                  {b.note && <p className="text-xs text-amber-800 bg-amber-50 rounded-lg px-2.5 py-1.5 mt-2 whitespace-pre-wrap">📝 {b.note}</p>}
+                </div>
+                {onDelete && (
+                  <button
+                    onClick={() => confirm(`Ta bort ${b.guestName || 'eleven'} från passet?`) && onDelete(b.id)}
+                    aria-label={`Ta bort ${b.guestName || 'eleven'}`}
+                    className="w-10 h-10 -mr-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Antal bokade elever per månad. */
+function MonthlyReport({ bookings }: { bookings: SchoolBooking[] }) {
+  const buckets: Record<string, number> = {};
+  for (const b of bookings) {
+    const d = new Date(b.bookingTime);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+  const sorted = Object.entries(buckets).sort((a, b) => b[0].localeCompare(a[0]));
+  const max = Math.max(1, ...sorted.map(([, v]) => v));
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 p-5">
+      <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <BarChart2 className="w-4 h-4 text-gray-400" /> Elever per månad
+      </h2>
+      {sorted.length === 0 ? (
+        <p className="text-sm text-gray-400 py-4 text-center">Inga bokningar ännu.</p>
+      ) : (
+        <ul className="space-y-3">
+          {sorted.map(([month, count]) => {
+            const [year, mon] = month.split('-');
+            const label = new Date(Number(year), Number(mon) - 1, 1).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long' });
+            return (
+              <li key={month} className="grid grid-cols-[7.5rem_2rem_1fr] items-center gap-3 text-sm">
+                <span className="capitalize text-gray-700">{label}</span>
+                <span className="font-bold text-swedish-dark text-right">{count}</span>
+                <span className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <span className="block h-full bg-swedish-blue rounded-full" style={{ width: `${Math.round((count / max) * 100)}%` }} />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
