@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import clsx from 'clsx';
 import AdminShell from '@/components/admin/AdminShell';
+import { KurserSideList } from '@/components/admin/SideLists';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
 import { buildTsReportXml, reportParts } from '@/lib/tsReport';
@@ -72,6 +73,7 @@ function download(filename: string, content: string, type: string) {
 }
 
 export default function KursPage({ params }: { params: { id: string } }) {
+  const sideList = <KurserSideList activeId={Number(params.id)} />;
   const locale = useLocale();
   const [kurs, setKurs] = useState<Kurs | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -100,14 +102,14 @@ export default function KursPage({ params }: { params: { id: string } }) {
 
   if (notFound) {
     return (
-      <AdminShell title="Kursen hittades inte" back={{ href: '/admin/kurser', label: 'Kurser' }}>
+      <AdminShell aside={sideList} title="Kursen hittades inte" back={{ href: '/admin/kurser', label: 'Kurser' }}>
         <p className="text-white/50">Kursen finns inte eller har tagits bort.</p>
       </AdminShell>
     );
   }
   if (!kurs) {
     return (
-      <AdminShell title="Kurs" back={{ href: '/admin/kurser', label: 'Kurser' }}>
+      <AdminShell aside={sideList} title="Kurs" back={{ href: '/admin/kurser', label: 'Kurser' }}>
         <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
       </AdminShell>
     );
@@ -167,7 +169,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <AdminShell
+    <AdminShell aside={sideList}
       title={kurs.title}
       back={{ href: '/admin/kurser', label: 'Kurser' }}
       actions={<Link href={`/${locale}/admin/kurser/${kurs.id}/redigera`} className="inline-flex items-center h-11 px-5 rounded-full bg-white/10 border border-white/10 text-sm font-semibold hover:bg-white/15">Redigera</Link>}
@@ -189,7 +191,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
         <Stat value={kr(value)} label="Värde" muted={value === 0} />
       </div>
 
-      <div className="grid lg:grid-cols-[1.25fr_1fr] gap-4 items-start">
+      <div className="grid lg:grid-cols-[1.25fr_1fr] lg:group-[.split]/shell:grid-cols-1 2xl:group-[.split]/shell:grid-cols-[1.25fr_1fr] gap-4 items-start">
         <Card
           title="Deltagare"
           aside={

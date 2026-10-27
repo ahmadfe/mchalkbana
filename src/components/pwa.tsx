@@ -40,7 +40,7 @@ const isIos = () =>
   /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 /** "Installera appen" – visas bara när appen går att installera och inte redan körs som app. */
-export function InstallAppButton({ dark = false, className }: { dark?: boolean; className?: string }) {
+export function InstallAppButton({ dark = false, iconOnly = false, className }: { dark?: boolean; iconOnly?: boolean; className?: string }) {
   const [mode, setMode] = useState<'hidden' | 'prompt' | 'ios'>('hidden');
   const [showSteps, setShowSteps] = useState(false);
 
@@ -71,13 +71,16 @@ export function InstallAppButton({ dark = false, className }: { dark?: boolean; 
       <button
         type="button"
         onClick={install}
+        title={iconOnly ? 'Installera appen' : undefined}
+        aria-label={iconOnly ? 'Installera appen' : undefined}
         className={clsx(
-          'h-10 px-4 rounded-full text-sm font-semibold inline-flex items-center justify-center gap-2',
+          iconOnly ? 'w-11 h-11 rounded-full' : 'h-10 px-4 rounded-full',
+          'text-sm font-semibold inline-flex items-center justify-center gap-2',
           dark ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-gray-900 text-white hover:bg-gray-800',
           className,
         )}
       >
-        <Download className="w-4 h-4" strokeWidth={1.75} /> Installera appen
+        <Download className={iconOnly ? 'w-5 h-5' : 'w-4 h-4'} strokeWidth={1.75} />{!iconOnly && ' Installera appen'}
       </button>
 
       {showSteps && (

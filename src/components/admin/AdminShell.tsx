@@ -6,16 +6,19 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import clsx from 'clsx';
 import AdminSidebar from './AdminSidebar';
 
 interface Props {
   title: string;
   back?: { href: string; label: string };
   actions?: React.ReactNode;
+  /** Lista som visas bredvid innehållet på breda skärmar (surfplatta liggande och dator) */
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function AdminShell({ title, back, actions, children }: Props) {
+export default function AdminShell({ title, back, actions, aside, children }: Props) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const locale = useLocale();
@@ -37,10 +40,16 @@ export default function AdminShell({ title, back, actions, children }: Props) {
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">
       <AdminSidebar />
-      <div className="lg:pl-60">
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 lg:py-8">
+      {/* split: innehållet är smalare när listan visas bredvid – sidorna kan välja färre kolumner med group-[.split]/shell */}
+      <div className={clsx('group/shell md:pl-[84px] xl:pl-60', aside && 'split lg:flex')}>
+        {aside && (
+          <aside className="hidden lg:flex flex-col w-[340px] 2xl:w-[380px] shrink-0 sticky top-[env(safe-area-inset-top)] h-[calc(100dvh-env(safe-area-inset-top))] border-r border-white/5 bg-[#111113]">
+            {aside}
+          </aside>
+        )}
+        <main className={clsx('max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-6 lg:py-8', aside && 'lg:flex-1 lg:min-w-0')}>
           {back && (
-            <Link href={`/${locale}${back.href}`} className="inline-flex items-center gap-1 text-sm text-white/60 hover:text-white mb-2">
+            <Link href={`/${locale}${back.href}`} className={clsx('inline-flex items-center gap-1 text-sm text-white/60 hover:text-white mb-2', aside && 'lg:hidden')}>
               <ChevronLeft className="w-4 h-4" /> {back.label}
             </Link>
           )}

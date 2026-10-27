@@ -1208,7 +1208,7 @@ export default function AdminPage() {
     <div className={clsx('min-h-screen', darkTab ? 'bg-[#0b0b0d]' : 'bg-gray-50')}>
       <AdminSidebar activeTab={tab as OldTab} onOldTab={selectTab} />
 
-      <div className="lg:pl-60">
+      <div className="md:pl-[84px] xl:pl-60">
       <main className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">

@@ -61,7 +61,7 @@ export default function StudentForm({
   });
 
   return (
-    <div className="grid lg:grid-cols-2 gap-4 items-start">
+    <div className="grid lg:grid-cols-2 lg:group-[.split]/shell:grid-cols-1 2xl:group-[.split]/shell:grid-cols-2 gap-4 items-start">
       <div className="space-y-4">
         <Card title="Person">
           <div className="grid sm:grid-cols-2 gap-4">

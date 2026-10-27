@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import AdminShell from '@/components/admin/AdminShell';
+import { EleverSideList } from '@/components/admin/SideLists';
 import StudentForm, { type StudentFormValues } from '@/components/admin/StudentForm';
 import { Badge, Button, Card, formatDate } from '@/components/admin/ui';
 import type { StudentDto } from '@/lib/students';
@@ -42,6 +43,7 @@ function toForm(s: StudentDto): StudentFormValues {
 }
 
 export default function ElevPage({ params }: { params: { id: string } }) {
+  const sideList = <EleverSideList activeId={Number(params.id)} />;
   const locale = useLocale();
   const router = useRouter();
   const [student, setStudent] = useState<StudentDto | null>(null);
@@ -92,7 +94,7 @@ export default function ElevPage({ params }: { params: { id: string } }) {
 
   if (notFound) {
     return (
-      <AdminShell title="Eleven hittades inte" back={{ href: '/admin/elever', label: 'Elever' }}>
+      <AdminShell aside={sideList} title="Eleven hittades inte" back={{ href: '/admin/elever', label: 'Elever' }}>
         <p className="text-white/50">Eleven finns inte eller har raderats.</p>
       </AdminShell>
     );
@@ -100,7 +102,7 @@ export default function ElevPage({ params }: { params: { id: string } }) {
 
   if (!student || !values) {
     return (
-      <AdminShell title="Elev" back={{ href: '/admin/elever', label: 'Elever' }}>
+      <AdminShell aside={sideList} title="Elev" back={{ href: '/admin/elever', label: 'Elever' }}>
         <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
       </AdminShell>
     );
@@ -109,7 +111,7 @@ export default function ElevPage({ params }: { params: { id: string } }) {
   const [datePart, lastFour] = student.personnummer ? student.personnummer.split('-') : ['', ''];
 
   return (
-    <AdminShell
+    <AdminShell aside={sideList}
       title={student.name || 'Elev'}
       back={{ href: '/admin/elever', label: 'Elever' }}
       actions={<Button variant="danger" onClick={remove}><Trash2 className="w-4 h-4" /> Radera</Button>}
