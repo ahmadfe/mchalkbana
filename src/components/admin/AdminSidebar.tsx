@@ -119,7 +119,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
           <span className="w-9 h-9 rounded-full bg-white/10 text-white text-xs font-bold flex items-center justify-center shrink-0">{initials}</span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-            <p className="text-xs text-white/50">Administratör</p>
+            <p className="text-xs text-white/50">{owner ? 'Superanvändare' : 'Administratör'}</p>
           </div>
         </div>
         <InstallAppButton dark className="mt-3 w-full" />

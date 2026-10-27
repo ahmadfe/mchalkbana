@@ -7,6 +7,7 @@ import Link from 'next/link';
 import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
 import KindBadge from '@/components/admin/KindBadge';
 import { isOwner } from '@/lib/owner';
+import Oversikt from '@/components/admin/Oversikt';
 import { sessionReportFiles } from '@/lib/tsReport';
 import type { Course, Session, Booking } from '@/lib/types';
 import {
@@ -1185,28 +1186,7 @@ export default function AdminPage() {
           </div>
 
           {/* Overview */}
-          {tab === 'overview' && stats && (
-            <div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-                {[
-                  { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-sky-300 bg-sky-400/10' },
-                  ...(stats.revenue === null ? [] : [{ label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-emerald-300 bg-emerald-400/10' }]),
-                  { label: t('upcoming_sessions'), value: stats.upcomingSessions, icon: <Calendar />, color: 'text-orange-300 bg-orange-400/10' },
-                  { label: t('students'), value: stats.totalStudents, icon: <Users />, color: 'text-purple-300 bg-purple-400/10' },
-                ].map((stat) => (
-                  <div key={stat.label} className="bg-[#1c1c1f] rounded-3xl p-5">
-                    <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center mb-3 [&>svg]:w-5 [&>svg]:h-5', stat.color)}>
-                      {stat.icon}
-                    </div>
-                    <div className="font-headline text-2xl font-extrabold text-white">{stat.value}</div>
-                    <div className="text-sm text-white/50 mt-1">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-
-
-            </div>
-          )}
+          {tab === 'overview' && <Oversikt />}
 
           {/* Courses */}
           {tab === 'courses' && (
