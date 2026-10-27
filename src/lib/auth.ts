@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import { isOwner } from './owner';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'uppsalahalkbana-secret-key-change-in-production'
@@ -41,6 +42,12 @@ export async function getAuthUserFromRequest(request: Request): Promise<JWTPaylo
   const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
   if (!match) return null;
   return verifyToken(match[1]);
+}
+
+/** Bara ägaren – intäkter och Swish-betalningar. */
+export async function requireOwner(request: Request): Promise<JWTPayload | null> {
+  const user = await getAuthUserFromRequest(request);
+  return isOwner(user) ? user : null;
 }
 
 export async function requireAdmin(request: Request): Promise<JWTPayload | null> {

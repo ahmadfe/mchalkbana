@@ -5,17 +5,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import {
-  BookOpen, Calendar, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
+  BookOpen, Calendar, CreditCard, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
   Receipt, School, ShieldCheck, Tag, UserCircle2, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 import { InstallAppButton } from '@/components/pwa';
+import { isOwner } from '@/lib/owner';
 
 /** Flikar som fortfarande ligger i den äldre admin-sidan (/admin?tab=…). */
-export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'schools' | 'cards' | 'hero' | 'whatsapp' | 'instructors';
+export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'schools' | 'cards' | 'hero' | 'whatsapp' | 'instructors' | 'payments';
 
-type Item = { label: string; /** Kort namn i surfplattans ikonmeny */ short?: string; icon: LucideIcon } & ({ href: string } | { tab: OldTab });
+type Item = { label: string; /** Kort namn i surfplattans ikonmeny */ short?: string; icon: LucideIcon; /** Bara för ägaren (intäkter) */ ownerOnly?: boolean } & ({ href: string } | { tab: OldTab });
 
 const SECTIONS: { title?: string; items: Item[] }[] = [
   {
@@ -33,6 +34,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     items: [
       { tab: 'sessions', label: 'Pass och bokningar', short: 'Pass', icon: Calendar },
       { tab: 'courses', label: 'Kursslag', icon: Layers },
+      { tab: 'payments', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
       { tab: 'schools', label: 'Trafikskolor', short: 'Skolor', icon: School },
       { tab: 'instructors', label: 'Instruktörer', short: 'Lärare', icon: UserCog },
       { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2 },
@@ -70,7 +72,9 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
   // Sökvägen saknar språkprefix (localePrefix: 'never'), men tål båda
   const path = pathname.replace(new RegExp(`^/${locale}(?=/|$)`), '');
 
+  const owner = isOwner(user);
   const renderItem = (item: Item, rail = false) => {
+    if (item.ownerOnly && !owner) return null;
     const Icon = item.icon;
     const cls = (active: boolean) => clsx(
       rail

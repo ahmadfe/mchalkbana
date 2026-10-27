@@ -7,7 +7,7 @@ import Navbar from '@/components/Navbar';
 import type { Session } from '@/lib/types';
 import {
   Calendar, Users, X, Plus, Building2, Trash2, CheckCircle2, ChevronRight,
-  BarChart2, Lock, MapPin, Clock, MessageSquare, AlarmClock, Mail, Phone,
+  BarChart2, Lock, MapPin, Clock, MessageSquare, AlarmClock, Mail, Phone, FileText, Download,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -312,6 +312,8 @@ export default function SchoolPage() {
               {shown && <div className="hidden md:block md:sticky md:top-[calc(6rem+env(safe-area-inset-top))]">{detail(shown)}</div>}
             </div>
           )}
+
+          <SchoolInvoices />
 
           <MonthlyReport bookings={bookings} />
         </div>
@@ -628,6 +630,65 @@ function MonthlyReport({ bookings }: { bookings: SchoolBooking[] }) {
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+interface SchoolInvoice { id: number; number: number; period: string; status: string; issueDate: string; dueDate: string; total: number; paidAt: string | null; creditOfId: number | null }
+
+/** Skolans fakturor med PDF att ladda ner. */
+function SchoolInvoices() {
+  const [list, setList] = useState<SchoolInvoice[] | null>(null);
+  useEffect(() => {
+    fetch('/api/school/fakturor').then((r) => r.json()).then((d) => setList(d.invoices ?? []));
+  }, []);
+  if (!list || list.length === 0) return null;
+
+  const date = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric', ...tz });
+  const month = (p: string) => {
+    const [y, m] = p.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+  };
+  const status = (i: SchoolInvoice) => {
+    if (i.creditOfId) return { label: 'Kreditfaktura', cls: 'bg-gray-100 text-gray-600' };
+    if (i.status === 'paid') return { label: 'Betald', cls: 'bg-green-100 text-green-700' };
+    if (i.status === 'credited') return { label: 'Krediterad', cls: 'bg-gray-100 text-gray-600' };
+    return new Date(i.dueDate) < new Date()
+      ? { label: 'Förfallen', cls: 'bg-red-100 text-red-700' }
+      : { label: 'Obetald', cls: 'bg-amber-100 text-amber-800' };
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 p-5">
+      <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+        <FileText className="w-4 h-4 text-gray-400" /> Fakturor
+      </h2>
+      <ul className="divide-y divide-gray-100">
+        {list.map((i) => {
+          const s = status(i);
+          return (
+            <li key={i.id} className="flex items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-900">{i.creditOfId ? 'Kreditfaktura' : 'Faktura'} {i.number}</span>
+                  <span className={clsx('text-[11px] font-bold px-2 py-0.5 rounded-full', s.cls)}>{s.label}</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Kurser i {month(i.period)} · {i.creditOfId || i.status !== 'sent' ? date(i.issueDate) : `betala senast ${date(i.dueDate)}`}
+                </p>
+              </div>
+              <span className="font-bold text-gray-900 shrink-0">{Math.abs(i.total).toLocaleString('sv-SE')} kr</span>
+              <a
+                href={`/api/school/fakturor/${i.id}/pdf`}
+                aria-label={`Ladda ner faktura ${i.number}`}
+                className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center shrink-0"
+              >
+                <Download className="w-4 h-4" />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireOwner } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
 import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const auth = await getAuthUserFromRequest(request);
-  if (!auth || auth.role !== 'admin') {
+  if (!(await requireOwner(request))) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 

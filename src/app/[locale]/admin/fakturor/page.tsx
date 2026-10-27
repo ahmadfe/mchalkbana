@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { ChevronDown, ChevronRight, Info, Settings } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Info, Settings } from 'lucide-react';
 import clsx from 'clsx';
 import AdminShell from '@/components/admin/AdminShell';
-import { Button, formatDate } from '@/components/admin/ui';
+import { Button, Checkbox, Field, Input, formatDate } from '@/components/admin/ui';
 import { InvoiceStatus, kr, periodLabel } from '@/components/admin/invoice';
 
 interface DraftLine { sessionId: number; date: string; description: string; quantity: number; unitPrice: number; amount: number; students: string[] }
@@ -158,7 +158,46 @@ export default function FakturorPage() {
       ) : (
         <div className="space-y-2">{lists[tab].map(inv => <InvoiceItem key={inv.id} inv={inv} locale={locale} />)}</div>
       )}
+
+      <SieExport />
     </AdminShell>
+  );
+}
+
+/** Bokföring: SIE-fil för en period, att läsa in i Fortnox, Visma m.fl. */
+function SieExport() {
+  const thisMonth = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' }).slice(0, 7);
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(thisMonth);
+  const [to, setTo] = useState(thisMonth);
+  const [payments, setPayments] = useState(true);
+  const href = `/api/admin/fakturor/sie?from=${from}&to=${to || from}&payments=${payments ? 1 : 0}`;
+  return (
+    <div className="rounded-2xl bg-[#1c1c1f] mt-5">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left">
+        <span className="font-bold">Bokföring (SIE)</span>
+        <ChevronDown className={clsx('w-4 h-4 text-white/50 transition', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <div className="border-t border-white/5 px-5 py-4 space-y-4">
+          <p className="text-sm text-white/60">
+            Ladda ner fakturorna som en SIE 4-fil och läs in den i bokföringsprogrammet. Varje faktura bokförs på kundfordringar,
+            försäljning och utgående moms{payments ? ', och varje betalning på bank mot kundfordringar' : ''}.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4 sm:max-w-md">
+            <Field label="Från och med"><Input type="month" value={from} onChange={e => setFrom(e.target.value)} /></Field>
+            <Field label="Till och med"><Input type="month" value={to} onChange={e => setTo(e.target.value)} /></Field>
+          </div>
+          <Checkbox checked={payments} onChange={setPayments}>Ta med betalningar</Checkbox>
+          <a
+            href={href}
+            className={clsx('inline-flex items-center gap-2 h-11 px-5 rounded-full bg-white text-black text-sm font-semibold hover:bg-white/90', (!from || (to && to < from)) && 'pointer-events-none opacity-40')}
+          >
+            <Download className="w-4 h-4" /> Ladda ner SIE-fil
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
 

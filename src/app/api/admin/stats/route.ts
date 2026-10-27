@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { activeStudentWhere } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { isOwner } from '@/lib/owner';
 
 export async function GET(request: Request) {
   const authUser = await getAuthUserFromRequest(request);
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     totalBookings,
-    revenue: payments._sum.amount ?? 0,
+    // Intäkterna visas bara för ägaren
+    revenue: isOwner(authUser) ? payments._sum.amount ?? 0 : null,
     upcomingSessions,
     totalStudents,
   });

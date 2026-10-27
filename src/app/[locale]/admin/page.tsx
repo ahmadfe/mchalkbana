@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
 import KindBadge from '@/components/admin/KindBadge';
+import { isOwner } from '@/lib/owner';
 import { sessionReportFiles } from '@/lib/tsReport';
 import type { Course, Session, Booking } from '@/lib/types';
 import {
@@ -94,7 +95,7 @@ interface PaymentRecord {
 
 interface AdminStats {
   totalBookings: number;
-  revenue: number;
+  revenue: number | null; // null för andra än ägaren
   upcomingSessions: number;
   totalStudents: number;
 }
@@ -138,6 +139,12 @@ export default function AdminPage() {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
     if (fromUrl && fromUrl in OLD_TAB_LABEL) setTab(fromUrl as Tab);
   }, []);
+
+  // Betalningar är bara för ägaren – andra hamnar på Översikt
+  const owner = isOwner(user);
+  useEffect(() => {
+    if (!authLoading && tab === 'payments' && !owner) setTab('overview');
+  }, [authLoading, tab, owner]);
 
   const selectTab = (next: OldTab) => {
     setTab(next);
@@ -372,7 +379,7 @@ export default function AdminPage() {
       fetch('/api/admin/schools'),
       fetch('/api/admin/school-accounts'),
       fetch('/api/admin/course-groups'),
-      fetch('/api/admin/payments'),
+      owner ? fetch('/api/admin/payments') : Promise.resolve(new Response('{"payments":[]}')),
       fetch('/api/admin/info-cards'),
       fetch('/api/admin/settings?key=heroVideoUrl'),
       fetch('/api/admin/settings?key=heroImageUrl'),
@@ -413,7 +420,7 @@ export default function AdminPage() {
     // Load WhatsApp numbers
     fetch('/api/admin/whatsapp-numbers').then(r => r.json()).then(d => setWaNumbers(d.numbers || []));
     setLoading(false);
-  }, []);
+  }, [owner]);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push(`/${locale}/login`); return; }
@@ -1183,7 +1190,7 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
                 {[
                   { label: t('total_bookings'), value: stats.totalBookings, icon: <BookOpen />, color: 'text-sky-300 bg-sky-400/10' },
-                  { label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-emerald-300 bg-emerald-400/10' },
+                  ...(stats.revenue === null ? [] : [{ label: t('revenue'), value: `${(stats.revenue / 1000).toFixed(0)}k kr`, icon: <TrendingUp />, color: 'text-emerald-300 bg-emerald-400/10' }]),
                   { label: t('upcoming_sessions'), value: stats.upcomingSessions, icon: <Calendar />, color: 'text-orange-300 bg-orange-400/10' },
                   { label: t('students'), value: stats.totalStudents, icon: <Users />, color: 'text-purple-300 bg-purple-400/10' },
                 ].map((stat) => (
@@ -2490,7 +2497,7 @@ export default function AdminPage() {
           )}
 
           {/* Payments */}
-          {tab === 'payments' && (() => {
+          {tab === 'payments' && owner && (() => {
             const filteredPayments = paymentStatusFilter === 'all' ? payments : payments.filter(p => p.status === paymentStatusFilter);
             // Group payments by month
             const groups: Record<string, PaymentRecord[]> = {};

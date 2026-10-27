@@ -22,6 +22,8 @@ export interface CompanySettings {
   paymentDays: number;
   firstNumber: number;
   fSkatt: boolean;
+  /** Konton i SIE-filen */
+  sieAccounts: { receivable: string; sales: string; vat: string; bank: string };
   /** Kurser före den här månaden räknas som redan fakturerade (det gamla e-postflödet) */
   startPeriod: string;
 }
@@ -41,6 +43,7 @@ export const DEFAULT_COMPANY: CompanySettings = {
   paymentDays: 30,
   firstNumber: 1001,
   fSkatt: true,
+  sieAccounts: { receivable: '1510', sales: '3001', vat: '2611', bank: '1930' },
   startPeriod: '2026-11',
 };
 
@@ -62,11 +65,17 @@ export function parseCompany(body: Record<string, unknown>): { error: string } |
   if (!Number.isInteger(paymentDays) || paymentDays < 0 || paymentDays > 120) return { error: 'Betalningsvillkor måste vara 0–120 dagar' };
   if (!Number.isInteger(firstNumber) || firstNumber < 1) return { error: 'Ogiltigt första fakturanummer' };
   if (!/^\d{4}-\d{2}$/.test(str('startPeriod'))) return { error: 'Ange månad som ÅÅÅÅ-MM' };
+  const acc = (body.sieAccounts ?? {}) as Record<string, unknown>;
+  const sieAccounts = {
+    receivable: String(acc.receivable ?? '1510').trim(), sales: String(acc.sales ?? '3001').trim(),
+    vat: String(acc.vat ?? '2611').trim(), bank: String(acc.bank ?? '1930').trim(),
+  };
+  if (Object.values(sieAccounts).some(a => !/^\d{4}$/.test(a))) return { error: 'Kontonumren ska vara fyra siffror' };
   return {
     data: {
       name: str('name'), address: str('address'), orgNr: str('orgNr'), vatNr: str('vatNr'),
       bankgiro: str('bankgiro'), plusgiro: str('plusgiro'), iban: str('iban'),
-      email: str('email'), phone: str('phone'), paymentDays, firstNumber, fSkatt: body.fSkatt !== false, startPeriod: str('startPeriod'),
+      email: str('email'), phone: str('phone'), paymentDays, firstNumber, fSkatt: body.fSkatt !== false, sieAccounts, startPeriod: str('startPeriod'),
     },
   };
 }

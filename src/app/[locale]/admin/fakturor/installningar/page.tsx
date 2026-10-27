@@ -9,6 +9,7 @@ import { Button, Card, Checkbox, Field, Input, Textarea } from '@/components/adm
 interface Company {
   name: string; address: string; orgNr: string; vatNr: string; bankgiro: string; plusgiro: string; iban: string;
   email: string; phone: string; paymentDays: number | string; firstNumber: number | string; fSkatt: boolean; startPeriod: string;
+  sieAccounts: { receivable: string; sales: string; vat: string; bank: string };
 }
 
 export default function FakturaInstallningarPage() {
@@ -90,6 +91,20 @@ export default function FakturaInstallningarPage() {
             >
               <Input type="month" {...text('startPeriod')} />
             </Field>
+          </Card>
+          <Card title="Bokföring (SIE)">
+            <div className="grid grid-cols-2 gap-4">
+              {([['receivable', 'Kundfordringar'], ['sales', 'Försäljning 25 % moms'], ['vat', 'Utgående moms 25 %'], ['bank', 'Bank (betalningar)']] as const).map(([k, label]) => (
+                <Field key={k} label={label}>
+                  <Input
+                    inputMode="numeric"
+                    value={c.sieAccounts[k]}
+                    onChange={e => setC({ ...c, sieAccounts: { ...c.sieAccounts, [k]: e.target.value } })}
+                  />
+                </Field>
+              ))}
+            </div>
+            <p className="text-sm text-white/50 mt-3">Kontona enligt BAS-kontoplanen. Ändra bara om er redovisningskonsult använder andra konton.</p>
           </Card>
           {error && <p className="text-sm text-red-400">{error}</p>}
         </div>
