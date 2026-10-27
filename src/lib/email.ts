@@ -414,228 +414,6 @@ export async function sendStaffAccountEmail(data: { name: string; email: string;
   }
 }
 
-// ── School monthly invoice ─────────────────────────────────────────────────
-
-interface SchoolInvoiceEmailData {
-  recipientEmail: string;
-  schoolName: string;
-  customerNumber: number;
-  month: string; // e.g. "april 2026"
-  rows: {
-    courseName: string;
-    sessionDate: string;
-    studentCount: number;
-    pricePerStudent: number;
-    subtotal: number;
-  }[];
-  totalStudents: number;
-  totalAmount: number;
-}
-
-function buildSchoolInvoiceHtml(data: SchoolInvoiceEmailData): string {
-  const now = new Date();
-  const invoiceNumber = String(data.customerNumber).padStart(3, '0') + String(now.getFullYear()).slice(2) + String(now.getMonth() + 1).padStart(2, '0');
-  const fakturadatum = now.toLocaleDateString('sv-SE').replace(/\//g, '-');
-  const dueDate = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString('sv-SE').replace(/\//g, '-');
-  const priceExVat = Math.round(data.totalAmount / 1.25);
-  const vatAmount = data.totalAmount - priceExVat;
-
-  const rowsHtml = data.rows.map((r) => `
-    <tr>
-      <td style="padding:10px 12px;font-size:14px;color:#111827;border-bottom:1px solid #f3f4f6;">${r.courseName}</td>
-      <td style="padding:10px 8px;font-size:14px;color:#111827;text-align:center;border-bottom:1px solid #f3f4f6;">${r.studentCount}</td>
-      <td style="padding:10px 8px;font-size:14px;color:#111827;text-align:right;border-bottom:1px solid #f3f4f6;">${r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
-      <td style="padding:10px 8px;font-size:14px;color:#6b7280;text-align:center;border-bottom:1px solid #f3f4f6;"></td>
-      <td style="padding:10px 12px;font-size:14px;color:#111827;font-weight:600;text-align:right;border-bottom:1px solid #f3f4f6;">${r.subtotal.toLocaleString('sv-SE')} kr</td>
-    </tr>
-  `).join('');
-
-  return `
-<!DOCTYPE html>
-<html lang="sv">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
-<div style="max-width:680px;margin:32px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-
-  <!-- Header: company name left, FAKTURA right -->
-  <div style="padding:28px 36px 20px;border-bottom:1px solid #e5e7eb;">
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <td style="vertical-align:top;">
-          <p style="margin:0;font-size:22px;font-weight:700;color:#00C4D4;line-height:1.2;">Consult Centre</p>
-          <p style="margin:0;font-size:22px;font-weight:700;color:#00C4D4;line-height:1.4;">Scandinavia AB</p>
-        </td>
-        <td style="vertical-align:top;text-align:right;">
-          <p style="margin:0;font-size:30px;font-weight:900;color:#00C4D4;letter-spacing:2px;">FAKTURA</p>
-          <div style="height:2px;background:#00C4D4;margin-top:6px;"></div>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <!-- Invoice details + billing address -->
-  <div style="padding:24px 36px;border-bottom:1px solid #e5e7eb;">
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <!-- Left: invoice meta -->
-        <td style="vertical-align:top;width:45%;">
-          <table style="border-collapse:collapse;font-size:13px;">
-            <tr><td style="color:#374151;font-weight:700;padding:2px 12px 2px 0;white-space:nowrap;">Fakturanr</td><td style="color:#111827;">${invoiceNumber}</td></tr>
-            <tr><td style="color:#374151;font-weight:700;padding:2px 12px 2px 0;">Kund nr</td><td style="color:#111827;">${data.customerNumber}</td></tr>
-            <tr><td style="color:#374151;font-weight:700;padding:2px 12px 2px 0;">Fakturadatum</td><td style="color:#111827;">${fakturadatum}</td></tr>
-            <tr><td style="color:#374151;font-weight:700;padding:2px 12px 2px 0;">Betalningsvillkor</td><td style="color:#111827;">10 dagar</td></tr>
-            <tr><td style="color:#374151;font-weight:700;padding:2px 12px 2px 0;">Förfallodatum</td><td style="color:#111827;">${dueDate}</td></tr>
-          </table>
-          <p style="font-size:11px;color:#6b7280;margin:12px 0 0;">Efter förfallodagen debiteras ränta enligt räntelagen</p>
-        </td>
-        <!-- Middle: referens -->
-        <td style="vertical-align:top;width:25%;padding-left:16px;">
-          <p style="font-size:12px;font-weight:700;color:#374151;margin:0 0 4px;">Vår referens</p>
-          <p style="font-size:13px;color:#111827;margin:0;">Uppsala Halkbana</p>
-        </td>
-        <!-- Right: billing address box -->
-        <td style="vertical-align:top;width:30%;padding-left:8px;">
-          <div style="border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
-            <div style="background:#00C4D4;padding:6px 12px;">
-              <p style="color:#fff;font-size:12px;font-weight:700;margin:0;">Faktureringsadress</p>
-            </div>
-            <div style="padding:10px 12px;">
-              <p style="font-size:15px;font-weight:900;color:#111827;margin:0;letter-spacing:0.3px;">${data.schoolName}</p>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <!-- Products table -->
-  <div style="padding:0 36px 24px;">
-    <table style="width:100%;border-collapse:collapse;margin-top:24px;">
-      <thead>
-        <tr style="background:#00C4D4;">
-          <th style="padding:10px 12px;text-align:left;color:#fff;font-size:13px;font-weight:700;">Produkt / tjänst</th>
-          <th style="padding:10px 8px;text-align:center;color:#fff;font-size:13px;font-weight:700;">Antal</th>
-          <th style="padding:10px 8px;text-align:right;color:#fff;font-size:13px;font-weight:700;">À pris</th>
-          <th style="padding:10px 8px;text-align:center;color:#fff;font-size:13px;font-weight:700;">Rb</th>
-          <th style="padding:10px 12px;text-align:right;color:#fff;font-size:13px;font-weight:700;">Belopp</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rowsHtml}
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Watermark logo + totals -->
-  <div style="padding:0 36px 32px;">
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <!-- Logo watermark -->
-        <td style="vertical-align:middle;width:50%;text-align:center;padding:16px;">
-          <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="120" height="120"
-            style="opacity:0.12;object-fit:contain;" />
-          <p style="color:#00C4D4;font-size:16px;font-weight:900;letter-spacing:3px;margin:8px 0 0;opacity:0.3;text-transform:uppercase;">UPPSALAHALKBANA</p>
-        </td>
-        <!-- Totals -->
-        <td style="vertical-align:bottom;width:50%;padding-left:24px;">
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr>
-              <td style="color:#6b7280;padding:4px 0;">Netto:</td>
-              <td style="color:#111827;text-align:right;padding:4px 0;">${priceExVat.toLocaleString('sv-SE')} kr</td>
-            </tr>
-            <tr>
-              <td style="color:#6b7280;padding:4px 0;">Moms 25%:</td>
-              <td style="color:#111827;text-align:right;padding:4px 0;">${vatAmount.toLocaleString('sv-SE')} kr</td>
-            </tr>
-          </table>
-          <div style="border-top:2px solid #111827;margin-top:12px;padding-top:12px;">
-            <table style="width:100%;border-collapse:collapse;">
-              <tr>
-                <td style="font-size:15px;font-weight:700;color:#111827;">Summa att betala:</td>
-                <td style="font-size:18px;font-weight:900;color:#111827;text-align:right;">${data.totalAmount.toLocaleString('sv-SE')} kr</td>
-              </tr>
-            </table>
-          </div>
-        </td>
-      </tr>
-    </table>
-  </div>
-
-  <!-- Footer -->
-  <div style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:20px 36px;">
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <tr>
-        <td style="vertical-align:top;padding-right:16px;">
-          <p style="font-weight:700;color:#111827;margin:0 0 4px;">Adress</p>
-          <p style="color:#6b7280;margin:0;line-height:1.6;">Consult Centre AB<br>Box 13100<br>402 52 GÖTEBORG</p>
-        </td>
-        <td style="vertical-align:top;padding-right:16px;">
-          <p style="font-weight:700;color:#111827;margin:0 0 4px;">Telefon</p>
-          <p style="color:#6b7280;margin:0;">0707 66 66 61</p>
-        </td>
-        <td style="vertical-align:top;padding-right:16px;">
-          <p style="font-weight:700;color:#111827;margin:0 0 4px;">Org.nr.</p>
-          <p style="color:#6b7280;margin:0;">559188-6410</p>
-          <p style="font-weight:700;color:#111827;margin:8px 0 4px;">Momsreg.nr.</p>
-          <p style="color:#6b7280;margin:0;">SE559188641001</p>
-        </td>
-        <td style="vertical-align:top;padding-right:16px;">
-          <p style="font-weight:700;color:#111827;margin:0 0 4px;">Webbplats</p>
-          <p style="color:#6b7280;margin:0;">www.uppsalahalkbana.se</p>
-          <p style="font-weight:700;color:#111827;margin:8px 0 4px;">Företagets e-post</p>
-          <p style="color:#6b7280;margin:0;">info@uppsalahalkbana.se</p>
-        </td>
-        <td style="vertical-align:top;">
-          <p style="font-weight:700;color:#111827;margin:0 0 4px;">Bankgiro</p>
-          <p style="color:#6b7280;margin:0;">5335-8925</p>
-          <p style="font-weight:700;color:#111827;margin:8px 0 4px;">Swish</p>
-          <p style="color:#6b7280;margin:0;">1234 114 112</p>
-        </td>
-      </tr>
-    </table>
-    <p style="font-size:11px;color:#6b7280;margin:12px 0 0;">Godkänd för F-skatt</p>
-  </div>
-
-  <!-- Bottom bar -->
-  <div style="background:#111827;padding:10px 36px;">
-    <table style="width:100%;border-collapse:collapse;">
-      <tr>
-        <td style="color:#9ca3af;font-size:12px;"># ${invoiceNumber} #</td>
-        <td style="color:#9ca3af;font-size:12px;text-align:center;">${data.totalAmount.toLocaleString('sv-SE').replace(/\s/g,'')} 00 &nbsp; 1 &gt;</td>
-        <td style="color:#9ca3af;font-size:12px;text-align:right;">53358925#41#</td>
-      </tr>
-    </table>
-  </div>
-
-</div>
-</body>
-</html>`;
-}
-
-export async function sendSchoolInvoiceEmail(data: SchoolInvoiceEmailData): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log('[Email] No RESEND_API_KEY — skipping invoice for', data.recipientEmail);
-    return;
-  }
-  try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
-        to: [data.recipientEmail],
-        subject: `Faktura ${data.month} – Uppsala Halkbana`,
-        html: buildSchoolInvoiceHtml(data),
-      }),
-    });
-    if (!res.ok) console.error('[Email] Resend error:', await res.text());
-    else console.log('[Email] Invoice sent to', data.recipientEmail);
-  } catch (err) {
-    console.error('[Email] Failed to send invoice:', err);
-  }
-}
-
 export async function sendReceiptEmail(data: ReceiptEmailData): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -1394,4 +1172,79 @@ export async function sendSchoolReservationEmail(data: {
     }),
   });
   if (!res.ok) console.error('[Email] Resend error (school reservation):', await res.text());
+}
+
+// ── Faktura till trafikskola (PDF bifogad) ────────────────────────────────
+
+/** Skickar fakturan eller kreditfakturan. Returnerar false om Resend inte tog emot den. */
+export async function sendInvoiceEmail(data: {
+  to: string;
+  bcc?: string;
+  buyerName: string;
+  sellerName: string;
+  number: number;
+  total: number;
+  dueDate: Date;
+  period: string;
+  credit: boolean;
+  pdf: Uint8Array;
+  filename: string;
+}): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) { console.log('[Email] No RESEND_API_KEY — skipping invoice', data.number, 'to', data.to); return true; }
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
+  const [y, m] = data.period.split('-').map(Number);
+  const month = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' });
+  const due = data.dueDate.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
+  const what = data.credit ? 'kreditfaktura' : 'faktura';
+  const html = `
+<!DOCTYPE html>
+<html lang="sv">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f0f0f0;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:32px auto;">
+    <div style="background:#111827;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center;">
+      <img src="https://uppsalahalkbana.se/logo.png" alt="Uppsala Halkbana" width="80" height="80"
+        style="border-radius:12px;object-fit:contain;background:#fff;padding:4px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;" />
+      <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700;letter-spacing:0.5px;">UPPSALA HALKBANA</h1>
+    </div>
+    <div style="background:#00C4D4;padding:14px 32px;text-align:center;">
+      <p style="color:#fff;margin:0;font-size:15px;font-weight:700;letter-spacing:0.5px;">${data.credit ? 'KREDITFAKTURA' : 'FAKTURA'} ${data.number}</p>
+    </div>
+    <div style="background:#fff;padding:32px;">
+      <p style="color:#111827;font-size:16px;margin:0 0 4px;">Hej <strong>${esc(data.buyerName)}</strong>,</p>
+      <p style="color:#6b7280;font-size:14px;margin:0 0 24px;">
+        Här kommer ${what} ${data.number} för era elevers riskutbildning i ${esc(month)}. Fakturan finns som PDF i bilagan.
+      </p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:24px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="color:#6b7280;padding:5px 0;">${data.credit ? 'Kreditfakturanummer' : 'Fakturanummer'}</td><td style="color:#111827;font-weight:600;text-align:right;">${data.number}</td></tr>
+          <tr><td style="color:#6b7280;padding:5px 0;">${data.credit ? 'Belopp att kreditera' : 'Att betala'}</td><td style="color:#111827;font-weight:700;text-align:right;">${kr(Math.abs(data.total))}</td></tr>
+          ${data.credit ? '' : `<tr><td style="color:#6b7280;padding:5px 0;">Förfallodatum</td><td style="color:#111827;font-weight:600;text-align:right;">${esc(due)}</td></tr>`}
+        </table>
+      </div>
+      <p style="color:#6b7280;font-size:13px;margin:0;">Frågor om fakturan? Svara på det här mejlet eller kontakta oss på <a href="mailto:info@uppsalahalkbana.se" style="color:#00C4D4;">info@uppsalahalkbana.se</a>, 07 07 66 66 61.</p>
+    </div>
+    <div style="background:#111827;border-radius:0 0 12px 12px;padding:20px 32px;text-align:center;">
+      <p style="color:#4b5563;font-size:11px;margin:0;">${esc(data.sellerName)}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: 'Uppsala Halkbana <info@uppsalahalkbana.se>',
+      to: [data.to],
+      ...(data.bcc && data.bcc !== data.to ? { bcc: [data.bcc] } : {}),
+      reply_to: 'info@uppsalahalkbana.se',
+      subject: `${data.credit ? 'Kreditfaktura' : 'Faktura'} ${data.number} från ${data.sellerName}`,
+      html,
+      attachments: [{ filename: data.filename, content: Buffer.from(data.pdf).toString('base64') }],
+    }),
+  });
+  if (!res.ok) { console.error('[Email] Resend error (invoice):', await res.text()); return false; }
+  return true;
 }

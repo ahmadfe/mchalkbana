@@ -239,6 +239,7 @@ export async function updateInvoice(id: number, action: InvoiceAction): Promise<
       return { ok: true };
     case 'paid':
       if (inv.status === 'credited') return { error: 'Fakturan är krediterad' };
+      if (inv.creditOfId) return { error: 'En kreditfaktura betalas inte' };
       await prisma.invoice.update({ where: { id }, data: { status: 'paid', paidAt: new Date(), sentAt: inv.sentAt ?? new Date() } });
       return { ok: true };
     case 'unpaid':
@@ -246,6 +247,7 @@ export async function updateInvoice(id: number, action: InvoiceAction): Promise<
       await prisma.invoice.update({ where: { id }, data: { status: 'sent', paidAt: null } });
       return { ok: true };
     case 'delete':
+      if (inv.creditOfId) return { error: 'En kreditfaktura kan inte tas bort – skicka den till skolan' };
       if (inv.status !== 'created') return { error: 'En skickad faktura kan inte tas bort – kreditera den i stället' };
       await prisma.$transaction([
         prisma.booking.updateMany({ where: { invoiceId: id }, data: { invoiceId: null } }),
@@ -260,8 +262,8 @@ export async function invoiceStats(drafts: Draft[]) {
   const now = new Date();
   const monthAgo = new Date(now.getTime() - 30 * 86400_000);
   const [unpaid, overdue, paid] = await Promise.all([
-    prisma.invoice.aggregate({ where: { status: 'sent' }, _sum: { total: true }, _count: true }),
-    prisma.invoice.aggregate({ where: { status: 'sent', dueDate: { lt: now } }, _sum: { total: true }, _count: true }),
+    prisma.invoice.aggregate({ where: { status: 'sent', creditOfId: null }, _sum: { total: true }, _count: true }),
+    prisma.invoice.aggregate({ where: { status: 'sent', creditOfId: null, dueDate: { lt: now } }, _sum: { total: true }, _count: true }),
     prisma.invoice.aggregate({ where: { status: 'paid', paidAt: { gte: monthAgo } }, _sum: { total: true }, _count: true }),
   ]);
   const toInvoice = drafts.reduce((s, d) => s + d.total, 0);
@@ -274,4 +276,106 @@ export async function invoiceStats(drafts: Draft[]) {
     overdueCount: overdue._count,
     paid30: paid._sum.total ?? 0,
   };
+}
+
+// ── Steg 2: PDF, utskick och kreditering ─────────────────────────────
+
+/** PDF för en faktura eller kreditfaktura. */
+export async function invoicePdf(id: number): Promise<{ pdf: Uint8Array; filename: string } | null> {
+  const { buildInvoicePdf } = await import('./invoicePdf');
+  const inv = await prisma.invoice.findUnique({
+    where: { id },
+    include: { lines: { orderBy: { date: 'asc' } } },
+  });
+  if (!inv) return null;
+  const creditOf = inv.creditOfId ? await prisma.invoice.findUnique({ where: { id: inv.creditOfId }, select: { number: true } }) : null;
+  const pdf = await buildInvoicePdf({ ...inv, seller: { ...DEFAULT_COMPANY, ...JSON.parse(inv.seller) }, creditOfNumber: creditOf?.number ?? null });
+  return { pdf, filename: `${inv.creditOfId ? 'Kreditfaktura' : 'Faktura'}-${inv.number}.pdf` };
+}
+
+/**
+ * Skickar fakturan med PDF till skolan. En faktura som inte skickats än får
+ * dagens datum, ny förfallodag och företagsuppgifterna som de ser ut nu.
+ */
+export async function sendInvoice(id: number): Promise<{ error: string } | { ok: true }> {
+  const { sendInvoiceEmail } = await import('./email');
+  const inv = await prisma.invoice.findUnique({ where: { id } });
+  if (!inv) return { error: 'Fakturan hittades inte' };
+  if (inv.status === 'credited') return { error: 'Fakturan är krediterad' };
+  if (!inv.buyerEmail) return { error: 'Skolan saknar e-postadress' };
+
+  const company = await getCompany();
+  const missing = missingCompanyFields(company);
+  if (missing.length) return { error: `Fyll i ${missing.join(', ')} under Inställningar först` };
+
+  if (inv.status === 'created') {
+    const issueDate = new Date();
+    await prisma.invoice.update({
+      where: { id },
+      data: { issueDate, dueDate: new Date(issueDate.getTime() + company.paymentDays * 86400_000), seller: JSON.stringify(company) },
+    });
+  }
+  const file = await invoicePdf(id);
+  if (!file) return { error: 'Fakturan hittades inte' };
+  const fresh = (await prisma.invoice.findUnique({ where: { id } }))!;
+  const sent = await sendInvoiceEmail({
+    to: fresh.buyerEmail,
+    bcc: company.email,
+    buyerName: fresh.buyerName,
+    sellerName: company.name,
+    number: fresh.number,
+    total: fresh.total,
+    dueDate: fresh.dueDate,
+    period: fresh.period,
+    credit: fresh.creditOfId !== null,
+    pdf: file.pdf,
+    filename: file.filename,
+  });
+  if (!sent) return { error: 'E-postmeddelandet kunde inte skickas – försök igen' };
+  if (fresh.status === 'created') await prisma.invoice.update({ where: { id }, data: { status: 'sent', sentAt: new Date() } });
+  return { ok: true };
+}
+
+/**
+ * Krediterar en skickad eller betald faktura: en kreditfaktura med minusbelopp skapas,
+ * originalet markeras krediterat och eleverna blir ofakturerade igen (de kan faktureras på nytt).
+ */
+export async function creditInvoice(id: number): Promise<{ error: string } | { id: number }> {
+  const inv = await prisma.invoice.findUnique({ where: { id }, include: { lines: true } });
+  if (!inv) return { error: 'Fakturan hittades inte' };
+  if (inv.creditOfId) return { error: 'En kreditfaktura kan inte krediteras' };
+  if (inv.status === 'created') return { error: 'Fakturan är inte skickad – ta bort den i stället' };
+  if (inv.status === 'credited') return { error: 'Fakturan är redan krediterad' };
+
+  const company = await getCompany();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const max = await prisma.invoice.aggregate({ _max: { number: true } });
+    const number = Math.max(company.firstNumber, (max._max.number ?? 0) + 1);
+    try {
+      const creditNote = await prisma.$transaction(async tx => {
+        const cn = await tx.invoice.create({
+          data: {
+            number, schoolUserId: inv.schoolUserId, period: inv.period, issueDate: new Date(), dueDate: new Date(),
+            total: -inv.total, vat: -inv.vat, creditOfId: inv.id,
+            buyerName: inv.buyerName, buyerEmail: inv.buyerEmail, buyerOrgNr: inv.buyerOrgNr, buyerAddress: inv.buyerAddress,
+            seller: JSON.stringify(company),
+            lines: {
+              create: inv.lines.map(l => ({
+                sessionId: l.sessionId, date: l.date, description: l.description,
+                quantity: -l.quantity, unitPrice: l.unitPrice, amount: -l.amount, students: l.students,
+              })),
+            },
+          },
+        });
+        await tx.invoice.update({ where: { id: inv.id }, data: { status: 'credited', creditedAt: new Date() } });
+        await tx.booking.updateMany({ where: { invoiceId: inv.id }, data: { invoiceId: null } });
+        return cn;
+      });
+      return { id: creditNote.id };
+    } catch (e) {
+      if ((e as { code?: string }).code === 'P2002') continue;
+      throw e;
+    }
+  }
+  return { error: 'Kunde inte skapa fakturanummer, försök igen' };
 }

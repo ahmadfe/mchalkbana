@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AdminSidebar, { OLD_TAB_LABEL, type OldTab } from '@/components/admin/AdminSidebar';
 import KindBadge from '@/components/admin/KindBadge';
 import { sessionReportFiles } from '@/lib/tsReport';
@@ -215,17 +216,6 @@ export default function AdminPage() {
   const [staffError, setStaffError] = useState('');
   const [staffSaving, setStaffSaving] = useState(false);
 
-  // School invoice
-  const [invoiceSchool, setInvoiceSchool] = useState<{ id: number; name: string; email: string } | null>(null);
-  const [invoiceMonth, setInvoiceMonth] = useState(() => new Date().toISOString().slice(0, 7));
-  const [invoiceReport, setInvoiceReport] = useState<{
-    schoolName: string; email: string; month: string;
-    rows: { courseName: string; sessionDate: string; studentCount: number; pricePerStudent: number; subtotal: number }[];
-    totalStudents: number; totalAmount: number;
-  } | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceSending, setInvoiceSending] = useState(false);
-  const [invoiceSent, setInvoiceSent] = useState(false);
 
   // Payments
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -896,41 +886,6 @@ export default function AdminPage() {
       body: JSON.stringify({ id }),
     });
     if (res.ok) setStaffList(prev => prev.filter(s => s.id !== id));
-  };
-
-  const openInvoiceModal = async (acc: { id: number; name: string; email: string }, month: string) => {
-    setInvoiceReport(null);
-    setInvoiceSent(false);
-    setInvoiceSchool(acc);
-    setInvoiceMonth(month);
-    setInvoiceLoading(true);
-    const res = await fetch(`/api/admin/school-accounts/${acc.id}/report?month=${month}`);
-    const data = await res.json();
-    setInvoiceReport(data.report || null);
-    setInvoiceLoading(false);
-  };
-
-  const handleInvoiceMonthChange = async (month: string) => {
-    setInvoiceMonth(month);
-    if (!invoiceSchool) return;
-    setInvoiceLoading(true);
-    setInvoiceReport(null);
-    const res = await fetch(`/api/admin/school-accounts/${invoiceSchool.id}/report?month=${month}`);
-    const data = await res.json();
-    setInvoiceReport(data.report || null);
-    setInvoiceLoading(false);
-  };
-
-  const handleSendInvoice = async () => {
-    if (!invoiceSchool) return;
-    setInvoiceSending(true);
-    await fetch(`/api/admin/school-accounts/${invoiceSchool.id}/invoice`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month: invoiceMonth }),
-    });
-    setInvoiceSending(false);
-    setInvoiceSent(true);
   };
 
   const openEditBooking = (b: Booking) => {
@@ -2430,13 +2385,13 @@ export default function AdminPage() {
                           >
                             <Tag className="w-3.5 h-3.5" />Priser
                           </button>
-                          <button
-                            onClick={() => openInvoiceModal(acc, new Date().toISOString().slice(0, 7))}
+                          <Link
+                            href={`/${locale}/admin/fakturor`}
                             className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-sky-500/10 px-2 py-1.5 rounded-lg transition font-medium"
-                            title="Rapport & Faktura"
+                            title="Fakturor"
                           >
-                            <FileText className="w-3.5 h-3.5" />Faktura
-                          </button>
+                            <FileText className="w-3.5 h-3.5" />Fakturor
+                          </Link>
                           <button
                             onClick={() => handleDeleteSchoolAccount(acc.id)}
                             className="text-white/40 hover:text-red-500 transition p-1"
@@ -3198,106 +3153,6 @@ export default function AdminPage() {
                   <><CheckCircle2 className="w-4 h-4" />Sparat!</>
                 ) : (
                   <><Save className="w-4 h-4" />Spara priser</>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* School Invoice Modal */}
-      {invoiceSchool && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92dvh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
-              <div>
-                <h3 className="font-bold text-lg text-white">Faktura – {invoiceSchool.name}</h3>
-                <p className="text-sm text-white/50">{invoiceSchool.email}</p>
-              </div>
-              <button onClick={() => setInvoiceSchool(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
-            </div>
-
-            {/* Month picker */}
-            <div className="px-6 py-4 border-b border-white/5 shrink-0">
-              <label className="block text-sm font-medium text-white/80 mb-1.5">Välj månad</label>
-              <input
-                type="month"
-                className="input-field w-48"
-                value={invoiceMonth}
-                onChange={(e) => handleInvoiceMonthChange(e.target.value)}
-              />
-            </div>
-
-            {/* Report content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {invoiceLoading ? (
-                <div className="flex items-center justify-center py-16 text-white/40">
-                  <div className="w-6 h-6 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin mr-3" />
-                  Laddar rapport...
-                </div>
-              ) : !invoiceReport || invoiceReport.rows.length === 0 ? (
-                <div className="text-center py-16 text-white/40">
-                  <FileText className="w-10 h-10 mx-auto mb-3 text-white/20" />
-                  <p className="text-sm">Inga bokningar för denna månad.</p>
-                </div>
-              ) : (
-                <>
-                  <table className="w-full text-sm mb-6">
-                    <thead>
-                      <tr className="border-b border-white/10">
-                        <th className="text-left text-xs text-white/50 uppercase pb-2 font-semibold">Kurs</th>
-                        <th className="text-center text-xs text-white/50 uppercase pb-2 font-semibold">Datum</th>
-                        <th className="text-center text-xs text-white/50 uppercase pb-2 font-semibold">Elever</th>
-                        <th className="text-right text-xs text-white/50 uppercase pb-2 font-semibold">Pris/elev</th>
-                        <th className="text-right text-xs text-white/50 uppercase pb-2 font-semibold">Summa</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoiceReport.rows.map((r, i) => (
-                        <tr key={i} className="border-b border-white/5">
-                          <td className="py-2.5 text-white font-medium">{r.courseName}</td>
-                          <td className="py-2.5 text-white/50 text-center">{r.sessionDate}</td>
-                          <td className="py-2.5 text-white/50 text-center">{r.studentCount}</td>
-                          <td className="py-2.5 text-white/50 text-right">{r.pricePerStudent.toLocaleString('sv-SE')} kr</td>
-                          <td className="py-2.5 text-white font-semibold text-right">{r.subtotal.toLocaleString('sv-SE')} kr</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="border-t-2 border-white/10 pt-4 space-y-1">
-                    <div className="flex justify-between text-sm text-white/50">
-                      <span>Totalt antal elever</span><span className="font-semibold text-white">{invoiceReport.totalStudents}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-white/50">
-                      <span>Exkl. moms</span><span>{Math.round(invoiceReport.totalAmount / 1.25).toLocaleString('sv-SE')} kr</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-white/50">
-                      <span>Moms (25%)</span><span>{(invoiceReport.totalAmount - Math.round(invoiceReport.totalAmount / 1.25)).toLocaleString('sv-SE')} kr</span>
-                    </div>
-                    <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-white/10">
-                      <span>Totalt att betala</span>
-                      <span className="text-swedish-blue">{invoiceReport.totalAmount.toLocaleString('sv-SE')} kr</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-white/5 shrink-0 flex gap-3">
-              <button onClick={() => setInvoiceSchool(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Stäng</button>
-              <button
-                onClick={handleSendInvoice}
-                disabled={invoiceSending || invoiceLoading || !invoiceReport || invoiceReport.rows.length === 0 || invoiceSent}
-                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {invoiceSending ? (
-                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skickar...</>
-                ) : invoiceSent ? (
-                  <><CheckCircle2 className="w-4 h-4" />Faktura skickad!</>
-                ) : (
-                  <><FileText className="w-4 h-4" />Skicka faktura via e-post</>
                 )}
               </button>
             </div>

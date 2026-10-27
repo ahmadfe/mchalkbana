@@ -9,7 +9,8 @@ export const periodLabel = (p: string) => {
 };
 
 /** Fakturans status som etikett: förfallen räknas fram från sista betalningsdag. */
-export function InvoiceStatus({ inv }: { inv: { status: string; dueDate: string } }) {
+export function InvoiceStatus({ inv }: { inv: { status: string; dueDate: string; creditOfId?: number | null } }) {
+  if (inv.creditOfId) return <Badge>{inv.status === 'created' ? 'Kreditfaktura, ej skickad' : 'Kreditfaktura'}</Badge>;
   if (inv.status === 'paid') return <Badge tone="green">Betald</Badge>;
   if (inv.status === 'credited') return <Badge>Krediterad</Badge>;
   if (inv.status === 'created') return <Badge tone="blue">Ej skickad</Badge>;

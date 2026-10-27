@@ -13,7 +13,7 @@ interface DraftLine { sessionId: number; date: string; description: string; quan
 interface Draft { schoolUserId: number; schoolName: string; email: string; period: string; lines: DraftLine[]; total: number; students: number }
 interface InvoiceRow {
   id: number; number: number; period: string; status: 'created' | 'sent' | 'paid' | 'credited';
-  issueDate: string; dueDate: string; total: number; buyerName: string; sentAt: string | null; paidAt: string | null; students: number;
+  issueDate: string; dueDate: string; total: number; buyerName: string; sentAt: string | null; paidAt: string | null; students: number; creditOfId: number | null;
 }
 interface Data {
   missing: string[];
@@ -54,8 +54,8 @@ export default function FakturorPage() {
   const s = data?.stats;
   const created = data?.invoices.filter(i => i.status === 'created') ?? [];
   const lists: Record<Exclude<Tab, 'tosend'>, InvoiceRow[]> = {
-    unpaid: data?.invoices.filter(i => i.status === 'sent') ?? [],
-    done: data?.invoices.filter(i => i.status === 'paid' || i.status === 'credited') ?? [],
+    unpaid: data?.invoices.filter(i => i.status === 'sent' && !i.creditOfId) ?? [],
+    done: data?.invoices.filter(i => i.status === 'paid' || i.status === 'credited' || (i.creditOfId && i.status === 'sent')) ?? [],
     all: data?.invoices ?? [],
   };
   const tabs: [Tab, string][] = [
@@ -187,7 +187,7 @@ function InvoiceItem({ inv, locale }: { inv: InvoiceRow; locale: string }) {
         </div>
         <p className="text-sm text-white/50 mt-0.5">
           {periodLabel(inv.period)} · {inv.students} {inv.students === 1 ? 'elev' : 'elever'} ·{' '}
-          {inv.status === 'paid' && inv.paidAt ? `betald ${formatDate(inv.paidAt)}` : `förfaller ${formatDate(inv.dueDate)}`}
+          {inv.creditOfId ? `kreditfaktura ${formatDate(inv.issueDate)}` : inv.status === 'paid' && inv.paidAt ? `betald ${formatDate(inv.paidAt)}` : inv.status === 'credited' ? 'krediterad' : `förfaller ${formatDate(inv.dueDate)}`}
         </p>
       </div>
       <span className="font-headline font-extrabold shrink-0">{kr(inv.total)}</span>

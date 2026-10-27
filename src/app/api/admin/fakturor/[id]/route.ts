@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { updateInvoice, type InvoiceAction } from '@/lib/invoices';
+import { creditInvoice, sendInvoice, updateInvoice, type InvoiceAction } from '@/lib/invoices';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
@@ -11,7 +11,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
     include: { lines: { orderBy: { date: 'asc' } } },
   });
   if (!invoice) return NextResponse.json({ error: 'Fakturan hittades inte' }, { status: 404 });
-  return NextResponse.json({ invoice: { ...invoice, seller: JSON.parse(invoice.seller) } });
+  const related = await prisma.invoice.findMany({
+    where: { OR: [{ creditOfId: invoice.id }, ...(invoice.creditOfId ? [{ id: invoice.creditOfId }] : [])] },
+    select: { id: true, number: true, creditOfId: true },
+  });
+  return NextResponse.json({ invoice: { ...invoice, seller: JSON.parse(invoice.seller) }, related });
 }
 
 const ACTIONS: InvoiceAction[] = ['sent', 'paid', 'unpaid', 'delete'];
@@ -33,6 +37,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       await prisma.invoice.update({ where: { id }, data: { buyerOrgNr: orgNr, buyerAddress: address } });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === 'send') {
+    const result = await sendInvoice(id);
+    return 'error' in result ? NextResponse.json(result, { status: 400 }) : NextResponse.json(result);
+  }
+  if (body.action === 'credit') {
+    const result = await creditInvoice(id);
+    return 'error' in result ? NextResponse.json(result, { status: 400 }) : NextResponse.json(result);
   }
 
   if (!ACTIONS.includes(body.action)) return NextResponse.json({ error: 'Okänd åtgärd' }, { status: 400 });
