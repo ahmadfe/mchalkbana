@@ -4,6 +4,7 @@ import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import { WHATSAPP_URL, WhatsAppIcon } from './WhatsAppButton';
 
 function FacebookIcon() {
   return (
@@ -59,6 +60,10 @@ export default function Footer() {
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-swedish-blue shrink-0" />
                 <a href="tel:+46707666661" className="hover:text-white">07 07 66 66 61</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <WhatsAppIcon className="w-4 h-4 text-[#25D366] shrink-0" />
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="hover:text-white">WhatsApp 07 07 66 66 61</a>
               </div>
             </div>
 

@@ -6,6 +6,7 @@ import CookieBanner from '@/components/CookieBanner';
 import { AuthProvider } from '@/context/AuthContext';
 import MetaPixel from '@/components/MetaPixel';
 import { PwaSetup } from '@/components/pwa';
+import WhatsAppButton from '@/components/WhatsAppButton';
 
 const locales = ['sv'];
 
@@ -94,6 +95,7 @@ export default async function LocaleLayout({
             <PwaSetup />
             <div className="status-bar-shim" aria-hidden />
             {children}
+            <WhatsAppButton />
             <CookieBanner />
           </AuthProvider>
         </NextIntlClientProvider>

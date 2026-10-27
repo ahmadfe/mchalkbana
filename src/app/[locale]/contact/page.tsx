@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard, CheckCircle2, Loader2 } from 'lucide-react';
+import { WHATSAPP_URL, WhatsAppIcon } from '@/components/WhatsAppButton';
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
@@ -84,7 +85,8 @@ export default function ContactPage() {
                 {[
                   { icon: <MapPin className="w-5 h-5" />, label: 'Adress', value: 'Norrlövsta 147, 747 91 Alunda', color: 'bg-brand-50 text-swedish-blue' },
                   { icon: <Mail className="w-5 h-5" />, label: 'E-post', value: 'info@uppsalahalkbana.se', color: 'bg-green-50 text-green-700' },
-                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '07 07 66 66 61', color: 'bg-yellow-50 text-yellow-700' },
+                  { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '07 07 66 66 61', href: 'tel:+46707666661', color: 'bg-yellow-50 text-yellow-700' },
+                  { icon: <WhatsAppIcon className="w-5 h-5" />, label: 'WhatsApp', value: 'Chatta med oss – 07 07 66 66 61', href: WHATSAPP_URL, color: 'bg-green-50 text-[#1da851]' },
                   { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Lör–Tor 08:00–17:00', color: 'bg-purple-50 text-purple-700' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start gap-4">
@@ -93,7 +95,11 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{item.label}</p>
-                      <p className="text-gray-800 font-medium">{item.value}</p>
+                      {'href' in item && item.href ? (
+                        <a href={item.href} target={item.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="text-gray-800 font-medium hover:text-swedish-blue">{item.value}</a>
+                      ) : (
+                        <p className="text-gray-800 font-medium">{item.value}</p>
+                      )}
                     </div>
                   </div>
                 ))}
