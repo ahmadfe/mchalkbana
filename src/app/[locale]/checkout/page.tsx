@@ -7,9 +7,8 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, QrCode, Calendar, MapPin } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin } from 'lucide-react';
 import clsx from 'clsx';
-import { QRCodeSVG } from 'qrcode.react';
 import { fbq } from '@/components/MetaPixel';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
@@ -29,7 +28,6 @@ function CheckoutContent() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [bookingId, setBookingId] = useState<number | null>(null);
-  const [swishRequestId, setSwishRequestId] = useState<string | null>(null);
   const [step, setStep] = useState<CheckoutStep>('form');
   const [guest, setGuest] = useState<GuestInfo>({
     name: '', personnummer: '', phone: '', email: '', swishPhone: '',
@@ -166,9 +164,6 @@ function CheckoutContent() {
       return;
     }
 
-    const swishData = await swishRes.json();
-    setSwishRequestId(swishData.swishRequestId ?? null);
-
     // 3. Enter waiting state — polling starts via useEffect
     setSubmitting(false);
     setStep('waiting');
@@ -176,10 +171,6 @@ function CheckoutContent() {
 
   // ── Waiting state ──────────────────────────────────────────────────────────
   if (step === 'waiting') {
-    const swishDeepLink = swishRequestId
-      ? `swish://paymentrequest?token=${swishRequestId}&callbackurl=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`
-      : null;
-
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Navbar />
@@ -191,39 +182,20 @@ function CheckoutContent() {
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Väntar på Swish</h1>
             <p className="text-gray-500 mb-6">Betala <strong>{effectivePrice.toLocaleString('sv-SE')} kr</strong> för {locale === 'sv' ? course.titleSv : course.titleEn}</p>
 
-            {/* QR code for desktop users */}
-            {swishDeepLink && (
-              <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-4">
-                <div className="flex items-center gap-2 justify-center mb-3 text-sm font-medium text-gray-700">
-                  <QrCode className="w-4 h-4" />
-                  Skanna med din telefon
-                </div>
-                <div className="flex justify-center mb-3">
-                  <div className="p-3 bg-white rounded-xl border-2 border-gray-100 inline-block">
-                    <QRCodeSVG
-                      value={swishDeepLink}
-                      size={180}
-                      bgColor="#ffffff"
-                      fgColor="#000000"
-                      level="M"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400">Öppna kameran och skanna QR-koden för att betala i Swish-appen</p>
-
-                {/* Mobile deep link button */}
-                <a
-                  href={swishDeepLink}
-                  className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-[#4B0082] to-[#E91E8C] text-white text-sm font-semibold sm:hidden"
-                >
-                  <Smartphone className="w-4 h-4" />
-                  Öppna Swish-appen
-                </a>
-              </div>
-            )}
+            {/*
+              Betalningen skickas till kundens Swish-nummer (e-handelsflödet) och ligger redan och väntar i appen.
+              Den får inget token, så appen ska öppnas utan – med ett påhittat token visar Swish "Tekniskt fel".
+            */}
+            <a
+              href="swish://"
+              className="sm:hidden mb-4 flex items-center justify-center gap-2 w-full h-14 rounded-2xl bg-gradient-to-r from-[#4B0082] to-[#E91E8C] text-white text-base font-bold"
+            >
+              <Smartphone className="w-5 h-5" />
+              Öppna Swish
+            </a>
 
             <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-4 text-left">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Eller godkänn i appen</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Betalningen väntar på dig i Swish</p>
               <ol className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-3">
                   <span className="w-5 h-5 rounded-full bg-swedish-blue text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
