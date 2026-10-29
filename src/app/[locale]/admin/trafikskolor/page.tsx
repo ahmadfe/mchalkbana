@@ -54,7 +54,7 @@ export default function TrafikskolorPage() {
             <Link key={r.id} href={`/${locale}/admin/trafikskolor/${r.id}`} className="rounded-2xl bg-[#1c1c1f] hover:bg-[#232327] p-5 transition flex flex-col">
               <div className="flex items-start gap-3">
                 <span className="w-10 h-10 rounded-xl bg-white/10 text-sm font-bold flex items-center justify-center shrink-0">
-                  {r.name.split(/\s+/).filter(w => /^\p{L}/u.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join('')}
+                  {r.name.split(/\s+/).filter(w => w[0].toLowerCase() !== w[0].toUpperCase()).slice(0, 2).map(w => w[0].toUpperCase()).join('')}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold truncate">{r.name}</p>
