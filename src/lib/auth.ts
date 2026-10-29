@@ -58,6 +58,13 @@ export async function requireSchool(request: Request): Promise<JWTPayload | null
   return (await isDisabled(user.userId)) ? null : user;
 }
 
+/** Inloggad lärare vars konto är aktivt. */
+export async function requireInstructor(request: Request): Promise<JWTPayload | null> {
+  const user = await getAuthUserFromRequest(request);
+  if (!user || user.role !== 'instructor') return null;
+  return (await isDisabled(user.userId)) ? null : user;
+}
+
 /** Bara ägaren – intäkter och Swish-betalningar. */
 export async function requireOwner(request: Request): Promise<JWTPayload | null> {
   const user = await getAuthUserFromRequest(request);

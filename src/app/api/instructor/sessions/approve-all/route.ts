@@ -1,22 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireInstructor } from '@/lib/auth';
+import { stockholmDay } from '@/lib/kurser';
 import { sessionReportFiles } from '@/lib/tsReport';
 import { sendResultReportEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const authUser = await requireInstructor(request);
+  if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
   const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23, 59, 59, 999);
+  // "Idag" i svensk tid – servern går i UTC
+  const { from: todayStart, to: todayEnd } = stockholmDay(now);
 
   const sessions = await prisma.session.findMany({
     where: {
-      startTime: { gte: todayStart, lte: todayEnd },
+      startTime: { gte: todayStart, lt: todayEnd },
       status: { not: 'canceled' },
       assignedSchoolUsers: { some: { id: authUser.userId } },
     },
@@ -41,7 +40,9 @@ export async function POST(request: Request) {
     missingBana: Array.from(new Set(sessions.filter((s) => !s.school.bana).map((s) => s.school.name))),
   });
 
-  await prisma.session.updateMany({ where: { id: { in: sessions.map((s) => s.id) }, status: 'planned' }, data: { status: 'completed' } });
+  const ids = sessions.map((s) => s.id);
+  await prisma.session.updateMany({ where: { id: { in: ids } }, data: { resultsSentAt: now } });
+  await prisma.session.updateMany({ where: { id: { in: ids }, status: 'planned' }, data: { status: 'completed' } });
 
   return NextResponse.json({ sent: true, sessionCount: sessions.length });
 }

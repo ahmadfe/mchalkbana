@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { linkBookingToStudent } from '@/lib/students';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireInstructor } from '@/lib/auth';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const authUser = await requireInstructor(request);
+  if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
   const sessionId = parseInt(params.id);
   const { name, personnummer, phone, email } = await request.json();

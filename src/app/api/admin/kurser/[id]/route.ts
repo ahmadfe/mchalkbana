@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { schoolChoiceFor } from '@/lib/checkin';
 import { SESSION_STATUSES, expectedPrice, parseKursInput, recalcSeats, setInstructors } from '@/lib/kurser';
 import { releaseExpiredAllocations } from '@/lib/allocations';
 import { formatPersonnummer, normalizePersonnummer } from '@/lib/personnummer';
@@ -51,6 +52,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       status: b.status,
       bookedBy: b.bookedByRole,
       schoolName: b.bookedBySchoolUser?.name ?? null,
+      schoolUserId: b.bookedBySchoolUserId,
+      schoolLocked: schoolChoiceFor(b).locked,
       note: b.note,
       price: expectedPrice(b, s, schoolPrices),
       payment: b.payment ? { ...b.payment, createdAt: b.payment.createdAt.toISOString() } : null,

@@ -1,201 +1,119 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { Clock, BookOpen, CheckCircle2, XCircle, ChevronRight, Send, AlertCircle } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import { CheckCircle2, ChevronRight, Send } from 'lucide-react';
 import clsx from 'clsx';
-import { InstallAppButton } from '@/components/pwa';
+import InstructorShell from '@/components/InstructorShell';
+import KindBadge from '@/components/admin/KindBadge';
+import { useAuth } from '@/context/AuthContext';
 
-interface SessionSummary {
-  id: number;
-  startTime: string;
-  endTime: string;
-  course: { titleSv: string; type: string; behorighet: string };
-  bookings: { id: number; result: string | null }[];
+interface TodayCourse {
+  id: number; startTime: string; endTime: string; resultsSentAt: string | null;
+  title: string; type: string; behorighet: string;
+  students: number; checkedIn: number; assessed: number;
 }
 
+const tz = { timeZone: 'Europe/Stockholm' } as const;
+const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
+
+/** Lärarens startsida: dagens kurser – hur många som är incheckade och bedömda. */
 export default function InstruktorPage() {
   const locale = useLocale();
-  const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user } = useAuth();
+  const [courses, setCourses] = useState<TodayCourse[] | null>(null);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
 
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [approvingAll, setApprovingAll] = useState(false);
-  const [approveAllDone, setApproveAllDone] = useState(false);
-  const [approveAllError, setApproveAllError] = useState(false);
+  const load = useCallback(() => fetch('/api/instructor/sessions/today').then(r => r.json()).then(d => setCourses(d.sessions ?? [])), []);
+  useEffect(() => { if (user?.role === 'instructor') load(); }, [user, load]);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'instructor')) {
-      router.push(`/${locale}/login`);
-      return;
-    }
-    if (user?.role === 'instructor') {
-      fetch('/api/instructor/sessions/today')
-        .then((r) => r.json())
-        .then((d) => { setSessions(d.sessions || []); setLoading(false); })
-        .catch(() => setLoading(false));
-    }
-  }, [user, authLoading, locale, router]);
-
-  const handleApproveAll = async () => {
-    setApprovingAll(true);
-    setApproveAllError(false);
+  const sendAll = async () => {
+    if (!confirm('Skicka resultaten för alla dagens kurser? De mejlas till kontoret som rapport.')) return;
+    setSending(true);
+    setError('');
     const res = await fetch('/api/instructor/sessions/approve-all', { method: 'POST' });
-    setApprovingAll(false);
-    if (res.ok) setApproveAllDone(true);
-    else setApproveAllError(true);
+    setSending(false);
+    if (!res.ok) { setError('Kunde inte skicka. Försök igen.'); return; }
+    load();
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gray-950">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
-        </main>
-      </div>
-    );
-  }
-
-  const today = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
-  const totalStudents = sessions.reduce((acc, s) => acc + s.bookings.length, 0);
-  const totalPassed = sessions.reduce((acc, s) => acc + s.bookings.filter(b => b.result === 'passed').length, 0);
-  const totalPending = sessions.reduce((acc, s) => acc + s.bookings.filter(b => !b.result).length, 0);
+  const today = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', ...tz });
+  const unsent = (courses ?? []).filter(c => !c.resultsSentAt && c.students > 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950">
-      <Navbar />
+    <InstructorShell>
+      <p className="text-sm font-semibold text-white/50 capitalize">{today}</p>
+      <h1 className="font-headline text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 mb-6">Idag</h1>
 
-      <main className="flex-1 pb-32">
-        {/* Header */}
-        <div className="bg-gray-900 border-b border-gray-800 px-4 py-5">
-          <div className="max-w-2xl mx-auto">
-            <p className="text-swedish-blue text-xs font-semibold uppercase tracking-wider mb-1 capitalize">{today}</p>
-            <h1 className="text-2xl font-bold text-white">Instruktörsportal</h1>
-            {user?.name && <p className="text-gray-400 text-sm mt-0.5">{user.name}</p>}
-            <InstallAppButton dark className="mt-4" />
-
-            {sessions.length > 0 && (
-              <div className="flex gap-4 mt-4">
-                <div className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-center">
-                  <p className="text-2xl font-bold text-white">{sessions.length}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Sessioner</p>
-                </div>
-                <div className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-center">
-                  <p className="text-2xl font-bold text-white">{totalStudents}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Elever</p>
-                </div>
-                <div className="flex-1 bg-gray-800 rounded-xl px-4 py-3 text-center">
-                  <p className={clsx('text-2xl font-bold', totalPending > 0 ? 'text-yellow-400' : 'text-green-400')}>{totalPending}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Ej bedömda</p>
-                </div>
-              </div>
-            )}
-          </div>
+      {courses === null ? (
+        <div className="py-16 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
+      ) : courses.length === 0 ? (
+        <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center">
+          <p className="font-semibold">Inga kurser i dag</p>
+          <p className="text-sm text-white/50 mt-1">Dina kurser visas här den dag de hålls.</p>
         </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-3">
+          {courses.map(c => {
+            const allIn = c.students > 0 && c.checkedIn === c.students;
+            const allAssessed = c.students > 0 && c.assessed === c.students;
+            return (
+              <Link key={c.id} href={`/${locale}/instruktor/session/${c.id}`} className="rounded-3xl bg-[#1c1c1f] hover:bg-[#232327] active:bg-[#26262a] p-5 transition block">
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2"><KindBadge type={c.type} /><span className="text-xs text-white/50">{c.behorighet}</span></div>
+                    <p className="font-headline text-xl font-extrabold mt-1.5 leading-tight">{c.title}</p>
+                    <p className="text-white/70 mt-1">{hm(c.startTime)}–{hm(c.endTime)}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-white/30 shrink-0 mt-1" />
+                </div>
 
-        <div className="max-w-2xl mx-auto px-4 pt-5">
-          {sessions.length === 0 ? (
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-12 text-center mt-4">
-              <BookOpen className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400 font-medium">Inga kurser tilldelade dig idag</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {sessions.map((session) => {
-                const start = new Date(session.startTime);
-                const end = new Date(session.endTime);
-                const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}–${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-                const total = session.bookings.length;
-                const passed = session.bookings.filter((b) => b.result === 'passed').length;
-                const failed = session.bookings.filter((b) => b.result === 'failed').length;
-                const pending = total - passed - failed;
-                const isR1 = session.course.type === 'Risk1';
+                <div className="grid grid-cols-2 gap-3 mt-5">
+                  <Progress label="Incheckade" value={c.checkedIn} max={c.students} done={allIn} />
+                  <Progress label="Bedömda" value={c.assessed} max={c.students} done={allAssessed} />
+                </div>
 
-                return (
-                  <Link
-                    key={session.id}
-                    href={`/${locale}/instruktor/session/${session.id}`}
-                    className="block bg-gray-900 border border-gray-800 rounded-2xl p-4 active:scale-[0.98] transition-transform"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={clsx(
-                        'w-14 h-14 rounded-xl flex items-center justify-center shrink-0 font-bold text-base',
-                        isR1 ? 'bg-swedish-blue/20 text-swedish-blue' : 'bg-orange-500/20 text-orange-400'
-                      )}>
-                        {isR1 ? 'R1' : 'R2'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-white text-base leading-tight">{session.course.titleSv}</p>
-                        <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-1">
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                          <span>{timeStr}</span>
-                          <span className="text-gray-600">·</span>
-                          <span>{session.course.behorighet}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <span className="text-xs text-gray-500">{total} elever</span>
-                          {passed > 0 && (
-                            <span className="text-xs text-green-400 font-semibold flex items-center gap-0.5">
-                              <CheckCircle2 className="w-3 h-3" /> {passed}
-                            </span>
-                          )}
-                          {failed > 0 && (
-                            <span className="text-xs text-red-400 font-semibold flex items-center gap-0.5">
-                              <XCircle className="w-3 h-3" /> {failed}
-                            </span>
-                          )}
-                          {pending > 0 && (
-                            <span className="text-xs text-yellow-400 font-semibold">{pending} ej bedömd</span>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-600 shrink-0" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                {c.resultsSentAt ? (
+                  <p className="flex items-center gap-1.5 text-sm text-emerald-300 mt-4"><CheckCircle2 className="w-4 h-4" /> Resultat skickat {hm(c.resultsSentAt)}</p>
+                ) : c.students - c.assessed > 0 ? (
+                  <p className="text-sm text-amber-300 mt-4">{c.students - c.assessed} ej bedömd{c.students - c.assessed === 1 ? '' : 'a'}</p>
+                ) : null}
+              </Link>
+            );
+          })}
         </div>
-      </main>
+      )}
 
-      {/* Sticky bottom approve-all */}
-      {sessions.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <div className="max-w-2xl mx-auto space-y-2">
-            {approveAllError && (
-              <div className="flex items-center gap-2 text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-xl px-4 py-2.5">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                Kunde inte skicka. Försök igen.
-              </div>
-            )}
+      {unsent.length > 1 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 bg-[#0b0b0d]/95 backdrop-blur border-t border-white/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="max-w-5xl mx-auto sm:px-2">
+            {error && <p className="text-sm text-red-400 mb-2">{error}</p>}
             <button
-              onClick={handleApproveAll}
-              disabled={approvingAll || approveAllDone}
-              className={clsx(
-                'w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition',
-                approveAllDone
-                  ? 'bg-green-900/60 text-green-400 border border-green-800'
-                  : 'bg-swedish-blue text-white active:scale-[0.98] disabled:opacity-60'
-              )}
+              onClick={sendAll}
+              disabled={sending}
+              className="w-full h-14 rounded-2xl bg-white text-black font-bold text-base flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60"
             >
-              {approveAllDone ? (
-                <><CheckCircle2 className="w-5 h-5" /> Alla sessioner skickade!</>
-              ) : approvingAll ? (
-                <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Skickar...</>
-              ) : (
-                <><Send className="w-5 h-5" /> Godkänn alla sessioner</>
-              )}
+              <Send className="w-5 h-5" /> {sending ? 'Skickar…' : `Skicka resultat för alla ${unsent.length} kurser`}
             </button>
           </div>
         </div>
       )}
+    </InstructorShell>
+  );
+}
+
+function Progress({ label, value, max, done }: { label: string; value: number; max: number; done: boolean }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-xs text-white/50">{label}</span>
+        <span className={clsx('font-headline text-lg font-extrabold', done ? 'text-emerald-300' : 'text-white')}>{value}<span className="text-white/40 text-sm font-semibold"> av {max}</span></span>
+      </div>
+      <div className="h-2 rounded-full bg-white/10 overflow-hidden mt-1.5">
+        <div className={clsx('h-full rounded-full', done ? 'bg-emerald-400' : 'bg-sky-400')} style={{ width: `${max ? Math.min(100, (value / max) * 100) : 0}%` }} />
+      </div>
     </div>
   );
 }

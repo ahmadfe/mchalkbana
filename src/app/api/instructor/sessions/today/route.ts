@@ -1,32 +1,41 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireInstructor } from '@/lib/auth';
+import { stockholmDay } from '@/lib/kurser';
 
+/** Lärarens kurser i dag (svensk tid) med hur många som är incheckade och bedömda. */
 export async function GET(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const authUser = await requireInstructor(request);
+  if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
-  const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23, 59, 59, 999);
-
+  const { from, to } = stockholmDay(new Date());
   const sessions = await prisma.session.findMany({
     where: {
-      startTime: { gte: todayStart, lte: todayEnd },
+      startTime: { gte: from, lt: to },
+      status: { not: 'canceled' },
       assignedSchoolUsers: { some: { id: authUser.userId } },
     },
-    include: {
+    select: {
+      id: true, startTime: true, endTime: true, resultsSentAt: true,
       course: { select: { titleSv: true, type: true, behorighet: true } },
-      bookings: {
-        where: { status: { not: 'Canceled' } },
-        select: { id: true, result: true },
-      },
+      bookings: { where: { status: { not: 'Canceled' } }, select: { checkedInAt: true, result: true } },
     },
     orderBy: { startTime: 'asc' },
   });
 
-  return NextResponse.json({ sessions });
+  return NextResponse.json({
+    sessions: sessions.map(s => ({
+      id: s.id,
+      startTime: s.startTime.toISOString(),
+      endTime: s.endTime.toISOString(),
+      resultsSentAt: s.resultsSentAt?.toISOString() ?? null,
+      title: s.course.titleSv,
+      type: s.course.type,
+      behorighet: s.course.behorighet,
+      students: s.bookings.length,
+      checkedIn: s.bookings.filter(b => b.checkedInAt).length,
+      assessed: s.bookings.filter(b => b.result === 'passed' || b.result === 'failed').length,
+    })),
+  });
 }

@@ -44,6 +44,8 @@ interface Participant {
   status: string;
   bookedBy: string;
   schoolName: string | null;
+  schoolUserId: number | null;
+  schoolLocked: string | null;
   note: string | null;
   price: number;
   payment: { amount: number; provider: string; createdAt: string } | null;
@@ -77,6 +79,11 @@ export default function KursPage({ params }: { params: { id: string } }) {
   const locale = useLocale();
   const [kurs, setKurs] = useState<Kurs | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  // Trafikskolor att välja vid incheckningen (skolan faktureras för eleven)
+  const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    fetch('/api/admin/school-accounts').then(r => r.json()).then(d => setSchools((d.accounts ?? []).map((a: { id: number; name: string }) => ({ id: a.id, name: a.name })).sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'sv'))));
+  }, []);
   const [notFound, setNotFound] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unpaid'>('all');
   const [busy, setBusy] = useState(false);
@@ -224,7 +231,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
                 </span>
               </div>
               <div className="divide-y divide-white/5 -mx-5 sm:-mx-6">
-                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} instructors={kurs.instructors} />)}
+                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} instructors={kurs.instructors} schools={schools} />)}
                 {shown.length === 0 && <p className="px-6 py-4 text-sm text-white/50">Alla har betalat.</p>}
               </div>
             </>
@@ -326,7 +333,8 @@ const ATTENDANCE_OPTIONS = [
   { value: 'late_cancel', label: 'Sen avanmälan' },
 ];
 
-function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructors }: {
+function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructors, schools }: {
+  schools: { id: number; name: string }[];
   p: Participant;
   locale: string;
   onChange: () => Promise<void>;
@@ -442,6 +450,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           onClose={() => setCheckingIn(false)}
           onDone={async () => { setCheckingIn(false); await onChange(); }}
           instructors={instructors}
+          school={{ schools, current: p.schoolUserId, currentName: p.schoolName, locked: p.schoolLocked }}
         />
       )}
     </div>

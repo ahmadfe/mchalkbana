@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import { useAuth } from '@/context/AuthContext';
-import { ArrowLeft, CheckCircle2, XCircle, Send, UserPlus, Clock, X, Phone, ContactRound } from 'lucide-react';
-import CheckInModal from '@/components/CheckInModal';
+import { useLocale } from 'next-intl';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ContactRound, MessageSquare, Phone, School, Search, Send, UserPlus, X, XCircle } from 'lucide-react';
 import clsx from 'clsx';
+import InstructorShell from '@/components/InstructorShell';
+import KindBadge from '@/components/admin/KindBadge';
+import CheckInModal from '@/components/CheckInModal';
+import { useAuth } from '@/context/AuthContext';
 
 interface Student {
   id: number;
@@ -19,386 +19,172 @@ interface Student {
   result: string | null;
   resultNote: string | null;
   bookedByRole: string;
-  checkedInAt?: string | null;
-  idType?: string | null;
-  note?: string | null;
+  checkedInAt: string | null;
+  idType: string | null;
+  note: string | null;
+  bookedBySchoolUserId: number | null;
+  schoolName: string | null;
+  schoolLocked: string | null;
   user: { name: string; phone: string | null; email: string } | null;
 }
-
-const ID_LABEL: Record<string, string> = { korkort: 'körkort', pass: 'pass', nationellt_id: 'nationellt id-kort', id_kort: 'id-kort' };
-
 interface SessionDetail {
-  id: number;
-  startTime: string;
-  endTime: string;
-  course: { titleSv: string; type: string; behorighet: string; location: string };
+  id: number; startTime: string; endTime: string; resultsSentAt: string | null;
+  course: { titleSv: string; type: string; behorighet: string };
   bookings: Student[];
 }
+interface SchoolOption { id: number; name: string }
+
+const ID_LABEL: Record<string, string> = { korkort: 'Körkort', pass: 'Pass', nationellt_id: 'Nationellt id-kort', id_kort: 'Id-kort' };
+const tz = { timeZone: 'Europe/Stockholm' } as const;
+const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
+const nameOf = (s: Student) => s.guestName || s.user?.name || '–';
 
 export default function InstruktorSessionPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const locale = useLocale();
-  const router = useRouter();
-  const { user, isLoading: authLoading } = useAuth();
-
+  const { user } = useAuth();
   const [session, setSession] = useState<SessionDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [schools, setSchools] = useState<SchoolOption[]>([]);
+  const [notFound, setNotFound] = useState(false);
+  const [q, setQ] = useState('');
   const [saving, setSaving] = useState<number | null>(null);
-  const [approving, setApproving] = useState(false);
-  const [approved, setApproved] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ name: '', personnummer: '', phone: '', email: '' });
-  const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState('');
-  const [expandedNote, setExpandedNote] = useState<number | null>(null);
   const [checkInFor, setCheckInFor] = useState<Student | null>(null);
+  const [schoolFor, setSchoolFor] = useState<Student | null>(null);
+  const [noteFor, setNoteFor] = useState<Student | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
 
-  const reload = useCallback(() =>
-    fetch(`/api/instructor/sessions/${id}`)
-      .then((r) => r.json())
-      .then((d) => { setSession(d.session || null); setLoading(false); })
-      .catch(() => setLoading(false)), [id]);
+  const reload = useCallback(async () => {
+    const res = await fetch(`/api/instructor/sessions/${id}`);
+    if (!res.ok) { setNotFound(true); return; }
+    const d = await res.json();
+    setSession(d.session);
+    setSchools(d.schools ?? []);
+  }, [id]);
+  useEffect(() => { if (user?.role === 'instructor') reload(); }, [user, reload]);
 
-  useEffect(() => {
-    if (!authLoading && (!user || user.role !== 'instructor')) {
-      router.push(`/${locale}/login`);
-      return;
-    }
-    if (user?.role === 'instructor') reload();
-  }, [user, authLoading, locale, router, reload]);
-
-  const setResult = async (bookingId: number, result: string | null, note?: string) => {
+  // Bedömning och notering sparas var för sig – då kan de aldrig skriva över varandra
+  const patchStudent = async (bookingId: number, data: { result?: string | null; resultNote?: string }) => {
     setSaving(bookingId);
     const res = await fetch(`/api/instructor/bookings/${bookingId}/result`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ result, resultNote: note ?? null }),
+      body: JSON.stringify(data),
     });
     if (res.ok) {
-      setSession((prev) => prev ? {
-        ...prev,
-        bookings: prev.bookings.map((b) => b.id === bookingId ? { ...b, result, resultNote: note ?? b.resultNote } : b),
-      } : prev);
+      const { booking } = await res.json();
+      setSession(prev => prev && { ...prev, bookings: prev.bookings.map(b => b.id === bookingId ? { ...b, result: booking.result, resultNote: booking.resultNote } : b) });
     }
     setSaving(null);
   };
 
-  const handleApprove = async () => {
-    setApproving(true);
-    await fetch(`/api/instructor/sessions/${id}/approve`, { method: 'POST' });
-    setApproving(false);
-    setApproved(true);
+  const send = async () => {
+    if (!session) return;
+    const notIn = session.bookings.filter(b => !b.checkedInAt).length;
+    const notAssessed = session.bookings.filter(b => !b.result).length;
+    const warn = [notIn && `${notIn} är inte incheckad${notIn === 1 ? '' : 'e'}`, notAssessed && `${notAssessed} är inte bedömd${notAssessed === 1 ? '' : 'a'}`].filter(Boolean).join(' och ');
+    if (!confirm(warn ? `${warn[0].toUpperCase()}${warn.slice(1)}. Skicka ändå?` : 'Skicka resultaten för kursen?')) return;
+    setSending(true);
+    setSendError('');
+    const res = await fetch(`/api/instructor/sessions/${id}/approve`, { method: 'POST' });
+    setSending(false);
+    if (!res.ok) { setSendError('Kunde inte skicka. Försök igen.'); return; }
+    reload();
   };
 
-  const handleAddStudent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAddError('');
-    setAdding(true);
-    const res = await fetch(`/api/instructor/sessions/${id}/students`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(addForm),
-    });
-    const data = await res.json();
-    if (!res.ok) { setAddError(data.error || 'Fel'); setAdding(false); return; }
-    const newStudent: Student = {
-      id: data.booking.id,
-      guestName: addForm.name,
-      personnummer: addForm.personnummer || null,
-      guestPhone: addForm.phone || null,
-      guestEmail: addForm.email || null,
-      result: null,
-      resultNote: null,
-      bookedByRole: 'instructor',
-      user: null,
-    };
-    setSession((prev) => prev ? { ...prev, bookings: [...prev.bookings, newStudent] } : prev);
-    setAddForm({ name: '', personnummer: '', phone: '', email: '' });
-    setShowAddForm(false);
-    setAdding(false);
-  };
-
-  if (authLoading || loading) {
+  if (notFound) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-950">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin" />
-        </main>
-      </div>
+      <InstructorShell>
+        <BackLink locale={locale} />
+        <p className="text-white/60">Kursen hittades inte eller är inte din.</p>
+      </InstructorShell>
     );
   }
-
   if (!session) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gray-950">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center">
-          <p className="text-gray-400">Session hittades inte.</p>
-        </main>
-      </div>
-    );
+    return <InstructorShell><div className="py-16 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div></InstructorShell>;
   }
 
-  const start = new Date(session.startTime);
-  const end = new Date(session.endTime);
-  const timeStr = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}–${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-  const dateStr = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Stockholm' });
-  const passed = session.bookings.filter((b) => b.result === 'passed').length;
-  const failed = session.bookings.filter((b) => b.result === 'failed').length;
-  const pending = session.bookings.length - passed - failed;
+  const total = session.bookings.length;
+  const passed = session.bookings.filter(b => b.result === 'passed').length;
+  const failed = session.bookings.filter(b => b.result === 'failed').length;
+  const checkedIn = session.bookings.filter(b => b.checkedInAt).length;
+  const query = q.trim().toLowerCase().replace(/-/g, '');
+  const shown = query
+    ? session.bookings.filter(b => `${nameOf(b)} ${b.personnummer ?? ''}`.toLowerCase().replace(/-/g, '').includes(query))
+    : session.bookings;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950">
-      <Navbar />
+    <InstructorShell>
+      <BackLink locale={locale} />
+      <div className="flex items-center gap-2"><KindBadge type={session.course.type} /><span className="text-xs text-white/50">{session.course.behorighet}</span></div>
+      <h1 className="font-headline text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5">{session.course.titleSv}</h1>
+      <p className="text-white/60 mt-1 capitalize">
+        {new Date(session.startTime).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', ...tz })} · {hm(session.startTime)}–{hm(session.endTime)}
+      </p>
 
-      <main className="flex-1 pb-32">
-        {/* Header */}
-        <div className="bg-gray-900 border-b border-gray-800 px-4 pt-4 pb-5">
-          <div className="max-w-2xl mx-auto">
-            <Link href={`/${locale}/instruktor`} className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-swedish-blue mb-4">
-              <ArrowLeft className="w-4 h-4" /> Tillbaka
-            </Link>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={clsx(
-                  'text-xs font-bold px-2 py-0.5 rounded',
-                  session.course.type === 'Risk1' ? 'bg-swedish-blue/20 text-swedish-blue' : 'bg-orange-500/20 text-orange-400'
-                )}>
-                  {session.course.type === 'Risk1' ? 'RISK 1' : 'RISK 2'}
-                </span>
-                <span className="text-xs text-gray-500">{session.course.behorighet}</span>
-              </div>
-              <h1 className="text-xl font-bold text-white leading-tight">{session.course.titleSv}</h1>
-              <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-1.5 capitalize">
-                <Clock className="w-3.5 h-3.5 shrink-0" />
-                <span>{dateStr} · {timeStr}</span>
-              </div>
-            </div>
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 mt-5">
+        <Stat label="Incheckade" value={`${checkedIn}/${total}`} />
+        <Stat label="Godkända" value={passed} tone="green" />
+        <Stat label="Underkända" value={failed} tone="red" />
+        <Stat label="Ej bedömda" value={total - passed - failed} tone={total - passed - failed > 0 ? 'amber' : undefined} />
+      </div>
 
-            {/* Stats row */}
-            <div className="flex gap-3 mt-4">
-              <div className="flex-1 bg-gray-800 rounded-xl px-3 py-2.5 text-center">
-                <p className="text-xl font-bold text-white">{session.bookings.length}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Totalt</p>
-              </div>
-              <div className="flex-1 bg-green-950/60 border border-green-900/40 rounded-xl px-3 py-2.5 text-center">
-                <p className="text-xl font-bold text-green-400">{passed}</p>
-                <p className="text-xs text-green-700 mt-0.5">Godkänd</p>
-              </div>
-              <div className="flex-1 bg-red-950/60 border border-red-900/40 rounded-xl px-3 py-2.5 text-center">
-                <p className="text-xl font-bold text-red-400">{failed}</p>
-                <p className="text-xs text-red-700 mt-0.5">Underkänd</p>
-              </div>
-              <div className="flex-1 bg-yellow-950/60 border border-yellow-900/40 rounded-xl px-3 py-2.5 text-center">
-                <p className={clsx('text-xl font-bold', pending > 0 ? 'text-yellow-400' : 'text-gray-600')}>{pending}</p>
-                <p className="text-xs text-yellow-700 mt-0.5">Ej bedömd</p>
-              </div>
-            </div>
-          </div>
+      {session.resultsSentAt && (
+        <p className="flex items-center gap-2 text-sm text-emerald-300 bg-emerald-500/10 rounded-2xl px-4 py-3 mt-4">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> Resultat skickat {hm(session.resultsSentAt)}. Ändrar du något – skicka igen.
+        </p>
+      )}
+
+      {total > 4 && (
+        <div className="relative mt-5">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <input
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="Sök namn eller personnummer"
+            className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#1c1c1f] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+          />
         </div>
+      )}
 
-        <div className="max-w-2xl mx-auto px-4 pt-4">
-          {/* Student list */}
-          <div className="space-y-2 mb-4">
-            {session.bookings.map((student, idx) => {
-              const name = student.guestName || student.user?.name || '–';
-              const pnr = student.personnummer || null;
-              const phone = student.guestPhone || student.user?.phone || null;
-              const isSaving = saving === student.id;
-              const showNote = expandedNote === student.id;
+      <div className="grid md:grid-cols-2 gap-3 mt-4">
+        {shown.map(s => (
+          <StudentCard
+            key={s.id}
+            s={s}
+            saving={saving === s.id}
+            onCheckIn={() => setCheckInFor(s)}
+            onSchool={() => setSchoolFor(s)}
+            onNote={() => setNoteFor(s)}
+            onResult={r => patchStudent(s.id, { result: s.result === r ? null : r })}
+          />
+        ))}
+        {total === 0 && <div className="rounded-3xl bg-[#1c1c1f] p-8 text-center text-white/50 md:col-span-2">Inga elever bokade på kursen.</div>}
+        {total > 0 && shown.length === 0 && <div className="rounded-3xl bg-[#1c1c1f] p-8 text-center text-white/50 md:col-span-2">Ingen elev matchar sökningen.</div>}
+      </div>
 
-              return (
-                <div key={student.id} className={clsx(
-                  'bg-gray-900 rounded-2xl border overflow-hidden',
-                  student.result === 'passed' ? 'border-green-900/60' :
-                  student.result === 'failed' ? 'border-red-900/60' :
-                  'border-gray-800'
-                )}>
-                  {/* Student info row */}
-                  <div className="px-4 pt-4 pb-3">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-xs text-gray-600 font-mono shrink-0">#{idx + 1}</span>
-                        <p className="font-semibold text-white text-base truncate">{name}</p>
-                        {student.bookedByRole === 'instructor' && (
-                          <span className="text-xs bg-purple-900/50 text-purple-400 border border-purple-800/40 px-1.5 py-0.5 rounded font-medium shrink-0">Walk-in</span>
-                        )}
-                      </div>
-                      {isSaving && <div className="w-4 h-4 border-2 border-swedish-blue border-t-transparent rounded-full animate-spin shrink-0" />}
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                      {pnr && <span className="text-gray-400"><span className="text-gray-600 text-xs">PNR </span>{pnr}</span>}
-                      {phone && (
-                        <a href={`tel:${phone}`} className="text-swedish-blue flex items-center gap-1 font-medium">
-                          <Phone className="w-3.5 h-3.5" /> {phone}
-                        </a>
-                      )}
-                    </div>
-                    {student.note && (
-                      <p className="text-sm text-amber-200 bg-amber-950/40 border border-amber-900/40 rounded-lg px-3 py-2 mt-2 whitespace-pre-wrap">📝 {student.note}</p>
-                    )}
-                  </div>
+      <button
+        onClick={() => setAdding(true)}
+        className="w-full mt-3 h-14 rounded-2xl border-2 border-dashed border-white/15 text-white/60 hover:text-white hover:border-white/30 font-semibold flex items-center justify-center gap-2"
+      >
+        <UserPlus className="w-5 h-5" /> Lägg till elev som saknas på listan
+      </button>
 
-                  {/* Check-in: legitimation must be verified before the course */}
-                  {student.checkedInAt ? (
-                    <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-800 text-sm text-green-400">
-                      <CheckCircle2 className="w-4 h-4 shrink-0" />
-                      Incheckad {new Date(student.checkedInAt).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}
-                      {student.idType && ` med ${ID_LABEL[student.idType] ?? student.idType}`}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setCheckInFor(student)}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 border-t border-gray-800 font-bold text-sm text-amber-300 hover:bg-amber-950/30 active:bg-amber-950/50 transition"
-                    >
-                      <ContactRound className="w-4 h-4" /> Checka in – kontrollera legitimation
-                    </button>
-                  )}
-
-                  {/* Pass/Fail buttons — full width, large */}
-                  <div className="grid grid-cols-2 border-t border-gray-800">
-                    <button
-                      onClick={() => setResult(student.id, student.result === 'passed' ? null : 'passed')}
-                      disabled={isSaving}
-                      className={clsx(
-                        'flex items-center justify-center gap-2 py-3.5 font-bold text-sm border-r border-gray-800 transition active:scale-95',
-                        student.result === 'passed'
-                          ? 'bg-green-600 text-white'
-                          : 'text-green-400 hover:bg-green-950/40 active:bg-green-950/60'
-                      )}
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> Godkänd
-                    </button>
-                    <button
-                      onClick={() => setResult(student.id, student.result === 'failed' ? null : 'failed')}
-                      disabled={isSaving}
-                      className={clsx(
-                        'flex items-center justify-center gap-2 py-3.5 font-bold text-sm transition active:scale-95',
-                        student.result === 'failed'
-                          ? 'bg-red-600 text-white'
-                          : 'text-red-400 hover:bg-red-950/40 active:bg-red-950/60'
-                      )}
-                    >
-                      <XCircle className="w-4 h-4" /> Underkänd
-                    </button>
-                  </div>
-
-                  {/* Note toggle */}
-                  <div className="border-t border-gray-800">
-                    {showNote ? (
-                      <div className="flex items-center gap-2 px-3 py-2">
-                        <input
-                          type="text"
-                          placeholder="Notering..."
-                          defaultValue={student.resultNote || ''}
-                          autoFocus
-                          onBlur={(e) => {
-                            if (e.target.value !== (student.resultNote || '')) {
-                              setResult(student.id, student.result, e.target.value);
-                            }
-                            setExpandedNote(null);
-                          }}
-                          className="flex-1 bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:outline-none"
-                        />
-                        <button onClick={() => setExpandedNote(null)} className="text-gray-600">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setExpandedNote(student.id)}
-                        className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:text-gray-400 transition"
-                      >
-                        {student.resultNote ? (
-                          <span className="text-gray-400">Notering: {student.resultNote}</span>
-                        ) : (
-                          '+ Lägg till notering'
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-
-            {session.bookings.length === 0 && (
-              <div className="bg-gray-900 rounded-2xl border border-gray-800 p-10 text-center">
-                <p className="text-gray-500 text-sm">Inga elever bokade på denna session.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Add walk-in student */}
-          {showAddForm ? (
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 p-5 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-white">Lägg till elev</h3>
-                <button onClick={() => setShowAddForm(false)}><X className="w-4 h-4 text-gray-500" /></button>
-              </div>
-              <form onSubmit={handleAddStudent} className="space-y-3">
-                <input
-                  required placeholder="Namn *" value={addForm.name}
-                  onChange={(e) => setAddForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue/40"
-                />
-                <input
-                  placeholder="Personnummer" value={addForm.personnummer}
-                  onChange={(e) => setAddForm((f) => ({ ...f, personnummer: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue/40"
-                />
-                <input
-                  placeholder="Telefon" value={addForm.phone}
-                  onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue/40"
-                />
-                <input
-                  type="email" placeholder="E-post" value={addForm.email}
-                  onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-swedish-blue/40"
-                />
-                {addError && <p className="text-xs text-red-400">{addError}</p>}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button type="button" onClick={() => setShowAddForm(false)}
-                    className="border border-gray-700 text-gray-400 font-medium py-3 rounded-xl text-sm hover:bg-gray-800 transition">
-                    Avbryt
-                  </button>
-                  <button type="submit" disabled={adding}
-                    className="bg-swedish-blue text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-60 transition">
-                    {adding ? 'Lägger till...' : 'Lägg till'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <button onClick={() => setShowAddForm(true)}
-              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-gray-800 text-gray-500 hover:border-swedish-blue/30 hover:text-swedish-blue rounded-2xl py-4 text-sm font-medium transition mb-4">
-              <UserPlus className="w-4 h-4" /> Lägg till saknad elev
-            </button>
-          )}
-        </div>
-      </main>
-
-      {/* Sticky approve button */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur border-t border-gray-800 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <div className="max-w-2xl mx-auto">
+      {/* Skicka resultaten – alltid nära till hands */}
+      <div className="fixed inset-x-0 bottom-0 z-20 bg-[#0b0b0d]/95 backdrop-blur border-t border-white/10 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="max-w-5xl mx-auto sm:px-2">
+          {sendError && <p className="text-sm text-red-400 mb-2">{sendError}</p>}
           <button
-            onClick={handleApprove}
-            disabled={approving || approved}
+            onClick={send}
+            disabled={sending || total === 0}
             className={clsx(
-              'w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl font-bold text-base transition',
-              approved
-                ? 'bg-green-900/60 text-green-400 border border-green-800'
-                : 'bg-swedish-blue text-white active:scale-[0.98] disabled:opacity-60'
+              'w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-50',
+              session.resultsSentAt ? 'bg-white/10 text-white border border-white/10' : 'bg-white text-black',
             )}
           >
-            {approved ? (
-              <><CheckCircle2 className="w-5 h-5" /> Resultat skickat!</>
-            ) : approving ? (
-              <><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Skickar...</>
-            ) : (
-              <><Send className="w-5 h-5" /> Godkänn & skicka resultat</>
-            )}
+            <Send className="w-5 h-5" />
+            {sending ? 'Skickar…' : session.resultsSentAt ? 'Skicka resultaten igen' : 'Godkänn & skicka resultat'}
           </button>
         </div>
       </div>
@@ -407,16 +193,225 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
         <CheckInModal
           person={{
             bookingId: checkInFor.id,
-            name: checkInFor.guestName || checkInFor.user?.name || '–',
+            name: nameOf(checkInFor),
             email: checkInFor.guestEmail || checkInFor.user?.email,
             phone: checkInFor.guestPhone || checkInFor.user?.phone,
             personnummer: checkInFor.personnummer,
             behorighet: session.course.behorighet,
           }}
+          school={{ schools, current: checkInFor.bookedBySchoolUserId, currentName: checkInFor.schoolName, locked: checkInFor.schoolLocked }}
           onClose={() => setCheckInFor(null)}
           onDone={() => { setCheckInFor(null); reload(); }}
         />
       )}
+      {schoolFor && <SchoolSheet student={schoolFor} schools={schools} onClose={() => setSchoolFor(null)} onSaved={() => { setSchoolFor(null); reload(); }} />}
+      {noteFor && (
+        <NoteSheet
+          student={noteFor}
+          onClose={() => setNoteFor(null)}
+          onSave={async note => { await patchStudent(noteFor.id, { resultNote: note }); setNoteFor(null); }}
+        />
+      )}
+      {adding && <AddSheet sessionId={session.id} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reload(); }} />}
+    </InstructorShell>
+  );
+}
+
+function BackLink({ locale }: { locale: string }) {
+  return (
+    <Link href={`/${locale}/instruktor`} className="inline-flex items-center gap-1 h-10 -mt-2 mb-1 text-sm text-white/60 hover:text-white">
+      <ChevronLeft className="w-4 h-4" /> Idag
+    </Link>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string | number; tone?: 'green' | 'red' | 'amber' }) {
+  return (
+    <div className="rounded-2xl bg-[#1c1c1f] px-2 py-3 text-center">
+      <p className={clsx('font-headline text-xl sm:text-2xl font-extrabold', tone === 'green' ? 'text-emerald-300' : tone === 'red' ? 'text-red-300' : tone === 'amber' ? 'text-amber-300' : 'text-white')}>{value}</p>
+      <p className="text-[11px] sm:text-xs text-white/50 mt-0.5">{label}</p>
     </div>
+  );
+}
+
+function StudentCard({ s, saving, onCheckIn, onSchool, onNote, onResult }: {
+  s: Student; saving: boolean;
+  onCheckIn: () => void; onSchool: () => void; onNote: () => void; onResult: (r: 'passed' | 'failed') => void;
+}) {
+  const phone = s.guestPhone || s.user?.phone || null;
+  return (
+    <div className={clsx(
+      'rounded-3xl bg-[#1c1c1f] overflow-hidden border',
+      s.result === 'passed' ? 'border-emerald-500/40' : s.result === 'failed' ? 'border-red-500/40' : 'border-transparent',
+    )}>
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-bold text-lg leading-tight">{nameOf(s)}</p>
+            <p className="font-mono text-sm text-white/60 mt-0.5">{s.personnummer || 'Personnummer saknas'}</p>
+          </div>
+          {saving && <div className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin shrink-0 mt-1" />}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-sm">
+          <button onClick={onSchool} className={clsx('inline-flex items-center gap-1.5 font-semibold', s.schoolName ? 'text-sky-300' : 'text-white/50')}>
+            <School className="w-4 h-4" /> {s.schoolName ?? 'Privat'}
+          </button>
+          {phone && <a href={`tel:${phone}`} className="inline-flex items-center gap-1.5 text-white/60"><Phone className="w-4 h-4" /> {phone}</a>}
+        </div>
+        {s.note && <p className="text-sm text-amber-200 bg-amber-500/10 rounded-xl px-3 py-2 mt-2 whitespace-pre-wrap">📝 {s.note}</p>}
+      </div>
+
+      {s.checkedInAt ? (
+        <p className="flex items-center gap-2 px-4 py-3 border-t border-white/5 text-sm text-emerald-300">
+          <CheckCircle2 className="w-4 h-4 shrink-0" /> Incheckad {hm(s.checkedInAt)}{s.idType ? ` · ${ID_LABEL[s.idType] ?? s.idType}` : ''}
+        </p>
+      ) : (
+        <button onClick={onCheckIn} className="w-full h-14 flex items-center justify-center gap-2 border-t border-white/5 font-bold text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/15">
+          <ContactRound className="w-5 h-5" /> Checka in – kontrollera legitimation
+        </button>
+      )}
+
+      <div className="grid grid-cols-2 border-t border-white/5">
+        <button
+          onClick={() => onResult('passed')}
+          disabled={saving}
+          className={clsx('h-14 flex items-center justify-center gap-2 font-bold border-r border-white/5 transition', s.result === 'passed' ? 'bg-emerald-600 text-white' : 'text-emerald-300 hover:bg-emerald-500/10')}
+        >
+          <CheckCircle2 className="w-5 h-5" /> Godkänd
+        </button>
+        <button
+          onClick={() => onResult('failed')}
+          disabled={saving}
+          className={clsx('h-14 flex items-center justify-center gap-2 font-bold transition', s.result === 'failed' ? 'bg-red-600 text-white' : 'text-red-300 hover:bg-red-500/10')}
+        >
+          <XCircle className="w-5 h-5" /> Underkänd
+        </button>
+      </div>
+
+      <button onClick={onNote} className="w-full text-left px-4 py-3 border-t border-white/5 text-sm flex items-center gap-2 text-white/50 hover:text-white">
+        <MessageSquare className="w-4 h-4 shrink-0" />
+        {s.resultNote ? <span className="text-white/80 truncate">{s.resultNote}</span> : 'Lägg till notering'}
+      </button>
+    </div>
+  );
+}
+
+function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={e => e.stopPropagation()}
+        className="sheet bg-[#1c1c1f] text-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md max-h-[92dvh] overflow-y-auto p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-6"
+      >
+        <div className="flex items-start justify-between gap-3 mb-5 pt-2 sm:pt-0">
+          <h3 className="font-headline text-xl font-extrabold">{title}</h3>
+          <button onClick={onClose} aria-label="Stäng" className="w-10 h-10 -mr-2 rounded-full hover:bg-white/10 flex items-center justify-center shrink-0"><X className="w-5 h-5" /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+const field = 'w-full h-14 px-4 rounded-2xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40';
+
+/** Byt skola efteråt, t.ex. om fel skola valdes vid incheckningen. */
+function SchoolSheet({ student, schools, onClose, onSaved }: { student: Student; schools: SchoolOption[]; onClose: () => void; onSaved: () => void }) {
+  const [value, setValue] = useState(student.bookedBySchoolUserId ? String(student.bookedBySchoolUserId) : '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const save = async () => {
+    setBusy(true);
+    setError('');
+    const res = await fetch(`/api/checkin/${student.id}/school`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolUserId: value ? Number(value) : null }),
+    });
+    setBusy(false);
+    if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
+    onSaved();
+  };
+  return (
+    <Sheet title="Trafikskola" onClose={onClose}>
+      <p className="text-sm text-white/60 mb-4">Vilken trafikskola kommer {nameOf(student)} från? Skolan faktureras för eleven.</p>
+      {student.schoolLocked ? (
+        <p className="flex items-start gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" /> {student.schoolName ?? 'Privat'} – {student.schoolLocked}.
+        </p>
+      ) : (
+        <>
+          <select value={value} onChange={e => setValue(e.target.value)} className={clsx(field, 'font-semibold [color-scheme:dark]')}>
+            <option value="">Ingen – privat (betalar själv)</option>
+            {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+          <div className="flex gap-3 mt-5">
+            <button onClick={onClose} className="h-12 px-6 rounded-full bg-white/10 font-bold">Avbryt</button>
+            <button onClick={save} disabled={busy} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-50">{busy ? 'Sparar…' : 'Spara'}</button>
+          </div>
+        </>
+      )}
+    </Sheet>
+  );
+}
+
+function NoteSheet({ student, onClose, onSave }: { student: Student; onClose: () => void; onSave: (note: string) => Promise<void> }) {
+  const [note, setNote] = useState(student.resultNote ?? '');
+  const [busy, setBusy] = useState(false);
+  return (
+    <Sheet title="Notering" onClose={onClose}>
+      <p className="text-sm text-white/60 mb-3">{nameOf(student)}</p>
+      <textarea
+        value={note}
+        onChange={e => setNote(e.target.value)}
+        autoFocus
+        rows={4}
+        placeholder="T.ex. behöver öva mer på halt underlag"
+        className="w-full px-4 py-3 rounded-2xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+      />
+      <div className="flex gap-3 mt-4">
+        <button onClick={onClose} className="h-12 px-6 rounded-full bg-white/10 font-bold">Avbryt</button>
+        <button onClick={async () => { setBusy(true); await onSave(note.trim()); setBusy(false); }} disabled={busy} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-50">{busy ? 'Sparar…' : 'Spara'}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Elev som kommit men saknas på listan. Skolan väljs sedan vid incheckningen. */
+function AddSheet({ sessionId, onClose, onSaved }: { sessionId: number; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({ name: '', personnummer: '', phone: '', email: '' });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const save = async () => {
+    setBusy(true);
+    setError('');
+    const res = await fetch(`/api/instructor/sessions/${sessionId}/students`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(f),
+    });
+    setBusy(false);
+    if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
+    onSaved();
+  };
+  return (
+    <Sheet title="Lägg till elev" onClose={onClose}>
+      <div className="space-y-3">
+        <input className={field} placeholder="Namn *" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} autoComplete="off" />
+        <input className={clsx(field, 'font-mono')} placeholder="Personnummer (ÅÅÅÅMMDD-XXXX)" inputMode="numeric" value={f.personnummer} onChange={e => setF({ ...f, personnummer: e.target.value })} autoComplete="off" />
+        <input className={field} placeholder="Telefon" type="tel" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} />
+        <input className={field} placeholder="E-post" type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
+        <p className="text-xs text-white/45">Välj elevens trafikskola när du checkar in eleven.</p>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <div className="flex gap-3 pt-1">
+          <button onClick={onClose} className="h-12 px-6 rounded-full bg-white/10 font-bold">Avbryt</button>
+          <button onClick={save} disabled={busy || !f.name.trim()} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-50">{busy ? 'Sparar…' : 'Lägg till'}</button>
+        </div>
+      </div>
+    </Sheet>
   );
 }

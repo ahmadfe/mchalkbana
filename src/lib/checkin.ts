@@ -153,3 +153,58 @@ export async function undoCheckIn(bookingId: number, user: JWTPayload): Promise<
   }
   return { ok: true };
 }
+
+// ── Vilken trafikskola eleven kommer från (väljs vid incheckningen) ──
+
+export interface SchoolChoice {
+  /** Skolan som betalar för eleven, null = privat */
+  schoolUserId: number | null;
+  /** Varför valet inte går att ändra, annars null */
+  locked: string | null;
+}
+
+/** Nuvarande skola och om den går att ändra (betald med Swish eller redan fakturerad = låst). */
+export function schoolChoiceFor(booking: { bookedBySchoolUserId: number | null; invoiceId: number | null; payment: { status: string } | null }): SchoolChoice {
+  // Bara en genomförd betalning låser (betalningar skapas först när de har gått igenom)
+  const paid = booking.payment?.status === 'Succeeded';
+  return {
+    schoolUserId: booking.bookedBySchoolUserId,
+    locked: booking.invoiceId ? 'Eleven finns redan på en faktura' : paid ? 'Eleven har betalat själv med Swish' : null,
+  };
+}
+
+/**
+ * Flyttar eleven till en trafikskola (skolan faktureras) eller tillbaka till privat.
+ * Kvoten för skolans platser gäller inte här – eleven sitter redan på kursen.
+ */
+export async function setBookingSchool(bookingId: number, user: JWTPayload, schoolUserId: number | null): Promise<Result> {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    select: { id: true, sessionId: true, status: true, bookedBySchoolUserId: true, invoiceId: true, payment: { select: { status: true } } },
+  });
+  if (!booking) return { ok: false, status: 404, error: 'Bokningen hittades inte' };
+  if (!(await canCheckIn(user, booking.sessionId))) return { ok: false, status: 403, error: 'Ej behörig' };
+  if (booking.bookedBySchoolUserId === schoolUserId) return { ok: true };
+  const choice = schoolChoiceFor(booking);
+  if (choice.locked) return { ok: false, status: 400, error: choice.locked };
+  if (schoolUserId !== null) {
+    const school = await prisma.user.findFirst({ where: { id: schoolUserId, role: 'school', disabled: false }, select: { id: true } });
+    if (!school) return { ok: false, status: 400, error: 'Trafikskolan finns inte eller är inaktiverad' };
+  }
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: {
+      bookedBySchoolUserId: schoolUserId,
+      // En skola betalar via faktura – en obetald privatbokning blir då bekräftad
+      ...(schoolUserId !== null && booking.status === 'Pending' ? { status: 'Confirmed' } : {}),
+    },
+  });
+  const { recalcSeats } = await import('./kurser');
+  await recalcSeats(booking.sessionId);
+  return { ok: true };
+}
+
+/** Aktiva trafikskolor att välja bland vid incheckningen. */
+export function activeSchools() {
+  return prisma.user.findMany({ where: { role: 'school', disabled: false, hidden: false }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
+}

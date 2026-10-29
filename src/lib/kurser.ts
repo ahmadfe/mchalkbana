@@ -21,6 +21,15 @@ export async function recalcSeats(sessionId: number): Promise<void> {
   });
 }
 
+/** Dygnet (00:00–24:00) i svensk tid som innehåller tidpunkten. */
+export function stockholmDay(at: Date): { from: Date; to: Date } {
+  const [h, m, s] = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(at).split(':').map(Number);
+  const from = new Date(at.getTime() - ((h * 60 + m) * 60 + s) * 1000 - at.getMilliseconds());
+  return { from, to: new Date(from.getTime() + 24 * 3600_000) };
+}
+
 /** Vad eleven ska betala: inbetalt belopp, annars skolpris, kampanjpris eller kursens pris. */
 export function expectedPrice(
   booking: { bookedBySchoolUserId: number | null; payment: { amount: number } | null },

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireInstructor } from '@/lib/auth';
 import { sessionReportFiles } from '@/lib/tsReport';
 import { sendResultReportEmail } from '@/lib/email';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'instructor') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const authUser = await requireInstructor(request);
+  if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
 
   const sessionId = parseInt(params.id);
 
@@ -34,7 +34,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     files: sessionReportFiles(session),
     missingBana: session.school.bana ? [] : [session.school.name],
   });
-  if (session.status === 'planned') await prisma.session.update({ where: { id: sessionId }, data: { status: 'completed' } });
+  await prisma.session.update({
+    where: { id: sessionId },
+    data: { resultsSentAt: new Date(), ...(session.status === 'planned' ? { status: 'completed' } : {}) },
+  });
 
   return NextResponse.json({ sent: true });
 }

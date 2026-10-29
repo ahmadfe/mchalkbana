@@ -112,6 +112,7 @@ model Session {
   status               String    @default("planned") // planned | completed | canceled
   reportToTS           Boolean   @default(true)
   reportedAt           DateTime?
+  resultsSentAt        DateTime? // när läraren senast skickade resultaten (Godkänn & skicka)
   internalNotes        String    @default("")
   comboRisk1SessionId  Int?
   comboRisk2SessionId  Int?
