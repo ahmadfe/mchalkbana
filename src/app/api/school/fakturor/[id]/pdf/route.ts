@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireSchool } from '@/lib/auth';
 import { invoicePdf } from '@/lib/invoices';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const user = await getAuthUserFromRequest(request);
-  if (!user || user.role !== 'school') return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const user = await requireSchool(request);
+  if (!user) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   // Bara skolans egna, skickade fakturor
   const invoice = await prisma.invoice.findFirst({
     where: { id: Number(params.id), schoolUserId: user.userId, status: { not: 'created' } },

@@ -28,8 +28,7 @@ export default function TrafikskolorPage() {
     <AdminShell
       title="Trafikskolor"
       actions={
-        // Kontona flyttar till Personal i nästa steg – tills dess skapas de på den gamla sidan
-        <Link href={`/${locale}/admin?tab=schools`} className="inline-flex items-center h-11 px-5 rounded-full bg-white/10 border border-white/10 text-sm font-semibold hover:bg-white/15">
+        <Link href={`/${locale}/admin/personal?tab=school&new=1`} className="inline-flex items-center h-11 px-5 rounded-full bg-white/10 border border-white/10 text-sm font-semibold hover:bg-white/15">
           Skapa konto
         </Link>
       }

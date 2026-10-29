@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { isOwner } from '@/lib/owner';
 
 // PATCH: reset password for a staff/admin account
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -11,6 +12,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const userId = parseInt(params.id);
+  if (!isOwner(authUser) && userId !== authUser.userId) {
+    return NextResponse.json({ error: 'Bara superanvändaren kan ändra andra administratörer' }, { status: 403 });
+  }
   const { password } = await request.json();
 
   if (!password || password.length < 8) {

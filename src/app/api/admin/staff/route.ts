@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendStaffAccountEmail } from '@/lib/email';
+import { isOwner } from '@/lib/owner';
+import { deleteAccount } from '@/lib/personal';
 
 export async function GET(request: Request) {
   const authUser = await getAuthUserFromRequest(request);
@@ -23,6 +25,8 @@ export async function POST(request: Request) {
   if (!authUser || authUser.role !== 'admin') {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
+
+  if (!isOwner(authUser)) return NextResponse.json({ error: 'Bara superanvändaren kan skapa administratörer' }, { status: 403 });
 
   const { name, email, password } = await request.json();
   if (!name || !email || !password) {
@@ -55,17 +59,7 @@ export async function DELETE(request: Request) {
   }
 
   const { id } = await request.json();
-
-  // Prevent deleting yourself
-  if (id === authUser.userId) {
-    return NextResponse.json({ error: 'Du kan inte ta bort ditt eget konto' }, { status: 400 });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id }, select: { role: true, hidden: true } });
-  if (!user || user.role !== 'admin' || user.hidden) {
-    return NextResponse.json({ error: 'Konto hittades inte' }, { status: 404 });
-  }
-
-  await prisma.user.delete({ where: { id } });
+  const result = await deleteAccount(authUser, Number(id));
+  if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ success: true });
 }

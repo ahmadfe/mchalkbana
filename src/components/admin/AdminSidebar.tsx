@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import {
-  BookOpen, Calendar, CreditCard, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
+  BookOpen, Calendar, Contact, CreditCard, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
   Receipt, School, ShieldCheck, Tag, UserCircle2, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -36,6 +36,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
       { tab: 'courses', label: 'Kursslag', icon: Layers },
       { tab: 'payments', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
       { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School },
+      { href: '/admin/personal', label: 'Personal', icon: Contact },
       { tab: 'instructors', label: 'Instruktörer', short: 'Lärare', icon: UserCog },
       { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2 },
     ],

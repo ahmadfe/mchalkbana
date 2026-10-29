@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { generatePassword, sendInstructorCredentialsEmail } from '@/lib/instructors';
+import { deleteAccount } from '@/lib/personal';
 
 async function findInstructor(id: number) {
   const user = await prisma.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, phone: true, role: true } });
@@ -44,9 +45,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 /** Tar bort kontot. Incheckningar och riskregistret behåller lärarens namn. */
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const me = await requireAdmin(request);
+  if (!me) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   const instructor = await findInstructor(Number(params.id));
   if (!instructor) return NextResponse.json({ error: 'Instruktören hittades inte' }, { status: 404 });
-  await prisma.user.delete({ where: { id: instructor.id } });
+  const result = await deleteAccount(me, instructor.id);
+  if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ ok: true });
 }

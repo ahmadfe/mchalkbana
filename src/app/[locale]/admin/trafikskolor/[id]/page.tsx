@@ -519,6 +519,7 @@ function Invoices({ invoices, locale }: { invoices: Invoice[]; locale: string })
 }
 
 function Details({ school, reload }: { school: School; reload: () => void }) {
+  const locale = useLocale();
   const [f, setF] = useState({ phone: school.phone ?? '', orgNr: school.orgNr, billingAddress: school.billingAddress });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -552,7 +553,7 @@ function Details({ school, reload }: { school: School; reload: () => void }) {
       </Card>
       <Card title="Konto">
         <p className="text-sm text-white/60">Kund sedan {formatDate(school.createdAt)}.</p>
-        <p className="text-sm text-white/60 mt-2">Lösenord, e-post och inaktivering hanteras under Personal (kommer i nästa steg).</p>
+        <p className="text-sm text-white/60 mt-2">Lösenord, e-post och inaktivering hanteras under <Link href={`/${locale}/admin/personal?tab=school`} className="underline">Personal</Link>.</p>
       </Card>
     </div>
   );

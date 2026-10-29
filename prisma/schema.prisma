@@ -16,6 +16,7 @@ model User {
   phone            String?
   role             String    @default("student")
   hidden           Boolean   @default(false)
+  disabled         Boolean   @default(false) // inaktiverat konto: kan inte logga in, historiken finns kvar
   languagePref     String    @default("sv")
   bookings         Booking[]
   checkIns         Booking[] @relation("BookingCheckedInBy")

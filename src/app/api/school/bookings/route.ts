@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireSchool } from '@/lib/auth';
 import { addSchoolBooking } from '@/lib/schoolBookings';
 
 // GET: all bookings made by this school
 export async function GET(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'school') {
+  const authUser = await requireSchool(request);
+  if (!authUser) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
@@ -27,8 +27,8 @@ export async function GET(request: Request) {
 
 // POST: skolan lägger till en elev på ett pass (reglerna ligger i lib/schoolBookings)
 export async function POST(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'school') {
+  const authUser = await requireSchool(request);
+  if (!authUser) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const body = await request.json();

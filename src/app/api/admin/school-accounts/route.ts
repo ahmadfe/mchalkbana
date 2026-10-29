@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
+import { deleteAccount } from '@/lib/personal';
 import { sendSchoolAccountEmail } from '@/lib/email';
 import { generatePassword } from '@/lib/instructors';
 
@@ -64,6 +65,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const { id } = await request.json();
-  await prisma.user.delete({ where: { id } });
+  const result = await deleteAccount(authUser, Number(id));
+  if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ success: true });
 }

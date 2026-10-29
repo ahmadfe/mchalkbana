@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { isOwner } from './owner';
+import { prisma } from './db';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'uppsalahalkbana-secret-key-change-in-production'
@@ -42,6 +43,19 @@ export async function getAuthUserFromRequest(request: Request): Promise<JWTPaylo
   const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
   if (!match) return null;
   return verifyToken(match[1]);
+}
+
+/** Är kontot inaktiverat? (Inaktiverade konton kan inte logga in och kastas ut.) */
+export async function isDisabled(userId: number): Promise<boolean> {
+  const row = await prisma.user.findUnique({ where: { id: userId }, select: { disabled: true } });
+  return !row || row.disabled;
+}
+
+/** Inloggad trafikskola vars konto är aktivt. */
+export async function requireSchool(request: Request): Promise<JWTPayload | null> {
+  const user = await getAuthUserFromRequest(request);
+  if (!user || user.role !== 'school') return null;
+  return (await isDisabled(user.userId)) ? null : user;
 }
 
 /** Bara ägaren – intäkter och Swish-betalningar. */

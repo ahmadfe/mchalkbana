@@ -21,6 +21,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Felaktig e-postadress eller lösenord' }, { status: 401 });
   }
 
+  if (user.disabled) {
+    return NextResponse.json({ error: 'Kontot är inaktiverat. Kontakta Uppsala Halkbana på 07 07 66 66 61.' }, { status: 403 });
+  }
+
   const token = await signToken({ userId: user.id, email: user.email, role: user.role, name: user.name });
 
   const response = NextResponse.json({

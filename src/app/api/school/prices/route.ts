@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAuthUserFromRequest } from '@/lib/auth';
+import { requireSchool } from '@/lib/auth';
 
 // GET: return the authenticated school's custom prices (courseId → price)
 export async function GET(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'school') {
+  const authUser = await requireSchool(request);
+  if (!authUser) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
 
