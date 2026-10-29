@@ -1,48 +1,42 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { linkBookingToStudent } from '@/lib/students';
 import { requireInstructor } from '@/lib/auth';
+import { createOrFindStudent, enrollStudent, searchStudents } from '@/lib/enroll';
 
+/** Läraren får bara hantera elever på kurser hen är tilldelad. */
+async function assignedSession(request: Request, sessionId: number) {
+  const user = await requireInstructor(request);
+  if (!user) return null;
+  const n = await prisma.session.count({ where: { id: sessionId, assignedSchoolUsers: { some: { id: user.userId } } } });
+  return n > 0 ? user : null;
+}
+
+/** Sök i elevregistret: ?q=namn, personnummer, telefon eller e-post */
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  if (!(await assignedSession(request, Number(params.id)))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const q = new URL(request.url).searchParams.get('q') ?? '';
+  return NextResponse.json({ students: await searchStudents(q) });
+}
+
+/**
+ * Anmäl en elev som saknas på listan: { studentId } för en elev i registret,
+ * eller { firstName, lastName, personnummer, phone, email } för en ny elev. { sendConfirmation } mejlar bekräftelse.
+ */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const authUser = await requireInstructor(request);
-  if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const sessionId = Number(params.id);
+  if (!(await assignedSession(request, sessionId))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
+  const body = await request.json();
 
-  const sessionId = parseInt(params.id);
-  const { name, personnummer, phone, email } = await request.json();
-
-  if (!name) return NextResponse.json({ error: 'Namn krävs' }, { status: 400 });
-
-  const session = await prisma.session.findUnique({
-    where: { id: sessionId },
-    include: { assignedSchoolUsers: { select: { id: true } } },
-  });
-  if (!session) return NextResponse.json({ error: 'Session hittades inte' }, { status: 404 });
-  if (session.status === 'canceled') return NextResponse.json({ error: 'Kursen är inställd' }, { status: 400 });
-
-  const isAssigned = session.assignedSchoolUsers.some((u) => u.id === authUser.userId);
-  if (!isAssigned) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
-
-  if (session.seatsAvailable <= 0) return NextResponse.json({ error: 'Inga platser kvar' }, { status: 400 });
-
-  const [booking] = await prisma.$transaction([
-    prisma.booking.create({
-      data: {
-        sessionId,
-        guestName: name,
-        personnummer: personnummer || null,
-        guestPhone: phone || null,
-        guestEmail: email || null,
-        status: 'Confirmed',
-        bookedByRole: 'instructor',
-      },
-    }),
-    prisma.session.update({
-      where: { id: sessionId },
-      data: { seatsAvailable: { decrement: 1 } },
-    }),
-  ]);
-
-  await linkBookingToStudent(booking.id);
-
-  return NextResponse.json({ booking });
+  let studentId = Number(body.studentId) || 0;
+  let existed = false;
+  if (!studentId) {
+    const created = await createOrFindStudent(body);
+    if ('error' in created) return NextResponse.json({ error: created.error }, { status: 400 });
+    studentId = created.studentId;
+    existed = created.existed;
+  }
+  const result = await enrollStudent(sessionId, studentId, { sendConfirmation: !!body.sendConfirmation, bookedByRole: 'instructor', seats: 'physical' });
+  if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  return NextResponse.json({ ...result, existed }, { status: 201 });
 }

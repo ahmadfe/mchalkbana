@@ -9,6 +9,7 @@ import InstructorShell from '@/components/InstructorShell';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
 import { useAuth } from '@/context/AuthContext';
+import { normalizePersonnummer } from '@/lib/pnr';
 
 interface Student {
   id: number;
@@ -212,7 +213,7 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
           onSave={async note => { await patchStudent(noteFor.id, { resultNote: note }); setNoteFor(null); }}
         />
       )}
-      {adding && <AddSheet sessionId={session.id} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); reload(); }} />}
+      {adding && <AddSheet sessionId={session.id} onClose={() => setAdding(false)} onSaved={info => { setAdding(false); if (info) alert(info); reload(); }} />}
     </InstructorShell>
   );
 }
@@ -381,35 +382,132 @@ function NoteSheet({ student, onClose, onSave }: { student: Student; onClose: ()
   );
 }
 
-/** Elev som kommit men saknas på listan. Skolan väljs sedan vid incheckningen. */
-function AddSheet({ sessionId, onClose, onSaved }: { sessionId: number; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ name: '', personnummer: '', phone: '', email: '' });
+interface StudentHit { id: number; name: string; personnummer: string; phone: string; email: string }
+interface NewStudent { firstName: string; lastName: string; personnummer: string; phone: string; email: string }
+
+/** Lägger det man sökte på i rätt fält: e-post, personnummer, telefon eller namn (som på adminsidan). */
+function prefillFromQuery(raw: string): NewStudent {
+  const q = raw.trim();
+  const empty: NewStudent = { firstName: '', lastName: '', personnummer: '', phone: '', email: '' };
+  if (!q) return empty;
+  if (q.includes('@')) return { ...empty, email: q };
+  if (/^[\d\s+-]+$/.test(q)) {
+    const looksLikePnr = /^\d{6}(\d{2})?[-+]\d{4}$/.test(q) || (!!normalizePersonnummer(q) && !q.startsWith('0') && !q.startsWith('+'));
+    return looksLikePnr ? { ...empty, personnummer: q } : { ...empty, phone: q };
+  }
+  const [first, ...rest] = q.split(/\s+/);
+  return { ...empty, firstName: first, lastName: rest.join(' ') };
+}
+
+/** Elev som saknas på listan: sök i elevregistret, eller skapa en ny elev. Skolan väljs sedan vid incheckningen. */
+function AddSheet({ sessionId, onClose, onSaved }: { sessionId: number; onClose: () => void; onSaved: (info?: string) => void }) {
+  const [q, setQ] = useState('');
+  const [hits, setHits] = useState<StudentHit[]>([]);
+  const [searched, setSearched] = useState(false);
+  const [picked, setPicked] = useState<StudentHit | null>(null);
+  const [creating, setCreating] = useState<NewStudent | null>(null);
+  const [sendConfirmation, setSendConfirmation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    setSearched(false);
+    if (picked || creating || q.trim().length < 2) { setHits([]); return; }
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/instructor/sessions/${sessionId}/students?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then(r => r.json()).then(d => { setHits(d.students ?? []); setSearched(true); }).catch(() => {});
+    }, 250);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [q, picked, creating, sessionId]);
+
+  const email = picked?.email || creating?.email || '';
+  const canSubmit = picked ? true : !!creating && !!creating.firstName.trim() && !!creating.lastName.trim() && !!creating.personnummer.trim();
+
   const save = async () => {
     setBusy(true);
     setError('');
     const res = await fetch(`/api/instructor/sessions/${sessionId}/students`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(f),
+      body: JSON.stringify({ ...(picked ? { studentId: picked.id } : creating), sendConfirmation: sendConfirmation && !!email }),
     });
+    const data = await res.json();
     setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
-    onSaved();
+    if (!res.ok) { setError(data.error ?? 'Något gick fel'); return; }
+    onSaved(data.existed ? 'Personnumret fanns redan i elevregistret – den sparade eleven lades till.' : undefined);
   };
+
   return (
-    <Sheet title="Lägg till elev" onClose={onClose}>
+    <Sheet title={creating ? 'Ny elev' : 'Lägg till elev'} onClose={onClose}>
       <div className="space-y-3">
-        <input className={field} placeholder="Namn *" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} autoComplete="off" />
-        <input className={clsx(field, 'font-mono')} placeholder="Personnummer (ÅÅÅÅMMDD-XXXX)" inputMode="numeric" value={f.personnummer} onChange={e => setF({ ...f, personnummer: e.target.value })} autoComplete="off" />
-        <input className={field} placeholder="Telefon" type="tel" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} />
-        <input className={field} placeholder="E-post" type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} />
-        <p className="text-xs text-white/45">Välj elevens trafikskola när du checkar in eleven.</p>
+        {picked ? (
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#26262a] border border-white/10 px-4 py-3">
+            <div className="min-w-0">
+              <p className="font-semibold truncate">{picked.name}</p>
+              <p className="text-sm text-white/50 truncate">{[picked.personnummer, picked.phone].filter(Boolean).join(' · ')}</p>
+            </div>
+            <button onClick={() => setPicked(null)} className="text-sm text-white/60 hover:text-white shrink-0">Byt</button>
+          </div>
+        ) : creating ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <input className={field} placeholder="Förnamn *" value={creating.firstName} onChange={e => setCreating({ ...creating, firstName: e.target.value })} autoComplete="off" autoFocus />
+              <input className={field} placeholder="Efternamn *" value={creating.lastName} onChange={e => setCreating({ ...creating, lastName: e.target.value })} autoComplete="off" />
+            </div>
+            <input className={clsx(field, 'font-mono')} placeholder="Personnummer * (ÅÅÅÅMMDD-XXXX)" inputMode="numeric" value={creating.personnummer} onChange={e => setCreating({ ...creating, personnummer: e.target.value })} autoComplete="off" />
+            <div className="grid grid-cols-2 gap-3">
+              <input className={field} placeholder="Telefon" type="tel" value={creating.phone} onChange={e => setCreating({ ...creating, phone: e.target.value })} />
+              <input className={field} placeholder="E-post" type="email" value={creating.email} onChange={e => setCreating({ ...creating, email: e.target.value })} />
+            </div>
+            <p className="text-xs text-white/50">Eleven sparas i elevregistret och läggs till på kursen. Välj elevens trafikskola när du checkar in eleven.</p>
+            <button onClick={() => { setCreating(null); setError(''); }} className="text-sm text-white/60 hover:text-white">← Tillbaka till sökning</button>
+          </>
+        ) : (
+          <>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+              <input
+                className={clsx(field, 'pl-11')}
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Sök elev – namn, personnummer, telefon"
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
+            {hits.length > 0 && (
+              <div className="rounded-2xl bg-[#26262a] border border-white/10 overflow-hidden">
+                {hits.map(h => (
+                  <button key={h.id} onClick={() => { setPicked(h); setHits([]); }} className="w-full text-left px-4 py-3 hover:bg-white/5 border-b border-white/5 last:border-0">
+                    <p className="font-semibold">{h.name}</p>
+                    <p className="text-sm text-white/50">{[h.personnummer, h.phone].filter(Boolean).join(' · ')}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searched && hits.length === 0 && <p className="text-sm text-white/60 px-1">Ingen elev hittades för &quot;{q.trim()}&quot;.</p>}
+            <button
+              onClick={() => { setError(''); setCreating(prefillFromQuery(q)); }}
+              className="w-full h-12 rounded-2xl border border-dashed border-white/20 text-white/70 hover:text-white hover:border-white/40 font-semibold"
+            >
+              + Skapa ny elev
+            </button>
+          </>
+        )}
+
+        {(picked || creating) && email && (
+          <label className="flex items-center gap-3 cursor-pointer select-none pt-1">
+            <input type="checkbox" checked={sendConfirmation} onChange={e => setSendConfirmation(e.target.checked)} className="w-6 h-6 rounded accent-white" />
+            <span className="text-[15px]">Skicka bokningsbekräftelse via e-post</span>
+          </label>
+        )}
         {error && <p className="text-sm text-red-400">{error}</p>}
         <div className="flex gap-3 pt-1">
           <button onClick={onClose} className="h-12 px-6 rounded-full bg-white/10 font-bold">Avbryt</button>
-          <button onClick={save} disabled={busy || !f.name.trim()} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-50">{busy ? 'Sparar…' : 'Lägg till'}</button>
+          <button onClick={save} disabled={busy || !canSubmit} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-40">
+            {busy ? 'Lägger till…' : creating ? 'Skapa och lägg till' : 'Lägg till på kursen'}
+          </button>
         </div>
       </div>
     </Sheet>
