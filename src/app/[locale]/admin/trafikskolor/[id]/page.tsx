@@ -451,16 +451,22 @@ function ReserveSheet({ schoolId, takenSessionIds, onClose, onSaved }: { schoolI
 
 // ── Priser, fakturor och uppgifter ───────────────────────────────────
 
+// Skolans pris skrivs exkl. moms men sparas inkl. 25 % moms (hela kronor), som alla priser i systemet
+const VAT = 1.25;
+const exVat = (incl: number) => String(Math.round(incl / VAT));
+const parseEx = (v: string) => Number(v.replace(/\s/g, '').replace(',', '.'));
+
 function Prices({ schoolId, prices, reload }: { schoolId: number; prices: Price[]; reload: () => void }) {
-  const [values, setValues] = useState<Record<number, string>>(() => Object.fromEntries(prices.map(p => [p.courseId, p.price === null ? '' : String(p.price)])));
+  const [values, setValues] = useState<Record<number, string>>(() => Object.fromEntries(prices.map(p => [p.courseId, p.price === null ? '' : exVat(p.price)])));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
   const save = async () => {
     setBusy(true);
     setMsg('');
-    const list = Object.entries(values).filter(([, v]) => v.trim() !== '').map(([courseId, v]) => ({ courseId: Number(courseId), price: Number(v) }));
-    if (list.some(p => !Number.isInteger(p.price) || p.price < 0)) { setBusy(false); setMsg('Priserna ska vara hela kronor'); return; }
+    const parsed = Object.entries(values).filter(([, v]) => v.trim() !== '').map(([courseId, v]) => ({ courseId: Number(courseId), ex: parseEx(v) }));
+    if (parsed.some(p => !Number.isFinite(p.ex) || p.ex < 0)) { setBusy(false); setMsg('Skriv priset i kronor, t.ex. 1000'); return; }
+    const list = parsed.map(p => ({ courseId: p.courseId, price: Math.round(p.ex * VAT) }));
     const res = await fetch(`/api/admin/school-accounts/${schoolId}/prices`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -473,19 +479,25 @@ function Prices({ schoolId, prices, reload }: { schoolId: number; prices: Price[
 
   return (
     <Card title="Skolans priser">
-      <p className="text-sm text-white/60 mb-4">Priset per elev som skolan faktureras. Lämna tomt för ordinarie pris.</p>
+      <p className="text-sm text-white/60 mb-4">Pris per elev <strong className="text-white">exkl. moms</strong> som skolan faktureras. 25 % moms läggs till på fakturan. Lämna tomt för ordinarie pris.</p>
       <div className="space-y-3">
-        {prices.map(p => (
-          <div key={p.courseId} className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold truncate">{p.title}</p>
-              <p className="text-xs text-white/45">Ordinarie {kr(p.listPrice)}</p>
+        {prices.map(p => {
+          const v = values[p.courseId] ?? '';
+          const ex = parseEx(v);
+          const incl = v.trim() !== '' && Number.isFinite(ex) && ex >= 0 ? Math.round(ex * VAT) : null;
+          return (
+            <div key={p.courseId} className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate">{p.title}</p>
+                <p className="text-xs text-white/45">Ordinarie {kr(p.listPrice)} inkl. moms ({exVat(p.listPrice)} kr exkl.)</p>
+              </div>
+              <div className="w-36 shrink-0">
+                <Input inputMode="decimal" aria-label={`${p.title} pris exkl. moms`} placeholder="exkl. moms" value={v} onChange={e => setValues({ ...values, [p.courseId]: e.target.value })} />
+                <p className="text-xs text-white/45 mt-1 text-right">{incl !== null ? `${kr(incl)} inkl. moms` : ' '}</p>
+              </div>
             </div>
-            <div className="w-32 shrink-0">
-              <Input type="number" min={0} inputMode="numeric" placeholder={String(p.listPrice)} value={values[p.courseId] ?? ''} onChange={e => setValues({ ...values, [p.courseId]: e.target.value })} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="flex items-center gap-3 mt-5">
         <Button variant="primary" disabled={busy} onClick={save}>{busy ? 'Sparar…' : 'Spara priser'}</Button>
