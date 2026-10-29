@@ -8,6 +8,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import { KurserSideList } from '@/components/admin/SideLists';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
+import IdScan from '@/components/admin/IdScan';
 import { buildTsReportXml, reportParts } from '@/lib/tsReport';
 import { normalizePersonnummer } from '@/lib/pnr';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
@@ -238,6 +239,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
           )}
 
           {kurs.status !== 'canceled' && <AddStudent kursId={kurs.id} onAdded={load} locale={locale} />}
+          {kurs.status !== 'canceled' && <IdScan kursId={kurs.id} courseStart={kurs.startTime} instructors={kurs.instructors} onDone={load} />}
 
           {canceled.length > 0 && (
             <details className="mt-5 text-sm">

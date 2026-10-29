@@ -25,3 +25,16 @@ export function ageFromPersonnummer(pnr12: string, at = new Date()): number | nu
   if (at.getMonth() + 1 < m || (at.getMonth() + 1 === m && at.getDate() < d)) age--;
   return age;
 }
+
+/** Stämmer kontrollsiffran (Luhn på de sista tio siffrorna)? Fångar felläsningar och felskrivningar. */
+export function personnummerChecksumOk(pnr12: string): boolean {
+  const ten = pnr12.replace(/\D/g, '').slice(-10);
+  if (ten.length !== 10) return false;
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    let d = Number(ten[i]) * (i % 2 === 0 ? 2 : 1);
+    if (d > 9) d -= 9;
+    sum += d;
+  }
+  return sum % 10 === 0;
+}
