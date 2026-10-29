@@ -37,6 +37,7 @@ interface Kurs {
 
 interface Participant {
   bookingId: number;
+  coupon: { code: string; discount: number } | null;
   studentId: number | null;
   name: string;
   phone: string;
@@ -388,7 +389,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
         ) : p.paid ? (
           <><Badge tone="green">Betald</Badge><span className="text-white/60">
             {kr(p.price)}{p.payment ? ` · ${PROVIDER_LABEL[p.payment.provider] ?? p.payment.provider} ${formatDate(p.payment.createdAt, { day: 'numeric', month: 'short' })}` : ''}
-          </span></>
+          </span>{p.coupon && <Badge tone="green">Rabattkod {p.coupon.code} −{kr(p.coupon.discount)}</Badge>}</>
         ) : (
           <><Badge tone="amber">Inte betald</Badge><span className="text-white/60">{kr(p.price)} – eleven har inte betalat än.</span></>
         )}

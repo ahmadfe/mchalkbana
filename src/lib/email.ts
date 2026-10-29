@@ -14,6 +14,8 @@ interface ReceiptEmailData {
   phone?: string | null;
   customMessage?: string;
   changeUrl?: string;
+  /** Rabattkod som använts, visas som egen rad på kvittot */
+  coupon?: { code: string; discount: number } | null;
 }
 
 function toGCalDate(iso: string): string {
@@ -108,6 +110,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
       <!-- Price breakdown -->
       <div style="border-top:1px solid #e5e7eb;padding-top:16px;margin-bottom:24px;">
         <table style="width:100%;font-size:14px;">
+          ${data.coupon ? `<tr><td style="color:#6b7280;padding:5px 0;">Rabattkod ${data.coupon.code}</td><td style="color:#059669;text-align:right;">−${data.coupon.discount.toLocaleString('sv-SE')} kr</td></tr>` : ''}
           <tr>
             <td style="color:#6b7280;padding:5px 0;">Pris exkl. moms</td>
             <td style="color:#374151;text-align:right;">${priceExVat.toLocaleString('sv-SE')} kr</td>

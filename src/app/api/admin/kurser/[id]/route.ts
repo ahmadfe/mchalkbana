@@ -6,6 +6,7 @@ import { schoolChoiceFor } from '@/lib/checkin';
 import { SESSION_STATUSES, expectedPrice, parseKursInput, recalcSeats, setInstructors } from '@/lib/kurser';
 import { releaseExpiredAllocations } from '@/lib/allocations';
 import { formatPersonnummer, normalizePersonnummer } from '@/lib/personnummer';
+import { formatCode } from '@/lib/coupons';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
@@ -28,6 +29,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
           payment: { select: { amount: true, provider: true, status: true, createdAt: true } },
           bookedBySchoolUser: { select: { name: true } },
           checkedInBy: { select: { name: true } },
+          coupon: { select: { code: true } },
           user: { select: { name: true, email: true, phone: true } },
         },
         orderBy: { bookingTime: 'asc' },
@@ -56,6 +58,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       schoolLocked: schoolChoiceFor(b).locked,
       note: b.note,
       price: expectedPrice(b, s, schoolPrices),
+      coupon: b.coupon ? { code: formatCode(b.coupon.code), discount: b.couponDiscount ?? 0 } : null,
       payment: b.payment ? { ...b.payment, createdAt: b.payment.createdAt.toISOString() } : null,
       paid: !!b.payment || b.status === 'Paid',
       attendance: b.attendance,

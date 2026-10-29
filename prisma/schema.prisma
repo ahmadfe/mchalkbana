@@ -173,9 +173,15 @@ model Booking {
   payment              Payment?
   invoiceId            Int?
   invoice              Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  // Pris eleven ska betala, satt när betalningen startar (rabattkod eller rea inräknad)
+  price                Int?
+  couponId             Int?
+  coupon               Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  couponDiscount       Int?     // kronor som rabattkoden drog av
 
   @@index([studentId])
   @@index([invoiceId])
+  @@index([couponId])
 }
 
 // Kopia av varje incheckning på riskutbildning. Sparas i fem år, även om eleven raderas.
@@ -327,4 +333,29 @@ model InvoiceLine {
   unitPrice   Int       // kr inkl. moms
   amount      Int       // kr inkl. moms
   students    String    @default("") // namn, en per rad
+}
+
+// Rabattkoder: skapas i omgångar, varje kod kan användas en gång
+model CouponBatch {
+  id          Int      @id @default(autoincrement())
+  name        String
+  kind        String   // percent | amount
+  value       Int      // procent eller kronor
+  validTo     DateTime?
+  courseIds   Int[]    // tom = alla kurser
+  createdBy   String   @default("")
+  createdAt   DateTime @default(now())
+  coupons     Coupon[]
+}
+
+model Coupon {
+  id        Int         @id @default(autoincrement())
+  code      String      @unique // utan bindestreck, t.ex. UH7K3PQX9M
+  batchId   Int
+  batch     CouponBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  disabled  Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  bookings  Booking[]
+
+  @@index([batchId])
 }

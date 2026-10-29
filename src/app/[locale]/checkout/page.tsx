@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin, Tag } from 'lucide-react';
 import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
 
@@ -36,6 +36,12 @@ function CheckoutContent() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Rabattkod: kontrolleras här för att visa priset, och igen på servern när betalningen startar
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState<{ code: string; label: string; price: number; normalPrice: number; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sessions/${sessionId}`)
@@ -56,7 +62,7 @@ function CheckoutContent() {
           // Track: successful purchase
           fbq('track', 'Purchase', {
             content_name: session?.course?.titleSv ?? 'Riskutbildning',
-            value: (session?.discountPrice ?? session?.course?.price) ?? 0,
+            value: coupon?.price ?? (session?.discountPrice ?? session?.course?.price) ?? 0,
             currency: 'SEK',
           });
           setStep('success');
@@ -88,7 +94,8 @@ function CheckoutContent() {
   }
 
   const course = session.course!;
-  const effectivePrice = session.discountPrice ?? course.price;
+  const effectivePrice = coupon?.price ?? session.discountPrice ?? course.price;
+  const free = effectivePrice === 0;
   const title = locale === 'sv' ? course.titleSv : course.titleEn;
   const courseSubtitle = course.vehicle === 'Car' ? 'Bil 🚗' : course.vehicle === 'Motorcycle' ? 'Motorcykel 🏍️' : course.vehicle;
   const start = new Date(session.startTime);
@@ -107,12 +114,29 @@ function CheckoutContent() {
     else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, '')))
       errs.personnummer = 'Format: YYYYMMDD-XXXX';
     if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
-    if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
+    if (free) { /* inget att betala – Swish behövs inte */ }
+    else if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
     else if (!/^(\+?46|0)[0-9\s\-]{7,12}$/.test(guest.swishPhone.trim()))
       errs.swishPhone = 'Ange ett giltigt mobilnummer';
     setGuestErrors(errs);
     return Object.keys(errs).length === 0;
   };
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCheckingCoupon(true);
+    setCouponError('');
+    const res = await fetch('/api/coupons/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: couponInput, sessionId }),
+    });
+    const d = await res.json().catch(() => ({}));
+    setCheckingCoupon(false);
+    if (!res.ok) { setCouponError(d.error ?? 'Koden kunde inte kontrolleras'); return; }
+    setCoupon(d);
+  };
+  const removeCoupon = () => { setCoupon(null); setCouponInput(''); setCouponError(''); };
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +147,7 @@ function CheckoutContent() {
     // Track: user started checkout
     fbq('track', 'InitiateCheckout', {
       content_name: session?.course?.titleSv ?? 'Riskutbildning',
-      value: (session?.discountPrice ?? session?.course?.price) ?? 0,
+      value: effectivePrice,
       currency: 'SEK',
     });
 
@@ -154,18 +178,24 @@ function CheckoutContent() {
     const swishRes = await fetch('/api/swish/create-payment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId: booking.id, payerPhone: guest.swishPhone }),
+      body: JSON.stringify({ bookingId: booking.id, payerPhone: free ? null : guest.swishPhone, couponCode: coupon?.code ?? null }),
     });
 
+    const payData = await swishRes.json().catch(() => ({}));
     if (!swishRes.ok) {
-      const d = await swishRes.json();
-      setError(d.error ?? 'Swish-betalning misslyckades');
+      setError(payData.error ?? 'Swish-betalning misslyckades');
       setSubmitting(false);
       return;
     }
 
-    // 3. Enter waiting state — polling starts via useEffect
     setSubmitting(false);
+    // 100 %-rabatt: bokningen är redan bekräftad
+    if (payData.free) {
+      fbq('track', 'Purchase', { content_name: session?.course?.titleSv ?? 'Riskutbildning', value: 0, currency: 'SEK' });
+      setStep('success');
+      return;
+    }
+    // 3. Enter waiting state — polling starts via useEffect
     setStep('waiting');
   };
 
@@ -355,7 +385,7 @@ function CheckoutContent() {
             <div className="flex items-baseline justify-between border-t border-gray-100 mt-3 pt-3">
               <span className="text-sm text-gray-500">Totalt inkl. moms</span>
               <span className="text-right">
-                {session.discountPrice != null && session.discountPrice < course.price && (
+                {effectivePrice < course.price && (
                   <span className="text-sm line-through text-gray-400 mr-2">{course.price.toLocaleString('sv-SE')} kr</span>
                 )}
                 <span className="font-bold text-lg text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
@@ -430,7 +460,53 @@ function CheckoutContent() {
                 </div>
               </div>
 
+              {/* Rabattkod */}
+              <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+                {coupon ? (
+                  <div className="flex items-center gap-3">
+                    <Tag className="w-5 h-5 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900">Rabattkod <span className="font-mono">{coupon.code}</span></p>
+                      <p className="text-sm text-green-700">−{coupon.discount.toLocaleString('sv-SE')} kr ({coupon.label})</p>
+                    </div>
+                    <button type="button" onClick={removeCoupon} className="h-10 px-3 text-sm text-gray-500 hover:text-gray-900 underline">Ta bort</button>
+                  </div>
+                ) : couponOpen ? (
+                  <div>
+                    <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1.5">Rabattkod</label>
+                    <div className="flex gap-2">
+                      <input
+                        id="coupon"
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCoupon(); } }}
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        spellCheck={false}
+                        placeholder="UH-XXXX-XXXX"
+                        className={clsx('input-field font-mono flex-1 min-w-0', couponError && 'border-red-400')}
+                      />
+                      <button
+                        type="button"
+                        onClick={applyCoupon}
+                        disabled={checkingCoupon || !couponInput.trim()}
+                        className="shrink-0 px-5 rounded-xl bg-swedish-blue text-white font-semibold disabled:opacity-50"
+                      >
+                        {checkingCoupon ? '…' : 'Använd'}
+                      </button>
+                    </div>
+                    {couponError && <p className="text-xs text-red-600 mt-1">{couponError}</p>}
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setCouponOpen(true)} className="flex items-center gap-2 h-8 text-sm font-medium text-swedish-blue hover:underline">
+                    <Tag className="w-4 h-4" /> Har du en rabattkod?
+                  </button>
+                )}
+              </div>
+
               {/* Swish */}
+              {!free && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C] flex items-center justify-center">
@@ -458,6 +534,7 @@ function CheckoutContent() {
                   }
                 </div>
               </div>
+              )}
 
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
@@ -479,10 +556,12 @@ function CheckoutContent() {
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : free ? (
+                  <CheckCircle2 className="w-5 h-5" />
                 ) : (
                   <Smartphone className="w-5 h-5" />
                 )}
-                {submitting ? 'Skickar...' : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
+                {submitting ? 'Skickar...' : free ? 'Bekräfta bokningen (0 kr)' : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
               </button>
               </div>
             </form>
@@ -521,10 +600,16 @@ function CheckoutContent() {
                 </div>
 
                 <div className="border-t border-gray-100 mt-5 pt-4">
-                  {session.discountPrice != null && session.discountPrice < course.price && (
+                  {effectivePrice < course.price && (
                     <div className="flex justify-between text-sm mb-2">
                       <span className="text-gray-500">Ordinarie pris</span>
                       <span className="line-through text-gray-400">{course.price.toLocaleString('sv-SE')} kr</span>
+                    </div>
+                  )}
+                  {coupon && (
+                    <div className="flex justify-between text-sm mb-2 text-green-700">
+                      <span>Rabattkod {coupon.code}</span>
+                      <span>−{coupon.discount.toLocaleString('sv-SE')} kr</span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm mb-2">

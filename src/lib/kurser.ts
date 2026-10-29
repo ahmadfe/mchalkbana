@@ -32,11 +32,13 @@ export function stockholmDay(at: Date): { from: Date; to: Date } {
 
 /** Vad eleven ska betala: inbetalt belopp, annars skolpris, kampanjpris eller kursens pris. */
 export function expectedPrice(
-  booking: { bookedBySchoolUserId: number | null; payment: { amount: number } | null },
+  booking: { bookedBySchoolUserId: number | null; payment: { amount: number } | null; price?: number | null },
   session: { discountPrice: number | null; course: { price: number } },
   schoolPrices: Map<number, number>,
 ): number {
   if (booking.payment) return booking.payment.amount;
+  // Pris satt när betalningen startade (t.ex. med rabattkod)
+  if (booking.price != null && !booking.bookedBySchoolUserId) return booking.price;
   if (booking.bookedBySchoolUserId) return schoolPrices.get(booking.bookedBySchoolUserId) ?? session.course.price;
   return session.discountPrice ?? session.course.price;
 }
