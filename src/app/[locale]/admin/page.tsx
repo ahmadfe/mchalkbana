@@ -138,7 +138,8 @@ export default function AdminPage() {
   // Sidomenyn länkar hit med ?tab=… från de nya admin-sidorna
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    if (fromUrl && fromUrl in OLD_TAB_LABEL) setTab(fromUrl as Tab);
+    // 'schools' finns kvar tills kontona flyttat till Personal
+    if (fromUrl && (fromUrl in OLD_TAB_LABEL || fromUrl === 'schools')) setTab(fromUrl as Tab);
   }, []);
 
   // Betalningar är bara för ägaren – andra hamnar på Översikt
@@ -1174,7 +1175,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white">{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white">{OLD_TAB_LABEL[tab as OldTab] ?? (tab === 'schools' ? 'Konton för trafikskolor' : t('title'))}</h1>
               <p className="text-sm mt-1 text-white/50">Uppsala Halkbana</p>
             </div>
             {saved && (

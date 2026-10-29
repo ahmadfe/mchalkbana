@@ -35,7 +35,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
       { tab: 'sessions', label: 'Pass och bokningar', short: 'Pass', icon: Calendar },
       { tab: 'courses', label: 'Kursslag', icon: Layers },
       { tab: 'payments', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
-      { tab: 'schools', label: 'Trafikskolor', short: 'Skolor', icon: School },
+      { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School },
       { tab: 'instructors', label: 'Instruktörer', short: 'Lärare', icon: UserCog },
       { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2 },
     ],

@@ -1,74 +1,13 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { meetingPlaceFor } from '@/lib/allocations';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
+import { removeSchoolBooking } from '@/lib/schoolBookings';
 
-// DELETE: school removes a student from a session
+// DELETE: skolan tar bort en egen elev från ett pass som inte har börjat
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'school') {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
-
-  const bookingId = parseInt(params.id);
-  const booking = await prisma.booking.findUnique({
-    where: { id: bookingId },
-    include: { session: { include: { course: true, school: true } }, user: { select: { name: true, email: true } } },
-  });
-
-  if (!booking) return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
-  if (booking.bookedBySchoolUserId !== authUser.userId) {
-    return NextResponse.json({ error: 'Ej behörig att ta bort denna bokning' }, { status: 403 });
-  }
-  if (booking.session.startTime <= new Date()) {
-    return NextResponse.json({ error: 'Passet har redan börjat – arkiverade pass kan inte ändras' }, { status: 400 });
-  }
-
-  const sessionId = booking.sessionId;
-  await prisma.booking.delete({ where: { id: bookingId } });
-  // Only restore seatsAvailable for school-only sessions; public sessions track public seats separately
-  if (booking.session?.visibility === 'school') {
-    await prisma.session.update({ where: { id: sessionId }, data: { seatsAvailable: { increment: 1 } } });
-  }
-
-  // Send cancellation email + internal notification
-  if (booking.session) {
-    const recipientEmail = booking.guestEmail || booking.user?.email || null;
-    const recipientName = booking.guestName || booking.user?.name || 'Kund';
-    const start = new Date(booking.session.startTime);
-    const end = new Date(booking.session.endTime);
-    const scCourseName = `${booking.session.course.titleSv} (${booking.session.course.behorighet})`;
-    const scCourseDate = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Stockholm' });
-    const scCourseTime = `${start.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })} – ${end.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Stockholm' })}`;
-    const scLocation = await meetingPlaceFor(booking, booking.session.meetingPlace || booking.session.course.location || booking.session.school?.name || '');
-    if (recipientEmail) {
-      sendCancellationEmail({
-        recipientEmail,
-        recipientName,
-        bookingId,
-        courseName: scCourseName,
-        courseDate: scCourseDate,
-        courseTime: scCourseTime,
-        location: scLocation,
-        cancelledBy: 'school',
-      }).catch((err) => console.error('[School cancel] Email failed:', err));
-    }
-    sendInternalBookingNotification({
-      bookingId,
-      studentName: booking.guestName || booking.user?.name || 'Okänd',
-      personnummer: booking.personnummer ?? '–',
-      phone: booking.guestPhone,
-      email: booking.guestEmail || booking.user?.email,
-      courseName: scCourseName,
-      courseDate: scCourseDate,
-      courseTime: scCourseTime,
-      location: scLocation,
-      bookedBy: 'school',
-      status: 'Canceled',
-      cancelledBy: 'school',
-    }).catch((err) => console.error('[School cancel] Internal cancel notification failed:', err));
-  }
-
-  return NextResponse.json({ success: true });
+  const result = await removeSchoolBooking(authUser.userId, parseInt(params.id), { by: 'school' });
+  return 'error' in result ? NextResponse.json({ error: result.error }, { status: result.status }) : NextResponse.json({ success: true });
 }
