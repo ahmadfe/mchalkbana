@@ -55,7 +55,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 
-type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'students' | 'schools' | 'payments' | 'cards' | 'hero' | 'whatsapp' | 'instructors';
+type Tab = 'overview' | 'courses' | 'sessions' | 'bookings' | 'students' | 'payments' | 'cards' | 'hero' | 'whatsapp';
 
 interface InfoCardRecord {
   id: number;
@@ -138,8 +138,10 @@ export default function AdminPage() {
   // Sidomenyn länkar hit med ?tab=… från de nya admin-sidorna
   useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    // 'schools' finns kvar tills kontona flyttat till Personal
-    if (fromUrl && (fromUrl in OLD_TAB_LABEL || fromUrl === 'schools')) setTab(fromUrl as Tab);
+    // Gamla bokmärken till flikarna som flyttat
+    if (fromUrl === 'schools') { router.replace(`/${locale}/admin/trafikskolor`); return; }
+    if (fromUrl === 'instructors') { router.replace(`/${locale}/admin/personal?tab=instructor`); return; }
+    if (fromUrl && fromUrl in OLD_TAB_LABEL) setTab(fromUrl as Tab);
   }, []);
 
   // Betalningar är bara för ägaren – andra hamnar på Översikt
@@ -199,31 +201,9 @@ export default function AdminPage() {
 
   const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
   const [schoolAccounts, setSchoolAccounts] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
-  const [newSchoolAccount, setNewSchoolAccount] = useState({ name: '', email: '', password: '' });
-  const [schoolAccountError, setSchoolAccountError] = useState('');
-  const [schoolAccountSaving, setSchoolAccountSaving] = useState(false);
-  const [showSchoolPwd, setShowSchoolPwd] = useState(false);
 
-  // School custom prices modal
-  const [pricesModal, setPricesModal] = useState<{ id: number; name: string } | null>(null);
-  const [schoolPriceMap, setSchoolPriceMap] = useState<Record<number, string>>({});
-  const [pricesSaving, setPricesSaving] = useState(false);
-  const [pricesSaved, setPricesSaved] = useState(false);
 
-  // Reset password modal (school)
-  const [resetPwdTarget, setResetPwdTarget] = useState<{ id: number; name: string; type: 'school' | 'staff' } | null>(null);
-  const [resetPwdValue, setResetPwdValue] = useState('');
-  const [showResetPwd, setShowResetPwd] = useState(false);
-  const [resetPwdSaving, setResetPwdSaving] = useState(false);
-  const [resetPwdError, setResetPwdError] = useState('');
-  const [resetPwdDone, setResetPwdDone] = useState(false);
 
-  // Staff (admin users)
-  const [staffList, setStaffList] = useState<{ id: number; name: string; email: string; createdAt: string }[]>([]);
-  const [newStaff, setNewStaff] = useState({ name: '', email: '', password: '' });
-  const [showStaffPwd, setShowStaffPwd] = useState(false);
-  const [staffError, setStaffError] = useState('');
-  const [staffSaving, setStaffSaving] = useState(false);
 
 
   // Payments
@@ -318,18 +298,9 @@ export default function AdminPage() {
 
   // Instructors
   const [instructors, setInstructors] = useState<{ id: number; name: string; email: string; phone?: string | null; _count?: { assignedSessions: number } }[]>([]);
-  const [editInstr, setEditInstr] = useState<{ id: number; name: string; email: string; phone: string } | null>(null);
-  const [instrBusy, setInstrBusy] = useState<number | null>(null);
-  const [instrError, setInstrError] = useState('');
-  const [instructorInvites, setInstructorInvites] = useState<{ id: number; token: string; email: string; name: string | null; usedAt: string | null; expiresAt: string }[]>([]);
   const [assigningInstructorSession, setAssigningInstructorSession] = useState<number | null>(null);
   const [assignInstructorIds, setAssignInstructorIds] = useState<number[]>([]);
   const [assignInstructorSaving, setAssignInstructorSaving] = useState(false);
-  const [newInviteEmail, setNewInviteEmail] = useState('');
-  const [newInviteName, setNewInviteName] = useState('');
-  const [inviteSending, setInviteSending] = useState(false);
-  const [inviteSuccess, setInviteSuccess] = useState(false);
-  const [createdInstructor, setCreatedInstructor] = useState<{ name: string; email: string; password: string; reset?: boolean } | null>(null);
 
   // Course groups
   const [courseGroups, setCourseGroups] = useState<{ id: number; name: string; createdAt: string }[]>([]);
@@ -415,10 +386,8 @@ export default function AdminPage() {
     setCourseGroups(groupsData.groups || []);
     setPayments(paymentsData.payments || []);
     setInfoCards(cardsData.cards || []);
-    // Load staff separately (don't block main load)
-    fetch('/api/admin/staff').then(r => r.json()).then(d => setStaffList(d.staff || []));
+    // Lärarna behövs när pass tilldelas lärare (laddas utan att blockera)
     fetch('/api/admin/instructors').then(r => r.json()).then(d => setInstructors(d.instructors || []));
-    fetch('/api/admin/instructor-invites').then(r => r.json()).then(d => setInstructorInvites(d.invites || []));
     // Load WhatsApp numbers
     fetch('/api/admin/whatsapp-numbers').then(r => r.json()).then(d => setWaNumbers(d.numbers || []));
     setLoading(false);
@@ -762,63 +731,9 @@ export default function AdminPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleCreateSchoolAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSchoolAccountError('');
-    setSchoolAccountSaving(true);
-    const res = await fetch('/api/admin/school-accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newSchoolAccount),
-    });
-    const data = await res.json();
-    setSchoolAccountSaving(false);
-    if (!res.ok) {
-      setSchoolAccountError(data.error || 'Något gick fel');
-      return;
-    }
-    setSchoolAccounts((prev) => [data.account, ...prev]);
-    setNewSchoolAccount({ name: '', email: '', password: '' });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
 
-  const handleDeleteSchoolAccount = async (id: number) => {
-    await fetch('/api/admin/school-accounts', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    setSchoolAccounts((prev) => prev.filter((a) => a.id !== id));
-  };
 
-  const openPricesModal = async (acc: { id: number; name: string }) => {
-    setPricesModal(acc);
-    setPricesSaved(false);
-    const res = await fetch(`/api/admin/school-accounts/${acc.id}/prices`);
-    const data = await res.json();
-    const map: Record<number, string> = {};
-    for (const p of data.prices || []) {
-      map[p.courseId] = String(p.price);
-    }
-    setSchoolPriceMap(map);
-  };
 
-  const handleSavePrices = async () => {
-    if (!pricesModal) return;
-    setPricesSaving(true);
-    const prices = courses
-      .filter((c) => schoolPriceMap[c.id] !== undefined && schoolPriceMap[c.id] !== '')
-      .map((c) => ({ courseId: c.id, price: parseInt(schoolPriceMap[c.id]) }))
-      .filter((p) => !isNaN(p.price) && p.price > 0);
-    await fetch(`/api/admin/school-accounts/${pricesModal.id}/prices`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prices }),
-    });
-    setPricesSaving(false);
-    setPricesSaved(true);
-  };
 
   const handleAddWaNumber = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -845,57 +760,9 @@ export default function AdminPage() {
     setWaNumbers((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const openResetPwd = (id: number, name: string, type: 'school' | 'staff') => {
-    setResetPwdTarget({ id, name, type });
-    setResetPwdValue('');
-    setShowResetPwd(false);
-    setResetPwdError('');
-    setResetPwdDone(false);
-  };
 
-  const handleResetPassword = async () => {
-    if (!resetPwdTarget) return;
-    if (resetPwdValue.length < 8) { setResetPwdError('Minst 8 tecken'); return; }
-    setResetPwdSaving(true);
-    setResetPwdError('');
-    const url = resetPwdTarget.type === 'school'
-      ? `/api/admin/school-accounts/${resetPwdTarget.id}`
-      : `/api/admin/staff/${resetPwdTarget.id}`;
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: resetPwdValue }),
-    });
-    const data = await res.json();
-    setResetPwdSaving(false);
-    if (!res.ok) { setResetPwdError(data.error || 'Fel'); return; }
-    setResetPwdDone(true);
-  };
 
-  const handleCreateStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStaffSaving(true);
-    setStaffError('');
-    const res = await fetch('/api/admin/staff', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newStaff),
-    });
-    const data = await res.json();
-    setStaffSaving(false);
-    if (!res.ok) { setStaffError(data.error || 'Fel'); return; }
-    setStaffList(prev => [...prev, data.user]);
-    setNewStaff({ name: '', email: '', password: '' });
-  };
 
-  const handleDeleteStaff = async (id: number) => {
-    const res = await fetch('/api/admin/staff', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    if (res.ok) setStaffList(prev => prev.filter(s => s.id !== id));
-  };
 
   const openEditBooking = (b: Booking) => {
     setEditBooking(b);
@@ -1175,7 +1042,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white">{OLD_TAB_LABEL[tab as OldTab] ?? (tab === 'schools' ? 'Konton för trafikskolor' : t('title'))}</h1>
+              <h1 className="font-headline text-3xl font-extrabold tracking-tight text-white">{OLD_TAB_LABEL[tab as OldTab] ?? t('title')}</h1>
               <p className="text-sm mt-1 text-white/50">Uppsala Halkbana</p>
             </div>
             {saved && (
@@ -2269,214 +2136,6 @@ export default function AdminPage() {
             );
           })()}
 
-          {/* School Accounts */}
-          {tab === 'schools' && (
-            <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Create form */}
-              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <School className="w-5 h-5 text-swedish-blue" />
-                  <h2 className="font-bold text-white">Skapa trafikskola-konto</h2>
-                </div>
-                {schoolAccountError && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">
-                    {schoolAccountError}
-                  </div>
-                )}
-                <form className="space-y-4" onSubmit={handleCreateSchoolAccount}>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">Trafikskolans namn</label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      placeholder="Uppsala Trafikskola AB"
-                      value={newSchoolAccount.name}
-                      onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">E-postadress</label>
-                    <input
-                      type="email"
-                      className="input-field"
-                      placeholder="skola@example.se"
-                      value={newSchoolAccount.email}
-                      onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">Lösenord</label>
-                    <div className="relative">
-                      <input
-                        type={showSchoolPwd ? 'text' : 'password'}
-                        className="input-field pr-10"
-                        placeholder="Minst 8 tecken"
-                        value={newSchoolAccount.password}
-                        onChange={(e) => setNewSchoolAccount({ ...newSchoolAccount, password: e.target.value })}
-                        required
-                        minLength={8}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSchoolPwd(!showSchoolPwd)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65"
-                      >
-                        {showSchoolPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={schoolAccountSaving}
-                    className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {schoolAccountSaving ? (
-                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skapar...</>
-                    ) : (
-                      <><Plus className="w-4 h-4" />Skapa konto</>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              {/* Existing accounts */}
-              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
-                <h2 className="font-bold text-white mb-5">Befintliga trafikskolor ({schoolAccounts.length})</h2>
-                {schoolAccounts.length === 0 ? (
-                  <div className="text-center py-12 text-white/40">
-                    <School className="w-10 h-10 mx-auto mb-3 text-white/20" />
-                    <p className="text-sm">Inga trafikskola-konton ännu.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {schoolAccounts.map((acc) => (
-                      <li key={acc.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition">
-                        <div className="min-w-0">
-                          <p className="font-medium text-white text-sm">{acc.name}</p>
-                          <p className="text-xs text-white/50 truncate">{acc.email}</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1 -ml-2 sm:ml-0">
-                          <button
-                            onClick={() => openResetPwd(acc.id, acc.name, 'school')}
-                            className="flex items-center gap-1 text-xs text-white/50 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
-                            title="Återställ lösenord"
-                          >
-                            <KeyRound className="w-3.5 h-3.5" />Lösenord
-                          </button>
-                          <button
-                            onClick={() => openPricesModal(acc)}
-                            className="flex items-center gap-1 text-xs text-white/65 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
-                            title="Ange priser per kurs"
-                          >
-                            <Tag className="w-3.5 h-3.5" />Priser
-                          </button>
-                          <Link
-                            href={`/${locale}/admin/fakturor`}
-                            className="flex items-center gap-1 text-xs text-swedish-blue hover:bg-sky-500/10 px-2 py-1.5 rounded-lg transition font-medium"
-                            title="Fakturor"
-                          >
-                            <FileText className="w-3.5 h-3.5" />Fakturor
-                          </Link>
-                          <button
-                            onClick={() => handleDeleteSchoolAccount(acc.id)}
-                            className="text-white/40 hover:text-red-500 transition p-1"
-                            title="Ta bort konto"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-
-            {/* Staff / Admin users */}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              {/* Create staff */}
-              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <Lock className="w-5 h-5 text-orange-500" />
-                  <h2 className="font-bold text-white">Skapa adminanvändare</h2>
-                </div>
-                <p className="text-xs text-white/50 mb-4">Adminanvändare har full behörighet, precis som huvudkontot.</p>
-                {staffError && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{staffError}</div>
-                )}
-                <form className="space-y-4" onSubmit={handleCreateStaff}>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">Namn</label>
-                    <input type="text" className="input-field" placeholder="Receptionist" value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">E-postadress</label>
-                    <input type="email" className="input-field" placeholder="reception@uppsalahalkbana.se" value={newStaff.email} onChange={(e) => setNewStaff({ ...newStaff, email: e.target.value })} required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-1.5">Lösenord</label>
-                    <div className="relative">
-                      <input
-                        type={showStaffPwd ? 'text' : 'password'}
-                        className="input-field pr-10"
-                        placeholder="Minst 8 tecken"
-                        value={newStaff.password}
-                        onChange={(e) => setNewStaff({ ...newStaff, password: e.target.value })}
-                        required
-                        minLength={8}
-                      />
-                      <button type="button" onClick={() => setShowStaffPwd(!showStaffPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65">
-                        {showStaffPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                  <button type="submit" disabled={staffSaving} className="w-full btn-primary py-2.5 flex items-center justify-center gap-2 disabled:opacity-60">
-                    {staffSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Skapar...</> : <><Plus className="w-4 h-4" />Skapa adminanvändare</>}
-                  </button>
-                </form>
-              </div>
-
-              {/* Staff list */}
-              <div className="bg-[#1c1c1f] rounded-xl border border-white/5 p-6">
-                <h2 className="font-bold text-white mb-5">Adminanvändare ({staffList.length})</h2>
-                {staffList.length === 0 ? (
-                  <div className="text-center py-12 text-white/40">
-                    <Lock className="w-10 h-10 mx-auto mb-3 text-white/20" />
-                    <p className="text-sm">Inga adminanvändare ännu.</p>
-                  </div>
-                ) : (
-                  <ul className="space-y-3">
-                    {staffList.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-500/10 hover:bg-orange-500/15 transition">
-                        <div>
-                          <p className="font-medium text-white text-sm">{s.name}</p>
-                          <p className="text-xs text-white/50">{s.email}</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => openResetPwd(s.id, s.name, 'staff')}
-                            className="flex items-center gap-1 text-xs text-white/50 hover:bg-white/15 px-2 py-1.5 rounded-lg transition font-medium"
-                            title="Återställ lösenord"
-                          >
-                            <KeyRound className="w-3.5 h-3.5" />Lösenord
-                          </button>
-                          <button onClick={() => handleDeleteStaff(s.id)} className="text-white/40 hover:text-red-500 transition p-1" title="Ta bort">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-            </>
-          )}
-
           {/* Payments */}
           {tab === 'payments' && owner && (() => {
             const filteredPayments = paymentStatusFilter === 'all' ? payments : payments.filter(p => p.status === paymentStatusFilter);
@@ -2830,323 +2489,10 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Instructor management tab */}
-          {tab === 'instructors' && (
-            <div className="space-y-8">
-
-              {/* Send invite */}
-              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
-                <h2 className="font-bold text-white mb-5">Bjud in instruktör</h2>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  setInviteSending(true);
-                  setInviteSuccess(false);
-                  setCreatedInstructor(null);
-                  const res = await fetch('/api/admin/instructor-invites', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: newInviteEmail, name: newInviteName }),
-                  });
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data.invite) setInstructorInvites((prev) => [data.invite, ...prev]);
-                    if (data.user) setInstructors((prev) => [data.user, ...prev]);
-                    setCreatedInstructor({ name: newInviteName || data.user?.name || newInviteEmail, email: newInviteEmail, password: data.password });
-                    setNewInviteEmail('');
-                    setNewInviteName('');
-                    setInviteSuccess(true);
-                    setTimeout(() => setInviteSuccess(false), 3000);
-                  }
-                  setInviteSending(false);
-                }} className="flex flex-col sm:flex-row gap-3">
-                  <input required type="email" placeholder="E-postadress *" value={newInviteEmail} onChange={(e) => setNewInviteEmail(e.target.value)} className="input-field flex-1 text-sm" />
-                  <input required placeholder="Namn *" value={newInviteName} onChange={(e) => setNewInviteName(e.target.value)} className="input-field flex-1 text-sm" />
-                  <button type="submit" disabled={inviteSending} className="btn-primary px-5 py-2 text-sm whitespace-nowrap disabled:opacity-60">
-                    {inviteSuccess ? '✓ Skapat!' : inviteSending ? 'Skapar...' : 'Skapa konto'}
-                  </button>
-                </form>
-
-                {createdInstructor && (
-                  <div className="mt-5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-bold text-emerald-300">{createdInstructor.reset ? '✓ Nytt lösenord skapat — spara det nu!' : '✓ Kontot skapat — spara lösenordet nu!'}</p>
-                      <button onClick={() => setCreatedInstructor(null)} className="text-emerald-400 hover:text-emerald-300 text-xs">Stäng</button>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-300 w-16 shrink-0">Namn</span>
-                        <span className="font-semibold text-emerald-200">{createdInstructor.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-300 w-16 shrink-0">E-post</span>
-                        <span className="font-semibold text-emerald-200">{createdInstructor.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-300 w-16 shrink-0">Lösenord</span>
-                        <span className="font-mono font-bold text-emerald-200 bg-[#1c1c1f] border border-green-300 px-3 py-1 rounded-lg text-base tracking-wide select-all">{createdInstructor.password}</span>
-                        <button
-                          onClick={() => navigator.clipboard.writeText(createdInstructor.password)}
-                          className="text-xs bg-green-200 hover:bg-green-300 text-emerald-300 font-semibold px-2.5 py-1 rounded-lg transition"
-                        >
-                          Kopiera
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-emerald-400 mt-3">Lösenordet har skickats via e-post till instruktören.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Active instructors */}
-              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
-                <h2 className="font-bold text-white mb-5">Aktiva instruktörer ({instructors.length})</h2>
-                {instructors.length === 0 ? (
-                  <p className="text-sm text-white/40 text-center py-4">Inga instruktörer ännu.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {instrError && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">{instrError}</p>}
-                    {instructors.map((instr) => {
-                      const busy = instrBusy === instr.id;
-                      const upcoming = instr._count?.assignedSessions ?? 0;
-
-                      if (editInstr?.id === instr.id) {
-                        return (
-                          <form
-                            key={instr.id}
-                            onSubmit={async (e) => {
-                              e.preventDefault();
-                              setInstrBusy(instr.id);
-                              setInstrError('');
-                              const res = await fetch(`/api/admin/instructors/${instr.id}`, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name: editInstr.name, email: editInstr.email, phone: editInstr.phone }),
-                              });
-                              const data = await res.json();
-                              setInstrBusy(null);
-                              if (!res.ok) { setInstrError(data.error || 'Kunde inte spara'); return; }
-                              setInstructors((prev) => prev.map((i) => i.id === instr.id ? { ...i, ...data.instructor } : i));
-                              setEditInstr(null);
-                            }}
-                            className="p-3 bg-white/5 rounded-xl border border-swedish-blue/30 space-y-2"
-                          >
-                            <div className="grid sm:grid-cols-3 gap-2">
-                              <input required placeholder="Namn" value={editInstr.name} onChange={(e) => setEditInstr({ ...editInstr, name: e.target.value })} className="input-field text-sm" />
-                              <input required type="email" placeholder="E-post" value={editInstr.email} onChange={(e) => setEditInstr({ ...editInstr, email: e.target.value })} className="input-field text-sm" />
-                              <input type="tel" placeholder="Telefon" value={editInstr.phone} onChange={(e) => setEditInstr({ ...editInstr, phone: e.target.value })} className="input-field text-sm" />
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <button type="button" onClick={() => { setEditInstr(null); setInstrError(''); }} className="px-4 py-2 text-sm border border-white/10 rounded-xl hover:bg-[#1c1c1f]">Avbryt</button>
-                              <button type="submit" disabled={busy} className="btn-primary px-4 py-2 text-sm disabled:opacity-60">{busy ? 'Sparar...' : 'Spara'}</button>
-                            </div>
-                          </form>
-                        );
-                      }
-
-                      return (
-                        <div key={instr.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white/5 rounded-xl">
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white">{instr.name}</p>
-                            <p className="text-xs text-white/50 truncate">{[instr.email, instr.phone].filter(Boolean).join(' · ')}</p>
-                            <p className="text-xs text-white/40">{upcoming > 0 ? `${upcoming} kommande pass` : 'Inga kommande pass'}</p>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 shrink-0">
-                            <button
-                              onClick={() => { setInstrError(''); setEditInstr({ id: instr.id, name: instr.name, email: instr.email, phone: instr.phone ?? '' }); }}
-                              disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-white/10 bg-[#1c1c1f] rounded-lg hover:bg-white/10"
-                            >
-                              <Pencil className="w-3.5 h-3.5" /> Redigera
-                            </button>
-                            <button
-                              onClick={async () => {
-                                if (!confirm(`Skapa ett nytt lösenord för ${instr.name}?\n\nDet gamla slutar fungera och det nya skickas till ${instr.email}.`)) return;
-                                setInstrBusy(instr.id);
-                                setInstrError('');
-                                const res = await fetch(`/api/admin/instructors/${instr.id}`, {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ resetPassword: true }),
-                                });
-                                const data = await res.json();
-                                setInstrBusy(null);
-                                if (!res.ok) { setInstrError(data.error || 'Kunde inte återställa lösenordet'); return; }
-                                setCreatedInstructor({ name: instr.name, email: instr.email, password: data.password, reset: true });
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
-                              disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-white/10 bg-[#1c1c1f] rounded-lg hover:bg-white/10"
-                            >
-                              <KeyRound className="w-3.5 h-3.5" /> Nytt lösenord
-                            </button>
-                            <button
-                              onClick={async () => {
-                                const warn = upcoming > 0 ? `\n\n${instr.name} är tilldelad ${upcoming} kommande pass – de blir utan lärare.` : '';
-                                if (!confirm(`Ta bort instruktören ${instr.name}?${warn}\n\nKontot raderas och kan inte loggas in med längre. Gjorda incheckningar och riskregistret finns kvar.`)) return;
-                                setInstrBusy(instr.id);
-                                setInstrError('');
-                                const res = await fetch(`/api/admin/instructors/${instr.id}`, { method: 'DELETE' });
-                                setInstrBusy(null);
-                                if (!res.ok) { setInstrError((await res.json()).error || 'Kunde inte ta bort'); return; }
-                                setInstructors((prev) => prev.filter((i) => i.id !== instr.id));
-                              }}
-                              disabled={busy}
-                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-red-500/30 text-red-400 bg-[#1c1c1f] rounded-lg hover:bg-red-500/10"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" /> Ta bort
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Invites list */}
-              <div className="bg-[#1c1c1f] rounded-2xl border border-white/5 p-6">
-                <h2 className="font-bold text-white mb-5">Skickade inbjudningar ({instructorInvites.length})</h2>
-                {instructorInvites.length === 0 ? (
-                  <p className="text-sm text-white/40 text-center py-4">Inga inbjudningar ännu.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {instructorInvites.map((inv) => (
-                      <div key={inv.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{inv.email}{inv.name ? ` (${inv.name})` : ''}</p>
-                          <p className="text-xs text-white/40">Går ut: {new Date(inv.expiresAt).toLocaleDateString('sv-SE')}</p>
-                        </div>
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${inv.usedAt ? 'bg-emerald-500/15 text-emerald-300' : 'bg-yellow-500/15 text-yellow-300'}`}>
-                          {inv.usedAt ? 'Använd' : 'Väntar'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
 
         </div>
       </main>
       </div>
-
-      {/* Reset Password Modal */}
-      {resetPwdTarget && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-[#1c1c1f] sheet max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 max-w-sm w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="font-bold text-lg">Återställ lösenord</h3>
-                <p className="text-sm text-white/50">{resetPwdTarget.name}</p>
-              </div>
-              <button onClick={() => setResetPwdTarget(null)} className="text-white/40 hover:text-white/65"><X className="w-5 h-5" /></button>
-            </div>
-            {resetPwdDone ? (
-              <div className="text-center py-6">
-                <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <p className="font-semibold text-white">Lösenord uppdaterat!</p>
-                {resetPwdTarget.type === 'school' && <p className="text-sm text-white/50 mt-1">Nytt lösenord har skickats via e-post.</p>}
-                <button onClick={() => setResetPwdTarget(null)} className="mt-4 btn-primary px-6 py-2 text-sm">Stäng</button>
-              </div>
-            ) : (
-              <>
-                {resetPwdError && <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">{resetPwdError}</div>}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-white/80 mb-1.5">Nytt lösenord</label>
-                  <div className="relative">
-                    <input
-                      type={showResetPwd ? 'text' : 'password'}
-                      className="input-field pr-10"
-                      placeholder="Minst 8 tecken"
-                      value={resetPwdValue}
-                      onChange={(e) => setResetPwdValue(e.target.value)}
-                      minLength={8}
-                    />
-                    <button type="button" onClick={() => setShowResetPwd(!showResetPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/65">
-                      {showResetPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setResetPwdTarget(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm">Avbryt</button>
-                  <button
-                    onClick={handleResetPassword}
-                    disabled={resetPwdSaving || resetPwdValue.length < 8}
-                    className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {resetPwdSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                    {resetPwdSaving ? 'Sparar...' : 'Spara lösenord'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* School Prices Modal */}
-      {pricesModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-          <div className="bg-[#1c1c1f] sheet pb-[env(safe-area-inset-bottom)] sm:pb-0 rounded-t-3xl sm:rounded-2xl shadow-2xl max-w-lg w-full max-h-[92dvh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-white/5 shrink-0">
-              <div>
-                <h3 className="font-bold text-lg text-white">Priser – {pricesModal.name}</h3>
-                <p className="text-sm text-white/50">Lämna tomt för att använda kursens standardpris</p>
-              </div>
-              <button onClick={() => setPricesModal(null)} className="text-white/40 hover:text-white/65">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-3">
-              {courses.length === 0 ? (
-                <p className="text-sm text-white/40 text-center py-8">Inga kurser skapade ännu.</p>
-              ) : (
-                courses.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-white/5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{c.titleSv}</p>
-                      <p className="text-xs text-white/40">Standardpris: {c.price.toLocaleString('sv-SE')} kr</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder={String(c.price)}
-                        value={schoolPriceMap[c.id] ?? ''}
-                        onChange={(e) => setSchoolPriceMap((prev) => ({ ...prev, [c.id]: e.target.value }))}
-                        className="w-28 input-field text-sm py-1.5 text-right"
-                      />
-                      <span className="text-sm text-white/50">kr</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-6 border-t border-white/5 shrink-0 flex gap-3">
-              <button onClick={() => setPricesModal(null)} className="flex-1 border border-white/10 text-white/80 py-2.5 rounded-xl hover:bg-white/5 text-sm font-medium">
-                Stäng
-              </button>
-              <button
-                onClick={handleSavePrices}
-                disabled={pricesSaving}
-                className="flex-1 btn-primary py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {pricesSaving ? (
-                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sparar...</>
-                ) : pricesSaved ? (
-                  <><CheckCircle2 className="w-4 h-4" />Sparat!</>
-                ) : (
-                  <><Save className="w-4 h-4" />Spara priser</>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit Booking Modal */}
       {editBooking && (

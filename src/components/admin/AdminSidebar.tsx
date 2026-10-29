@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import {
   BookOpen, Calendar, Contact, CreditCard, Home, Layers, LogOut, MapPin, Menu, MessageCircle, MonitorPlay,
-  Receipt, School, ShieldCheck, Tag, UserCircle2, UserCog, Users, X, type LucideIcon,
+  Receipt, School, ShieldCheck, Tag, UserCircle2, Users, X, type LucideIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +14,7 @@ import { InstallAppButton } from '@/components/pwa';
 import { isOwner } from '@/lib/owner';
 
 /** Flikar som fortfarande ligger i den äldre admin-sidan (/admin?tab=…). */
-export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'schools' | 'cards' | 'hero' | 'whatsapp' | 'instructors' | 'payments';
+export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'cards' | 'hero' | 'whatsapp' | 'payments';
 
 type Item = { label: string; /** Kort namn i surfplattans ikonmeny */ short?: string; icon: LucideIcon; /** Bara för ägaren (intäkter) */ ownerOnly?: boolean } & ({ href: string } | { tab: OldTab });
 
@@ -37,7 +37,6 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
       { tab: 'payments', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
       { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School },
       { href: '/admin/personal', label: 'Personal', icon: Contact },
-      { tab: 'instructors', label: 'Instruktörer', short: 'Lärare', icon: UserCog },
       { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2 },
     ],
   },

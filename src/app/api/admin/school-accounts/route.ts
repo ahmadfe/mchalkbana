@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
-import { deleteAccount } from '@/lib/personal';
 import { sendSchoolAccountEmail } from '@/lib/email';
 import { generatePassword } from '@/lib/instructors';
 
@@ -13,7 +12,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   }
   const accounts = await prisma.user.findMany({
-    where: { role: 'school' },
+    // Inaktiverade skolor kan inte få nya platser
+    where: { role: 'school', disabled: false },
     select: { id: true, name: true, email: true, createdAt: true },
     orderBy: { createdAt: 'desc' },
   });
@@ -57,15 +57,4 @@ export async function POST(request: Request) {
   await sendSchoolAccountEmail({ schoolName: name, email, password });
 
   return NextResponse.json({ account: user, ...(body.password ? {} : { password }) }, { status: 201 });
-}
-
-export async function DELETE(request: Request) {
-  const authUser = await getAuthUserFromRequest(request);
-  if (!authUser || authUser.role !== 'admin') {
-    return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
-  }
-  const { id } = await request.json();
-  const result = await deleteAccount(authUser, Number(id));
-  if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  return NextResponse.json({ success: true });
 }
