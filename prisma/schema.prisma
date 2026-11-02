@@ -178,6 +178,8 @@ model Booking {
   couponId             Int?
   coupon               Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
   couponDiscount       Int?     // kronor som rabattkoden drog av
+  priceOverride        Int?     // pris satt för hand av admin (går före skolpris och kurspris)
+  comboParts           String   @default("both") // kombokurs: both | risk1 | risk2
 
   @@index([studentId])
   @@index([invoiceId])

@@ -5,13 +5,14 @@ import { AlertTriangle, Camera, CheckCircle2, ScanLine, X, XCircle } from 'lucid
 import clsx from 'clsx';
 import { normalizePersonnummer, personnummerChecksumOk } from '@/lib/pnr';
 import { Button, Checkbox } from './ui';
+import { COMBO_PARTS, COMBO_PARTS_LABEL, type ComboParts } from '@/lib/courseKind';
 
 type IdType = 'korkort' | 'pass' | 'nationellt_id' | 'id_kort' | 'okand';
 interface ScanRow {
   firstName: string; lastName: string; personnummer: string; idType: IdType;
   confidence: 'high' | 'low'; note: string; checksumOk: boolean; existingStudent: string | null; alreadyBooked: boolean;
 }
-interface EditRow extends ScanRow { include: boolean }
+interface EditRow extends ScanRow { include: boolean; comboParts: ComboParts }
 interface Result { name: string; ok: boolean; message: string }
 
 const ID_LABEL: Record<IdType, string> = { korkort: 'Körkort', pass: 'Pass', nationellt_id: 'Nationellt id-kort', id_kort: 'Id-kort', okand: 'Okänd' };
@@ -33,11 +34,13 @@ async function shrink(file: File): Promise<{ mediaType: 'image/jpeg'; data: stri
 const pnrOk = (v: string) => { const n = normalizePersonnummer(v); return !!n && personnummerChecksumOk(n); };
 
 /** "Läs in legitimationer": foton av körkort/pass/id-kort → granska → anmäl (och checka in på kursdagen). */
-export default function IdScan({ kursId, courseStart, instructors, onDone }: {
+export default function IdScan({ kursId, courseStart, instructors, onDone, isKombo = false }: {
   kursId: number;
   courseStart: string;
   instructors: { id: number; name: string }[];
   onDone: () => Promise<void> | void;
+  /** Kombokurs: välj delar (Risk 1 + 2 / bara Risk 1 / bara Risk 2) per elev */
+  isKombo?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [photos, setPhotos] = useState<{ mediaType: 'image/jpeg'; data: string; preview: string }[]>([]);
@@ -77,7 +80,7 @@ export default function IdScan({ kursId, courseStart, instructors, onDone }: {
     setBusy('');
     if (!res.ok) { setError(data.error ?? 'Korten kunde inte läsas'); return; }
     setFreeSeats(data.freeSeats);
-    setRows((data.rows as ScanRow[]).map(r => ({ ...r, include: r.checksumOk && !r.alreadyBooked })));
+    setRows((data.rows as ScanRow[]).map(r => ({ ...r, include: r.checksumOk && !r.alreadyBooked, comboParts: 'both' as ComboParts })));
     // Bilderna behövs inte längre – släpp dem direkt
     setPhotos([]);
   };
@@ -100,7 +103,7 @@ export default function IdScan({ kursId, courseStart, instructors, onDone }: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        rows: selected.map(({ firstName, lastName, personnummer, idType }) => ({ firstName, lastName, personnummer, idType })),
+        rows: selected.map(({ firstName, lastName, personnummer, idType, comboParts }) => ({ firstName, lastName, personnummer, idType, ...(isKombo ? { comboParts } : {}) })),
         checkIn: checkIn && canCheckIn,
         instructorId,
       }),
@@ -181,6 +184,11 @@ export default function IdScan({ kursId, courseStart, instructors, onDone }: {
                             <select value={r.idType} onChange={e => update(i, { idType: e.target.value as IdType })} className="h-11 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white [color-scheme:dark] min-w-0">
                               {(Object.keys(ID_LABEL) as IdType[]).map(t => <option key={t} value={t}>{ID_LABEL[t]}</option>)}
                             </select>
+                            {isKombo && (
+                              <select value={r.comboParts} onChange={e => update(i, { comboParts: e.target.value as ComboParts })} aria-label="Delar" className="col-span-2 sm:col-span-4 h-11 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white [color-scheme:dark] min-w-0">
+                                {COMBO_PARTS.map(c => <option key={c} value={c}>{COMBO_PARTS_LABEL[c]}</option>)}
+                              </select>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 ml-8 text-xs">

@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+import { bookingKindLabel, courseKind } from '@/lib/courseKind';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
@@ -27,7 +28,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     sessionId: b.sessionId,
     startTime: b.session.startTime.toISOString(),
     endTime: b.session.endTime.toISOString(),
-    courseTitle: b.session.course.titleSv,
+    courseTitle: courseKind(b.session.course.type) === 'kombo' && b.comboParts !== 'both' ? `${b.session.course.titleSv} (${bookingKindLabel(b.session.course.type, b.comboParts)})` : b.session.course.titleSv,
     courseType: b.session.course.type,
     filialName: b.session.school.name,
     status: b.status,

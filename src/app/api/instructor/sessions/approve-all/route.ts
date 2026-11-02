@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       school: { select: { name: true, bana: true } },
       bookings: {
         where: { status: { not: 'Canceled' } },
-        select: { personnummer: true, guestName: true, attendance: true, user: { select: { name: true } } },
+        select: { personnummer: true, guestName: true, attendance: true, comboParts: true, user: { select: { name: true } } },
       },
     },
     orderBy: { startTime: 'asc' },

@@ -162,7 +162,8 @@ export async function getDrafts(opts: { schoolUserId?: number; period?: string }
       d = { schoolUserId: school.id, schoolName: school.name, email: school.email, period, lines: [], total: 0, students: 0 };
       drafts.set(key, d);
     }
-    const unitPrice = school.schoolCoursePrices.find(p => p.courseId === b.session.courseId)?.price ?? b.session.course.price;
+    // Pris satt för hand på eleven går före skolans pris
+    const unitPrice = b.priceOverride ?? school.schoolCoursePrices.find(p => p.courseId === b.session.courseId)?.price ?? b.session.course.price;
     let line = d.lines.find(l => l.sessionId === b.session.id && l.unitPrice === unitPrice);
     if (!line) {
       line = {

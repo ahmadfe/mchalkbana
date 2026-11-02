@@ -1,6 +1,6 @@
 import { prisma } from './db';
 import type { JWTPayload } from './auth';
-import { courseKind } from './courseKind';
+import { bookingParts, courseKind, isComboParts } from './courseKind';
 import { encryptPersonnummer, formatPersonnummer, normalizePersonnummer } from './personnummer';
 import { linkBookingToStudent } from './students';
 
@@ -8,6 +8,9 @@ export const ID_TYPES = ['korkort', 'pass', 'nationellt_id', 'id_kort'] as const
 export type IdType = (typeof ID_TYPES)[number];
 
 type Result = { ok: true } | { ok: false; status: number; error: string };
+
+/** Kurstyp i riskregistret för en del av en kombokurs */
+const PART_TYPE = { risk1: 'Risk 1', risk2: 'Risk 2' } as const;
 
 /** Admin får checka in på alla kurser, lärare bara på kurser de är tilldelade. */
 export async function canCheckIn(user: JWTPayload | null, sessionId: number): Promise<boolean> {
@@ -68,7 +71,8 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
   const pnrChanged = pnr !== normalizePersonnummer(booking.personnummer);
 
   const kind = courseKind(booking.session.course.type);
-  const isRisk = kind !== 'other';
+  // Kombokurs: en rad per del eleven gör (Risk 1 och/eller Risk 2)
+  const parts = bookingParts(booking.session.course.type, booking.comboParts);
   let personnummerEnc: string;
   try {
     personnummerEnc = encryptPersonnummer(pnr);
@@ -90,12 +94,12 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
         ...(pnrChanged ? { personnummer: formatPersonnummer(pnr), studentId: null } : {}),
       },
     }),
-    ...(isRisk ? [prisma.riskRegisterEntry.create({
+    ...parts.map(part => prisma.riskRegisterEntry.create({
       data: {
         bookingId,
         studentId: pnrChanged ? null : booking.studentId,
         sessionId: booking.sessionId,
-        courseType: booking.session.course.type,
+        courseType: kind === 'kombo' ? PART_TYPE[part] : booking.session.course.type,
         courseTitle: booking.session.course.titleSv,
         sessionDate: booking.session.startTime,
         studentName: booking.guestName || booking.user?.name || '',
@@ -107,7 +111,7 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
         instructorId: instructor.id,
         instructorName: instructor.name,
       },
-    })] : []),
+    })),
   ]);
 
   // Koppla till elevregistret (nytt personnummer kan betyda en annan elev) och uppdatera milstolparna
@@ -121,8 +125,8 @@ export async function checkIn(bookingId: number, user: JWTPayload, idType: strin
       await prisma.student.update({
         where: { id: student.id },
         data: {
-          ...((kind === 'risk1' || kind === 'kombo') && !student.risk1DoneAt ? { risk1DoneAt: date } : {}),
-          ...((kind === 'risk2' || kind === 'kombo') && !student.risk2DoneAt ? { risk2DoneAt: date } : {}),
+          ...(parts.includes('risk1') && !student.risk1DoneAt ? { risk1DoneAt: date } : {}),
+          ...(parts.includes('risk2') && !student.risk2DoneAt ? { risk2DoneAt: date } : {}),
         },
       });
     }
@@ -207,4 +211,48 @@ export async function setBookingSchool(bookingId: number, user: JWTPayload, scho
 /** Aktiva trafikskolor att välja bland vid incheckningen. */
 export function activeSchools() {
   return prisma.user.findMany({ where: { role: 'school', disabled: false, hidden: false }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
+}
+
+// ── Kombokurs: vilka delar eleven gör ──
+
+/**
+ * Ändrar delarna (Risk 1 + 2 / bara Risk 1 / bara Risk 2) för en bokning på en kombokurs.
+ * Är eleven redan incheckad följer riskregistret och elevens datum för Risk 1/Risk 2 med.
+ */
+export async function setComboParts(bookingId: number, comboParts: string): Promise<Result> {
+  if (!isComboParts(comboParts)) return { ok: false, status: 400, error: 'Ogiltigt val av delar' };
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { session: { include: { course: true } } },
+  });
+  if (!booking) return { ok: false, status: 404, error: 'Bokningen hittades inte' };
+  if (courseKind(booking.session.course.type) !== 'kombo') return { ok: false, status: 400, error: 'Delar kan bara väljas på kombokurser' };
+  if (booking.comboParts === comboParts) return { ok: true };
+
+  await prisma.booking.update({ where: { id: bookingId }, data: { comboParts } });
+  const entries = booking.checkedInAt ? await prisma.riskRegisterEntry.findMany({ where: { bookingId } }) : [];
+  if (entries.length === 0) return { ok: true };
+
+  // Incheckad: lägg till eller ta bort rader i riskregistret så att de matchar delarna
+  const wanted = bookingParts(booking.session.course.type, comboParts);
+  const partOf = (type: string) => courseKind(type) === 'risk1' ? 'risk1' : 'risk2';
+  const template = entries[0];
+  const remove = entries.filter(e => !wanted.includes(partOf(e.courseType)));
+  const add = wanted.filter(p => !entries.some(e => partOf(e.courseType) === p));
+  const { id: _id, createdAt: _createdAt, ...copy } = template;
+  await prisma.$transaction([
+    prisma.riskRegisterEntry.deleteMany({ where: { id: { in: remove.map(e => e.id) } } }),
+    ...add.map(p => prisma.riskRegisterEntry.create({ data: { ...copy, courseType: PART_TYPE[p] } })),
+  ]);
+
+  if (booking.studentId) {
+    const date = booking.session.startTime;
+    const has = (p: 'risk1' | 'risk2') => wanted.includes(p);
+    // Ta bara bort datum som kom från just den här kursen
+    if (!has('risk1')) await prisma.student.updateMany({ where: { id: booking.studentId, risk1DoneAt: date }, data: { risk1DoneAt: null } });
+    if (!has('risk2')) await prisma.student.updateMany({ where: { id: booking.studentId, risk2DoneAt: date }, data: { risk2DoneAt: null } });
+    if (has('risk1')) await prisma.student.updateMany({ where: { id: booking.studentId, risk1DoneAt: null }, data: { risk1DoneAt: date } });
+    if (has('risk2')) await prisma.student.updateMany({ where: { id: booking.studentId, risk2DoneAt: null }, data: { risk2DoneAt: date } });
+  }
+  return { ok: true };
 }

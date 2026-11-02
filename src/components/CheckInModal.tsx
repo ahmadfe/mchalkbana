@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Lock, Mail, Phone, X } from 'lucide-react';
 import clsx from 'clsx';
 import { ageFromPersonnummer, formatPersonnummer, normalizePersonnummer } from '@/lib/pnr';
+import { COMBO_PARTS, COMBO_PARTS_LABEL, type ComboParts } from '@/lib/courseKind';
 
 export interface CheckInPerson {
   bookingId: number;
@@ -32,13 +33,15 @@ export interface SchoolPick {
   locked: string | null;
 }
 
-export default function CheckInModal({ person, onClose, onDone, instructors, school }: {
+export default function CheckInModal({ person, onClose, onDone, instructors, school, comboParts }: {
   person: CheckInPerson;
   onClose: () => void;
   onDone: () => void;
   /** Kursens lärare – skickas från admin. Läraren som checkar in själv behöver inte välja. */
   instructors?: { id: number; name: string }[];
   school?: SchoolPick;
+  /** Kombokurs (admin): vilka delar eleven gör – visas som val */
+  comboParts?: ComboParts;
 }) {
   const original = normalizePersonnummer(person.personnummer);
   const [editing, setEditing] = useState(!original);
@@ -46,6 +49,7 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
   const [idType, setIdType] = useState('');
   const [instructorId, setInstructorId] = useState(instructors?.[0]?.id ?? 0);
   const [schoolId, setSchoolId] = useState(school?.current ? String(school.current) : '');
+  const [parts, setParts] = useState<ComboParts | undefined>(comboParts);
   const noInstructor = !!instructors && instructors.length === 0;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -70,6 +74,7 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
         ...(editing && pnr !== original ? { personnummer: pnrInput } : {}),
         ...(instructors && instructorId ? { instructorId } : {}),
         ...(school && !school.locked ? { schoolUserId: schoolId ? Number(schoolId) : null } : {}),
+        ...(parts ? { comboParts: parts } : {}),
       }),
     });
     setBusy(false);
@@ -148,6 +153,24 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
             </button>
           ))}
         </div>
+
+        {parts && (
+          <div className="mt-5">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60 mb-2">Vilka delar gör eleven?</p>
+            <div className="grid grid-cols-3 gap-2">
+              {COMBO_PARTS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setParts(p)}
+                  className={clsx('h-12 rounded-2xl text-sm font-bold border transition', parts === p ? 'border-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-400' : 'border-white/10 hover:border-white/30')}
+                >
+                  {COMBO_PARTS_LABEL[p]}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-white/50 mt-1.5">Styr vilka rapportfiler (Risk 1/Risk 2) eleven kommer med i.</p>
+          </div>
+        )}
 
         {school && (
           <div className="mt-5">

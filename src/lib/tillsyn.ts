@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { prisma } from './db';
-import { courseKind, COURSE_KIND_LABEL } from './courseKind';
+import { bookingKindLabel, courseKind, COURSE_KIND_LABEL } from './courseKind';
 import { decryptPersonnummer, formatPersonnummer, normalizePersonnummer } from './personnummer';
 
 /** Digital incheckning infördes då – äldre kurser saknar incheckning och räknas inte som brist. */
@@ -165,7 +165,7 @@ export async function elevregister(period: Period): Promise<Table> {
       dateSv(new Date(Math.min(s ? s.createdAt.getTime() : Infinity, ...list.map(x => x.bookingTime.getTime())))),
       s?.risk1DoneAt ? dateSv(s.risk1DoneAt) : '',
       s?.risk2DoneAt ? dateSv(s.risk2DoneAt) : '',
-      list.map(x => `${dateSv(x.session.startTime)} ${COURSE_KIND_LABEL[courseKind(x.session.course.type)]} (${ATTENDANCE_LABEL[x.attendance] ?? x.attendance}${x.idType ? `, ${ID_LABEL[x.idType]?.toLowerCase()}` : ''})`).join('; '),
+      list.map(x => `${dateSv(x.session.startTime)} ${bookingKindLabel(x.session.course.type, x.comboParts)} (${ATTENDANCE_LABEL[x.attendance] ?? x.attendance}${x.idType ? `, ${ID_LABEL[x.idType]?.toLowerCase()}` : ''})`).join('; '),
       b.session.school.name,
     ];
   }).sort((a, b) => a[0].localeCompare(b[0], 'sv'));

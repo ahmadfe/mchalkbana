@@ -1,5 +1,5 @@
 // Rapportfil till Transportstyrelsen för riskutbildning. Ren funktion – används i webbläsaren.
-import { courseKind } from './courseKind';
+import { bookingParts, courseKind } from './courseKind';
 import { normalizePersonnummer } from './pnr';
 
 export type Del = 'Teori' | 'Praktik';
@@ -7,6 +7,9 @@ export type Del = 'Teori' | 'Praktik';
 export interface ReportElev { personnummer: string | null; name: string }
 
 /** Risk 1 rapporteras som Teori, Risk 2 som Praktik, och Kombo som båda (två filer). */
+export const DEL_PART: Record<Del, 'risk1' | 'risk2'> = { Teori: 'risk1', Praktik: 'risk2' };
+export const DEL_LABEL: Record<Del, string> = { Teori: 'Risk 1 (Teori)', Praktik: 'Risk 2 (Praktik)' };
+
 export function reportParts(courseType: string): Del[] {
   const kind = courseKind(courseType);
   if (kind === 'kombo') return ['Teori', 'Praktik'];
@@ -46,17 +49,22 @@ export interface ReportSession {
   startTime: Date | string;
   course: { type: string; behorighet: string };
   school: { bana: string; name: string };
-  bookings: { personnummer: string | null; guestName: string | null; attendance?: string; user?: { name: string } | null }[];
+  bookings: { personnummer: string | null; guestName: string | null; attendance?: string; comboParts?: string | null; user?: { name: string } | null }[];
 }
 
-/** En eller två rapportfiler (Kombo = teori + praktik) för ett kurstillfälle. Uteblivna och sena avanmälningar tas inte med. */
+/** Elever som ska med i en dels rapport: inte uteblivna/sena avanmälningar, och på kombokurser bara de som gör delen. */
+export function reportBookings<T extends { attendance?: string; comboParts?: string | null }>(courseType: string, del: Del, bookings: T[]): T[] {
+  return bookings.filter(b => b.attendance !== 'no_show' && b.attendance !== 'late_cancel' && bookingParts(courseType, b.comboParts).includes(DEL_PART[del]));
+}
+
+/** En eller två rapportfiler (Kombo = teori + praktik) för ett kurstillfälle. */
 export function sessionReportFiles(s: ReportSession): { filename: string; xml: string }[] {
   const utbDatum = new Date(s.startTime).toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
-  const elever = s.bookings
-    .filter(b => b.attendance !== 'no_show' && b.attendance !== 'late_cancel')
-    .map(b => ({ personnummer: b.personnummer, name: b.guestName || b.user?.name || '' }));
-  return reportParts(s.course.type).map(del => ({
-    filename: `rapport-${utbDatum}-${del.toLowerCase()}-kurs${s.id}.xml`,
-    xml: buildTsReportXml({ bana: s.school.bana, behorighet: s.course.behorighet, del, utbDatum, elever }),
-  }));
+  return reportParts(s.course.type).map(del => {
+    const elever = reportBookings(s.course.type, del, s.bookings).map(b => ({ personnummer: b.personnummer, name: b.guestName || b.user?.name || '' }));
+    return {
+      filename: `rapport-${utbDatum}-${del.toLowerCase()}-kurs${s.id}.xml`,
+      xml: buildTsReportXml({ bana: s.school.bana, behorighet: s.course.behorighet, del, utbDatum, elever }),
+    };
+  });
 }

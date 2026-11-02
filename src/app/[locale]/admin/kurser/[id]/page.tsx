@@ -9,7 +9,8 @@ import { KurserSideList } from '@/components/admin/SideLists';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
 import IdScan from '@/components/admin/IdScan';
-import { buildTsReportXml, reportParts } from '@/lib/tsReport';
+import { DEL_LABEL, buildTsReportXml, reportBookings, reportParts, type Del } from '@/lib/tsReport';
+import { COMBO_PARTS, COMBO_PARTS_LABEL, courseKind, type ComboParts } from '@/lib/courseKind';
 import { normalizePersonnummer } from '@/lib/pnr';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
 import { ReservationFields, newReservation, reservationPayload, useReservationData, type ReservationDraft } from '@/components/admin/Reservations';
@@ -50,6 +51,9 @@ interface Participant {
   schoolLocked: string | null;
   note: string | null;
   price: number;
+  priceOverride: number | null;
+  invoiced: boolean;
+  comboParts: ComboParts;
   payment: { amount: number; provider: string; createdAt: string } | null;
   paid: boolean;
   attendance: string;
@@ -134,6 +138,7 @@ export default function KursPage({ params }: { params: { id: string } }) {
   const shown = filter === 'unpaid' ? unpaid : active;
   const price = kurs.discountPrice ?? kurs.coursePrice;
   const isPast = new Date(kurs.endTime) < new Date();
+  const isKombo = courseKind(kurs.courseType) === 'kombo';
 
   const dateLine = (() => {
     const d = new Date(kurs.startTime).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...tz });
@@ -147,9 +152,9 @@ export default function KursPage({ params }: { params: { id: string } }) {
   const exportCsv = () => {
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const rows = [
-      ['Namn', 'Personnummer', 'Telefon', 'E-post', 'Bokad av', 'Pris', 'Betalning', 'Närvaro', 'Incheckad'],
+      ['Namn', 'Personnummer', 'Telefon', 'E-post', 'Bokad av', ...(isKombo ? ['Delar'] : []), 'Pris', 'Betalning', 'Närvaro', 'Incheckad'],
       ...active.map(p => [
-        p.name, p.personnummer, p.phone, p.email, p.schoolName ?? 'Elev', String(p.price),
+        p.name, p.personnummer, p.phone, p.email, p.schoolName ?? 'Elev', ...(isKombo ? [COMBO_PARTS_LABEL[p.comboParts]] : []), String(p.price),
         p.schoolName ? 'Faktureras skolan' : p.paid ? `Betald${p.payment ? ` (${PROVIDER_LABEL[p.payment.provider] ?? p.payment.provider})` : ''}` : 'Inte betald',
         ATTENDANCE_OPTIONS.find(a => a.value === p.attendance)?.label ?? p.attendance,
         p.checkedInAt ? `${formatDate(p.checkedInAt)} ${hm(p.checkedInAt)}` : '',
@@ -159,22 +164,18 @@ export default function KursPage({ params }: { params: { id: string } }) {
     download(`deltagare-${date}.csv`, '﻿' + rows.map(r => r.map(esc).join(';')).join('\n'), 'text/csv;charset=utf-8');
   };
 
-  const exportXml = () => {
+  const exportXml = (del: Del) => {
     if (!kurs.filial.bana) {
       alert(`Banans namn saknas för filialen ${kurs.filial.name}. Fyll i det under Filialer → Redigera först.`);
       return;
     }
     const date = new Date(kurs.startTime).toLocaleDateString('sv-SE', tz);
-    const elever = active
-      .filter(p => p.attendance !== 'no_show' && p.attendance !== 'late_cancel')
-      .map(p => ({ personnummer: p.personnummer, name: p.name }));
+    const elever = reportBookings(kurs.courseType, del, active).map(p => ({ personnummer: p.personnummer, name: p.name }));
+    if (elever.length === 0) { alert(`Ingen elev gör ${DEL_LABEL[del]} på den här kursen.`); return; }
     const skipped = elever.filter(e => !normalizePersonnummer(e.personnummer));
     if (skipped.length && !confirm(`${skipped.map(e => e.name).join(', ')} saknar giltigt personnummer och tas inte med i rapporten. Fortsätt?`)) return;
-    // Kombo ger två filer: en för teori och en för praktik
-    for (const del of reportParts(kurs.courseType)) {
-      const xml = buildTsReportXml({ bana: kurs.filial.bana, behorighet: kurs.behorighet, del, utbDatum: date, elever });
-      download(`rapport-${date}-${del.toLowerCase()}-kurs${kurs.id}.xml`, xml, 'application/xml;charset=utf-8');
-    }
+    const xml = buildTsReportXml({ bana: kurs.filial.bana, behorighet: kurs.behorighet, del, utbDatum: date, elever });
+    download(`rapport-${date}-${del.toLowerCase()}-kurs${kurs.id}.xml`, xml, 'application/xml;charset=utf-8');
   };
 
   return (
@@ -233,14 +234,14 @@ export default function KursPage({ params }: { params: { id: string } }) {
                 </span>
               </div>
               <div className="divide-y divide-white/5 -mx-5 sm:-mx-6">
-                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} instructors={kurs.instructors} schools={schools} />)}
+                {shown.map(p => <ParticipantRow key={p.bookingId} p={p} locale={locale} onChange={load} behorighet={kurs.behorighet} canCheckIn={kurs.status !== 'canceled'} instructors={kurs.instructors} schools={schools} isKombo={isKombo} />)}
                 {shown.length === 0 && <p className="px-6 py-4 text-sm text-white/50">Alla har betalat.</p>}
               </div>
             </>
           )}
 
-          {kurs.status !== 'canceled' && <AddStudent kursId={kurs.id} onAdded={load} locale={locale} />}
-          {kurs.status !== 'canceled' && <IdScan kursId={kurs.id} courseStart={kurs.startTime} instructors={kurs.instructors} onDone={load} />}
+          {kurs.status !== 'canceled' && <AddStudent kursId={kurs.id} onAdded={load} locale={locale} isKombo={isKombo} />}
+          {kurs.status !== 'canceled' && <IdScan kursId={kurs.id} courseStart={kurs.startTime} instructors={kurs.instructors} onDone={load} isKombo={isKombo} />}
 
           {canceled.length > 0 && (
             <details className="mt-5 text-sm">
@@ -279,11 +280,18 @@ export default function KursPage({ params }: { params: { id: string } }) {
               <div className="mt-5 pt-5 border-t border-white/5">
                 <p className="text-sm font-semibold mb-1">Rapportering till Transportstyrelsen</p>
                 <p className="text-sm text-white/50 mb-3">
-                  Ladda ner XML-filen med deltagarnas personnummer och skicka in den. Markera sedan kursen som rapporterad.
-                  Elever som uteblev eller avanmälde sig sent tas inte med.
+                  {isKombo
+                    ? 'Ladda ner en fil för Risk 1 (teori) och en för Risk 2 (praktik) – bara elever som gör delen kommer med. '
+                    : 'Ladda ner XML-filen med deltagarnas personnummer och skicka in den. '}
+                  Markera sedan kursen som rapporterad. Elever som uteblev eller avanmälde sig sent tas inte med.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={exportXml} disabled={active.length === 0}>Ladda ner XML</Button>
+                  {/* Kombo: en knapp per del – Risk 1 (teori) och Risk 2 (praktik) rapporteras i var sin fil */}
+                  {reportParts(kurs.courseType).map(del => (
+                    <Button key={del} onClick={() => exportXml(del)} disabled={active.length === 0}>
+                      {isKombo ? `Ladda ner ${DEL_LABEL[del]} · ${reportBookings(kurs.courseType, del, active).length}` : 'Ladda ner XML'}
+                    </Button>
+                  ))}
                   {kurs.reportedAt
                     ? <Button onClick={() => patchKurs({ reported: false })} disabled={busy}>Ångra rapporterad</Button>
                     : <Button variant="primary" onClick={() => patchKurs({ reported: true })} disabled={busy || active.length === 0}>Markera som rapporterad</Button>}
@@ -336,8 +344,9 @@ const ATTENDANCE_OPTIONS = [
   { value: 'late_cancel', label: 'Sen avanmälan' },
 ];
 
-function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructors, schools }: {
+function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructors, schools, isKombo }: {
   schools: { id: number; name: string }[];
+  isKombo: boolean;
   p: Participant;
   locale: string;
   onChange: () => Promise<void>;
@@ -350,6 +359,10 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   const [amount, setAmount] = useState(String(p.price));
   const [provider, setProvider] = useState('cash');
   const [busy, setBusy] = useState(false);
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceInput, setPriceInput] = useState(String(p.price));
+  // Priset går inte att ändra när eleven har betalat eller finns på en faktura
+  const priceLocked = !!p.payment || p.invoiced;
 
   const call = async (url: string, method: string, body: unknown) => {
     setBusy(true);
@@ -357,6 +370,11 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
     if (!res.ok) alert((await res.json()).error ?? 'Något gick fel');
     await onChange();
     setBusy(false);
+  };
+
+  const savePrice = async (value: number | null) => {
+    await call(`/api/admin/deltagare/${p.bookingId}`, 'PATCH', { price: value });
+    setEditingPrice(false);
   };
 
   const pay = async () => {
@@ -393,7 +411,30 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
         ) : (
           <><Badge tone="amber">Inte betald</Badge><span className="text-white/60">{kr(p.price)} – eleven har inte betalat än.</span></>
         )}
+        {isKombo && <Badge tone={p.comboParts === 'both' ? 'neutral' : 'amber'}>{COMBO_PARTS_LABEL[p.comboParts]}</Badge>}
+        {p.priceOverride != null && !p.payment && <span className="text-xs text-white/40">eget pris</span>}
+        {!priceLocked && !editingPrice && (
+          <button onClick={() => { setPriceInput(String(p.price)); setEditingPrice(true); }} className="text-xs text-white/50 hover:text-white underline">Ändra pris</button>
+        )}
       </div>
+
+      {editingPrice && (
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={priceInput}
+            onChange={e => setPriceInput(e.target.value)}
+            aria-label="Pris för eleven (kr inkl. moms)"
+            className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
+          />
+          <span className="text-sm text-white/50">kr inkl. moms</span>
+          <Button variant="primary" className="!h-10" disabled={busy || priceInput === '' || !Number.isInteger(Number(priceInput)) || Number(priceInput) < 0} onClick={() => savePrice(Number(priceInput))}>Spara</Button>
+          {p.priceOverride != null && <Button className="!h-10" disabled={busy} onClick={() => savePrice(null)}>Ordinarie pris</Button>}
+          <Button className="!h-10" onClick={() => setEditingPrice(false)}>Avbryt</Button>
+        </div>
+      )}
 
       {!p.paid && !p.schoolName && (
         paying ? (
@@ -444,6 +485,17 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
         >
           {ATTENDANCE_OPTIONS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
         </Select>
+        {isKombo && (
+          <Select
+            value={p.comboParts}
+            disabled={busy}
+            aria-label="Delar"
+            onChange={e => call(`/api/admin/deltagare/${p.bookingId}`, 'PATCH', { comboParts: e.target.value })}
+            className="!w-40 !h-10"
+          >
+            {COMBO_PARTS.map(c => <option key={c} value={c}>{COMBO_PARTS_LABEL[c]}</option>)}
+          </Select>
+        )}
         {p.result === 'passed' && <Badge tone="green">Godkänd av lärare</Badge>}
       </div>
 
@@ -454,6 +506,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           onDone={async () => { setCheckingIn(false); await onChange(); }}
           instructors={instructors}
           school={{ schools, current: p.schoolUserId, currentName: p.schoolName, locked: p.schoolLocked }}
+          comboParts={isKombo ? p.comboParts : undefined}
         />
       )}
     </div>
@@ -462,7 +515,8 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
 
 interface StudentHit { id: number; name: string; personnummer: string; phone: string; email: string }
 
-function AddStudent({ kursId, onAdded }: { kursId: number; onAdded: () => Promise<void>; locale: string }) {
+function AddStudent({ kursId, onAdded, isKombo }: { kursId: number; onAdded: () => Promise<void>; locale: string; isKombo: boolean }) {
+  const [parts, setParts] = useState<ComboParts>('both');
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<StudentHit[]>([]);
   const [searched, setSearched] = useState(false);
@@ -486,12 +540,12 @@ function AddStudent({ kursId, onAdded }: { kursId: number; onAdded: () => Promis
     return () => clearTimeout(t);
   }, [q, picked, creating]);
 
-  const reset = () => { setPicked(null); setCreating(null); setQ(''); setHits([]); };
+  const reset = () => { setPicked(null); setCreating(null); setQ(''); setHits([]); setParts('both'); };
 
   const enroll = async (studentId: number) => {
     const res = await fetch(`/api/admin/kurser/${kursId}/deltagare`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId, sendConfirmation }),
+      body: JSON.stringify({ studentId, sendConfirmation, ...(isKombo ? { comboParts: parts } : {}) }),
     });
     if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return false; }
     return true;
@@ -590,7 +644,16 @@ function AddStudent({ kursId, onAdded }: { kursId: number; onAdded: () => Promis
       )}
 
       {(picked || creating) && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-3">
+          {isKombo && (
+            <div className="flex p-1 rounded-xl bg-[#26262a] sm:max-w-md" role="radiogroup" aria-label="Delar">
+              {COMBO_PARTS.map(c => (
+                <button key={c} role="radio" aria-checked={parts === c} onClick={() => setParts(c)} className={clsx('flex-1 h-9 rounded-lg text-sm font-semibold', parts === c ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white')}>
+                  {COMBO_PARTS_LABEL[c]}
+                </button>
+              ))}
+            </div>
+          )}
           <Checkbox checked={sendConfirmation} onChange={setSendConfirmation}>Skicka bokningsbekräftelse via e-post</Checkbox>
         </div>
       )}

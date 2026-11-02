@@ -39,6 +39,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     email: b.guestEmail || b.user?.email || '–',
     bookedByRole: b.bookedByRole,
     attendance: b.attendance,
+    comboParts: b.comboParts,
     bookedBySchool: b.bookedByRole === 'school' ? (b.bookedBySchoolUser?.name || 'Skola') : null,
   }));
 

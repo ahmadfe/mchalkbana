@@ -112,6 +112,7 @@ interface StudentRecord {
   bookedByRole: string;
   bookedBySchool: string | null;
   attendance?: string;
+  comboParts?: string;
 }
 
 interface SessionStudentsData {
@@ -986,6 +987,7 @@ export default function AdminPage() {
         personnummer: s.personnummer === '–' ? null : s.personnummer,
         guestName: s.name,
         attendance: s.attendance,
+        comboParts: s.comboParts,
       })),
     });
     for (const f of files) {

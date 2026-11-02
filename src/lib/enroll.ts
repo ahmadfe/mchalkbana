@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import type { ComboParts } from './courseKind';
 import { prisma } from './db';
 import { courseEmailInfo, recalcSeats } from './kurser';
 import { decryptPersonnummer, formatPersonnummer } from './personnummer';
@@ -48,7 +49,7 @@ export async function createOrFindStudent(body: Record<string, unknown>): Promis
 export async function enrollStudent(
   sessionId: number,
   studentId: number,
-  opts: { sendConfirmation: boolean; bookedByRole: 'admin' | 'instructor'; seats: 'public' | 'physical' },
+  opts: { sendConfirmation: boolean; bookedByRole: 'admin' | 'instructor'; seats: 'public' | 'physical'; comboParts?: ComboParts },
 ): Promise<{ error: string; status: number } | { bookingId: number }> {
   const [session, student] = await Promise.all([
     prisma.session.findUnique({ where: { id: sessionId }, include: { course: true, school: true } }),
@@ -91,6 +92,7 @@ export async function enrollStudent(
       guestEmail: student.email || null,
       status: 'Confirmed',
       bookedByRole: opts.bookedByRole,
+      ...(opts.comboParts ? { comboParts: opts.comboParts } : {}),
     },
   });
   await recalcSeats(sessionId);

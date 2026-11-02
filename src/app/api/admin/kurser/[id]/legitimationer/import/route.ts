@@ -7,8 +7,9 @@ import { createOrFindStudent, enrollStudent } from '@/lib/enroll';
 import { checkIn, ID_TYPES } from '@/lib/checkin';
 import { normalizePersonnummer, personnummerChecksumOk } from '@/lib/pnr';
 import { stockholmDay } from '@/lib/kurser';
+import { isComboParts } from '@/lib/courseKind';
 
-interface Row { firstName: string; lastName: string; personnummer: string; idType: string }
+interface Row { firstName: string; lastName: string; personnummer: string; idType: string; comboParts?: string }
 
 /**
  * Sparar de granskade raderna: elev i registret (ny eller befintlig), anmälan till kursen och –
@@ -36,7 +37,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const student = await createOrFindStudent({ firstName: r.firstName, lastName: r.lastName, personnummer: pnr });
     if ('error' in student) { results.push({ name, ok: false, message: student.error }); continue; }
-    const booking = await enrollStudent(sessionId, student.studentId, { sendConfirmation: false, bookedByRole: 'admin', seats: 'physical' });
+    const booking = await enrollStudent(sessionId, student.studentId, { sendConfirmation: false, bookedByRole: 'admin', seats: 'physical', comboParts: isComboParts(r.comboParts) ? r.comboParts : undefined });
     if ('error' in booking) { results.push({ name, ok: false, message: booking.error }); continue; }
 
     if (doCheckIn && isCourseDay && (ID_TYPES as readonly string[]).includes(r.idType)) {
