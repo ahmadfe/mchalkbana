@@ -10,6 +10,9 @@ import type { Session } from '@/lib/types';
 import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin, Tag } from 'lucide-react';
 import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
+import KlarnaCheckout, { type KlarnaCheckoutHandle } from '@/components/KlarnaCheckout';
+import { KlarnaAfterPurchase, KlarnaBadge } from '@/components/Klarna';
+import KlarnaMessage from '@/components/KlarnaMessage';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
@@ -42,6 +45,15 @@ function CheckoutContent() {
   const [coupon, setCoupon] = useState<{ code: string; label: string; price: number; normalPrice: number; discount: number } | null>(null);
   const [couponError, setCouponError] = useState('');
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  // Betalsätt: Swish eller Klarna (Klarna bara om nyckeln finns)
+  // Testnycklar (klarna_test_client_…) visas aldrig för kunder på den skarpa webbplatsen
+  const klarnaClient = process.env.NEXT_PUBLIC_KLARNA_CLIENT_ID ?? '';
+  const [liveSite, setLiveSite] = useState(true);
+  useEffect(() => { setLiveSite(/(^|\.)uppsalahalkbana\.se$/.test(window.location.hostname)); }, []);
+  const klarnaEnabled = klarnaClient.startsWith('klarna_live_client_') || (!!klarnaClient && !liveSite && process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production');
+  const [method, setMethod] = useState<'swish' | 'klarna'>('swish');
+  const [paidWith, setPaidWith] = useState<'swish' | 'klarna' | 'free'>('swish');
+  const klarnaRef = useRef<KlarnaCheckoutHandle>(null);
 
   useEffect(() => {
     fetch(`/api/sessions/${sessionId}`)
@@ -114,7 +126,7 @@ function CheckoutContent() {
     else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, '')))
       errs.personnummer = 'Format: YYYYMMDD-XXXX';
     if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
-    if (free) { /* inget att betala – Swish behövs inte */ }
+    if (free || method === 'klarna') { /* Swish-numret behövs inte */ }
     else if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
     else if (!/^(\+?46|0)[0-9\s\-]{7,12}$/.test(guest.swishPhone.trim()))
       errs.swishPhone = 'Ange ett giltigt mobilnummer';
@@ -150,6 +162,36 @@ function CheckoutContent() {
       value: effectivePrice,
       currency: 'SEK',
     });
+
+    if (method === 'klarna' && !free) {
+      const auth = await klarnaRef.current?.authorize({ name: guest.name, email: guest.email, phone: guest.phone || undefined });
+      if (!auth || 'error' in auth) {
+        setError(auth?.error ?? 'Klarna är inte redo än');
+        setSubmitting(false);
+        return;
+      }
+      const res = await fetch('/api/klarna/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          couponCode: coupon?.code ?? null,
+          authorizationToken: auth.token,
+          guestName: guest.name,
+          personnummer: guest.personnummer,
+          guestPhone: guest.phone || null,
+          guestEmail: guest.email,
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      setSubmitting(false);
+      if (!res.ok) { setError(d.error ?? 'Klarna kunde inte slutföra köpet'); return; }
+      setBookingId(d.bookingId);
+      setPaidWith('klarna');
+      fbq('track', 'Purchase', { content_name: session?.course?.titleSv ?? 'Riskutbildning', value: effectivePrice, currency: 'SEK' });
+      setStep('success');
+      return;
+    }
 
     // 1. Create booking
     const bookRes = await fetch('/api/bookings', {
@@ -191,6 +233,7 @@ function CheckoutContent() {
     setSubmitting(false);
     // 100 %-rabatt: bokningen är redan bekräftad
     if (payData.free) {
+      setPaidWith('free');
       fbq('track', 'Purchase', { content_name: session?.course?.titleSv ?? 'Riskutbildning', value: 0, currency: 'SEK' });
       setStep('success');
       return;
@@ -315,12 +358,13 @@ function CheckoutContent() {
                   </div>
                 )}
                 <div className="flex justify-between border-t-2 border-swedish-blue pt-2 mt-2">
-                  <span className="font-semibold">Totalt betalt:</span>
+                  <span className="font-semibold">{paidWith === 'klarna' ? 'Totalt (via Klarna):' : 'Totalt betalt:'}</span>
                   <span className="font-bold text-swedish-blue text-base">{effectivePrice.toLocaleString('sv-SE')} kr</span>
                 </div>
               </div>
             </div>
 
+            {paidWith === 'klarna' && <div className="mb-6"><KlarnaAfterPurchase /></div>}
             <Link href={`/${locale}/courses`} className="btn-primary inline-block px-8 py-3">
               Tillbaka till kurser
             </Link>
@@ -391,6 +435,7 @@ function CheckoutContent() {
                 <span className="font-bold text-lg text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
               </span>
             </div>
+            {!free && <KlarnaMessage amount={effectivePrice} className="mt-2" />}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -505,8 +550,41 @@ function CheckoutContent() {
                 )}
               </div>
 
+              {/* Betalsätt */}
+              {!free && klarnaEnabled && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Betalsätt">
+                  {(['swish', 'klarna'] as const).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      role="radio"
+                      aria-checked={method === m}
+                      onClick={() => { setMethod(m); setError(''); }}
+                      className={clsx('h-14 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold transition', method === m ? 'border-gray-900 bg-gray-50' : 'border-transparent hover:bg-gray-50')}
+                    >
+                      {m === 'swish'
+                        ? <><span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C] flex items-center justify-center"><Smartphone className="w-4 h-4 text-white" /></span>Swish</>
+                        : <><KlarnaBadge /><span className="sr-only">Klarna</span></>}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!free && method === 'klarna' && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <KlarnaBadge />
+                    <div>
+                      <h2 className="font-semibold text-gray-900">Betala med Klarna</h2>
+                      <p className="text-xs text-gray-500">Beloppet dras när kursen är genomförd</p>
+                    </div>
+                  </div>
+                  <KlarnaCheckout ref={klarnaRef} sessionId={sessionId} couponCode={coupon?.code ?? null} />
+                </div>
+              )}
+
               {/* Swish */}
-              {!free && (
+              {!free && method === 'swish' && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C] flex items-center justify-center">
@@ -544,7 +622,10 @@ function CheckoutContent() {
 
               <div className="flex items-center gap-3 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
                 <Lock className="w-4 h-4 shrink-0" />
-                <p>Betalningen sker säkert via Swish. Vi lagrar aldrig bankuppgifter.</p>
+                <p>
+                  Betalningen sker säkert via {method === 'klarna' ? 'Klarna' : 'Swish'}. Vi lagrar aldrig bankuppgifter.
+                  Avbokning är kostnadsfri senast 48 timmar före kursstart – se våra <a href={`/${locale}/bokningsvillkor`} target="_blank" className="underline">bokningsvillkor</a>.
+                </p>
               </div>
 
               {/* Mobil: betalknappen ligger fast längst ner */}
@@ -552,16 +633,21 @@ function CheckoutContent() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-swedish-yellow text-gray-900 font-bold text-lg py-4 rounded-2xl lg:rounded-xl hover:bg-yellow-300 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                className={clsx(
+                  'w-full font-bold text-lg py-4 rounded-2xl lg:rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60',
+                  method === 'klarna' && !free ? 'bg-[#0B051D] text-white hover:bg-black' : 'bg-swedish-yellow text-gray-900 hover:bg-yellow-300',
+                )}
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : method === 'klarna' && !free ? (
+                  <KlarnaBadge small />
                 ) : free ? (
                   <CheckCircle2 className="w-5 h-5" />
                 ) : (
                   <Smartphone className="w-5 h-5" />
                 )}
-                {submitting ? 'Skickar...' : free ? 'Bekräfta bokningen (0 kr)' : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
+                {submitting ? 'Skickar...' : free ? 'Bekräfta bokningen (0 kr)' : method === 'klarna' ? `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Klarna` : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
               </button>
               </div>
             </form>
@@ -624,12 +710,13 @@ function CheckoutContent() {
                     <span>Totalt:</span>
                     <span className="text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
                   </div>
+                  {!free && <KlarnaMessage amount={effectivePrice} className="mt-3" />}
                 </div>
 
                 <div className="mt-5 p-3 bg-gray-50 rounded-xl text-center">
                   <p className="text-xs text-gray-400">Säker betalning via</p>
-                  <p className="font-bold text-gray-700 text-sm">Swish</p>
-                  <p className="text-xs text-gray-400 mt-1">Sveriges säkraste betaltjänst</p>
+                  <p className="font-bold text-gray-700 text-sm">{klarnaEnabled ? 'Swish eller Klarna' : 'Swish'}</p>
+                  <p className="text-xs text-gray-400 mt-1">{klarnaEnabled ? 'Betala direkt eller senare' : 'Sveriges säkraste betaltjänst'}</p>
                 </div>
               </div>
             </div>

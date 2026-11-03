@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { Clock, MapPin, Users, Calendar, CheckCircle2, Lock, ArrowLeft } from 'lucide-react';
 import clsx from 'clsx';
 
-const LOCK_HOURS = 74;
+const LOCK_HOURS = 48; // samma gräns som fri avbokning (bokningsvillkoren)
 
 interface SessionInfo {
   id: number;

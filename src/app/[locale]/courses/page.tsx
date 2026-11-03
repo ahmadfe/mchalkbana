@@ -9,6 +9,7 @@ import { MapPin, Clock, Users, SlidersHorizontal, Tag } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
+import KlarnaMessage from '@/components/KlarnaMessage';
 
 function dayLabel(key: string) {
   return new Date(key + 'T12:00:00').toLocaleDateString('sv-SE', {
@@ -222,6 +223,13 @@ export default function CoursesPage() {
             <p className="text-brand-100 text-sm">
               {filtered.length} {filtered.length === 1 ? 'kurstillfälle' : 'kurstillfällen'}
             </p>
+          )}
+          {filtered.length > 0 && (
+            <KlarnaMessage
+              amount={Math.min(...filtered.map(s => s.discountPrice ?? s.course?.price ?? 0).filter(p => p > 0))}
+              theme="dark"
+              className="mt-3"
+            />
           )}
         </div>
       </section>

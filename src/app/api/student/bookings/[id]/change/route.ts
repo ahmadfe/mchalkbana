@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
-const LOCK_HOURS = 74;
+const LOCK_HOURS = 48; // samma gräns som fri avbokning (bokningsvillkoren)
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);

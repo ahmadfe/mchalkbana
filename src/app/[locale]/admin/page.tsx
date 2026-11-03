@@ -1712,7 +1712,7 @@ export default function AdminPage() {
                                   <div className="flex items-center justify-between gap-2">
                                     <div>
                                       <p className="text-xs font-semibold text-white/90">{payment.amount.toLocaleString('sv-SE')} kr</p>
-                                      <p className="text-xs text-white/40">{payment.provider} · {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}</p>
+                                      <p className="text-xs text-white/40">{payment.provider} · {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status === 'Authorized' ? 'Reserverad (Klarna)' : payment.status === 'Canceled' ? 'Släppt' : payment.status}</p>
                                     </div>
                                     {canRefundBooking && (
                                       <button
@@ -1994,7 +1994,7 @@ export default function AdminPage() {
                                           payment.status === 'Succeeded' ? 'text-emerald-400' :
                                           payment.status === 'Refunded' ? 'text-orange-500' : 'text-white/40'
                                         )}>
-                                          {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status}
+                                          {payment.status === 'Succeeded' ? 'Betald' : payment.status === 'Refunded' ? 'Återbetald' : payment.status === 'Authorized' ? 'Reserverad (Klarna)' : payment.status === 'Canceled' ? 'Släppt' : payment.status}
                                         </span>
                                       </div>
                                       {payment.status === 'Succeeded' && (
@@ -2207,7 +2207,7 @@ export default function AdminPage() {
                                 p.status === 'Refunded' ? 'bg-orange-500/15 text-orange-300' :
                                 'bg-white/10 text-white/50'
                               )}>
-                                {p.status === 'Succeeded' ? 'Betald' : p.status === 'Refunded' ? 'Återbetald' : p.status}
+                                {p.status === 'Succeeded' ? 'Betald' : p.status === 'Refunded' ? 'Återbetald' : p.status === 'Authorized' ? 'Reserverad (Klarna)' : p.status === 'Canceled' ? 'Släppt' : p.status}
                               </span>
                             </div>
 

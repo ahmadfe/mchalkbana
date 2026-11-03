@@ -54,7 +54,7 @@ interface Participant {
   priceOverride: number | null;
   invoiced: boolean;
   comboParts: ComboParts;
-  payment: { amount: number; provider: string; createdAt: string } | null;
+  payment: { amount: number; provider: string; status: string; createdAt: string } | null;
   paid: boolean;
   attendance: string;
   result: string | null;
@@ -68,7 +68,7 @@ const tz = { timeZone: 'Europe/Stockholm' } as const;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 const STATUS_LABEL = { planned: 'Planerad', completed: 'Genomförd', canceled: 'Inställd' } as const;
-const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', invoice: 'Faktura', manual: 'Manuell' };
+const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', invoice: 'Faktura', manual: 'Manuell', Klarna: 'Klarna' };
 const ID_LABEL: Record<string, string> = { korkort: 'körkort', pass: 'pass', nationellt_id: 'nationellt id-kort', id_kort: 'id-kort' };
 
 function download(filename: string, content: string, type: string) {
@@ -274,6 +274,21 @@ export default function KursPage({ params }: { params: { id: string } }) {
               )}
               {kurs.status === 'planned' && isPast && <Button onClick={() => patchKurs({ status: 'completed' })} disabled={busy}>Markera som genomförd</Button>}
               {kurs.status === 'completed' && <Button onClick={() => patchKurs({ status: 'planned' })} disabled={busy}>Ångra genomförd</Button>}
+              {isPast && participants.some(p => p.payment?.provider === 'Klarna' && p.payment.status === 'Authorized') && (
+                <Button
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    const res = await fetch('/api/admin/klarna/settle', { method: 'POST' });
+                    const d = await res.json().catch(() => ({}));
+                    setBusy(false);
+                    alert(res.ok ? `Klarna: ${d.captured.length} dragna, ${d.released.length} släppta${d.failed.length ? `, ${d.failed.length} misslyckades` : ''}` : d.error ?? 'Något gick fel');
+                    await load();
+                  }}
+                >
+                  Dra Klarna-betalningar nu
+                </Button>
+              )}
             </div>
 
             {kurs.reportToTS && kurs.status !== 'canceled' && (
@@ -385,7 +400,10 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   const cancel = () => {
     if (!confirm(`Avboka ${p.name}?${p.payment ? '\n\nBetalningen återbetalas inte automatiskt.' : ''}`)) return;
     const notify = !!p.email && confirm('Skicka avbokningsbekräftelse via e-post till eleven?');
-    call(`/api/admin/deltagare/${p.bookingId}`, 'PATCH', { cancel: true, notify });
+    setBusy(true);
+    fetch(`/api/admin/deltagare/${p.bookingId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cancel: true, notify }) })
+      .then(r => r.json().then(d => { if (!r.ok) alert(d.error ?? 'Något gick fel'); else if (d.message) alert(d.message); }))
+      .finally(async () => { await onChange(); setBusy(false); });
   };
 
   return (
@@ -404,6 +422,10 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
       <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
         {p.schoolName ? (
           <><Badge tone="blue">Skola</Badge><span className="text-white/60">{kr(p.price)} – faktureras {p.schoolName}</span></>
+        ) : p.payment?.provider === 'Klarna' && p.payment.status === 'Authorized' ? (
+          <><Badge tone="blue">Klarna – reserverad</Badge><span className="text-white/60">{kr(p.price)} – dras efter kursen</span></>
+        ) : p.payment?.provider === 'Klarna' && p.payment.status === 'Canceled' ? (
+          <><Badge>Klarna – släppt</Badge><span className="text-white/60">Reservationen släpptes, inget debiterat</span></>
         ) : p.paid ? (
           <><Badge tone="green">Betald</Badge><span className="text-white/60">
             {kr(p.price)}{p.payment ? ` · ${PROVIDER_LABEL[p.payment.provider] ?? p.payment.provider} ${formatDate(p.payment.createdAt, { day: 'numeric', month: 'short' })}` : ''}

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendInternalBookingNotification } from '@/lib/email';
+import { klarnaOnCancel } from '@/lib/klarnaSettle';
 
 // Cancel a booking
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -27,6 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     prisma.booking.update({ where: { id: bookingId }, data: { status: 'Canceled' } }),
     prisma.session.update({ where: { id: booking.sessionId }, data: { seatsAvailable: { increment: 1 } } }),
   ]);
+  const klarna = await klarnaOnCancel(bookingId);
 
   // Internal staff notification
   if (booking.session) {
@@ -48,5 +50,5 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }).catch((err) => console.error('[User cancel] Internal cancel notification failed:', err));
   }
 
-  return NextResponse.json({ booking: updated });
+  return NextResponse.json({ booking: updated, klarna });
 }

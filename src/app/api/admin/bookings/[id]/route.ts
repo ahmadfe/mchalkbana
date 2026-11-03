@@ -4,6 +4,8 @@ import { meetingPlaceFor } from '@/lib/allocations';
 import { linkBookingToStudent } from '@/lib/students';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail, sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
+import { klarnaOnCancel } from '@/lib/klarnaSettle';
+import { cancelOrder } from '@/lib/klarna';
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
@@ -36,6 +38,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   // Send cancellation email if status just changed to Canceled
   if (status === 'Canceled' && before?.status !== 'Canceled') {
+    await klarnaOnCancel(updated.id);
     const recipientEmail = updated.guestEmail || updated.user?.email || null;
     const recipientName = updated.guestName || updated.user?.name || 'Kund';
     if (updated.session) {
@@ -95,6 +98,16 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     },
   });
   if (!booking) return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
+
+  // Klarna: en reservation släpps innan bokningen raderas; en dragen betalning måste återbetalas först
+  const klarnaPay = await prisma.payment.findFirst({ where: { bookingId, provider: 'Klarna' } });
+  if (klarnaPay?.status === 'Succeeded') {
+    return NextResponse.json({ error: 'Eleven har betalat med Klarna – återbetala under Betalningar innan bokningen raderas' }, { status: 409 });
+  }
+  if (klarnaPay?.status === 'Authorized' && klarnaPay.transactionId) {
+    try { await cancelOrder(klarnaPay.transactionId); }
+    catch { return NextResponse.json({ error: 'Klarna-reservationen kunde inte släppas – försök igen' }, { status: 502 }); }
+  }
 
   // Delete payment if exists, then booking
   await prisma.payment.deleteMany({ where: { bookingId } });

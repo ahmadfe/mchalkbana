@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Calendar, Clock, MapPin, Users, Tag } from 'lucide-react';
 import type { Session } from '@/lib/types';
 import clsx from 'clsx';
+import KlarnaMessage from '@/components/KlarnaMessage';
 
 interface Props {
   session: Session;
@@ -157,6 +158,7 @@ export default function SessionCard({ session, isLoggedIn }: Props) {
             </Link>
           )}
         </div>
+        {!isSoldOut && <KlarnaMessage amount={price} className="mt-3" />}
       </div>
     </div>
   );

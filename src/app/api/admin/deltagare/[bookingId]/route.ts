@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { ATTENDANCE_VALUES, courseEmailInfo, recalcSeats } from '@/lib/kurser';
 import { sendCancellationEmail } from '@/lib/email';
 import { setComboParts } from '@/lib/checkin';
+import { klarnaOnCancel } from '@/lib/klarnaSettle';
 
 /** Ändrar närvaro, delar (kombokurs), pris eller avbokar en deltagare. */
 export async function PATCH(request: Request, { params }: { params: { bookingId: string } }) {
@@ -37,9 +38,11 @@ export async function PATCH(request: Request, { params }: { params: { bookingId:
     await prisma.booking.update({ where: { id }, data: { attendance } });
   }
 
+  let message: string | null = null;
   if (cancel && booking.status !== 'Canceled') {
     await prisma.booking.update({ where: { id }, data: { status: 'Canceled' } });
     await recalcSeats(booking.sessionId);
+    message = await klarnaOnCancel(id);
     if (notify && booking.guestEmail) {
       await sendCancellationEmail({
         recipientEmail: booking.guestEmail,
@@ -52,5 +55,5 @@ export async function PATCH(request: Request, { params }: { params: { bookingId:
     }
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, message });
 }

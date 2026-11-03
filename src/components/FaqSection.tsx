@@ -28,7 +28,7 @@ const FAQ_SV: FaqItem[] = [
   {
     question: 'Kan jag avboka eller byta tid?',
     answer:
-      'Kontakta oss så snart möjligt om du behöver avboka eller ändra din bokning. Avbokning kan göras upp till 48 timmar före kursdatum för att undvika avgift. Kontakta oss via info@uppsalahalkbana.se.',
+      'Du kan avboka eller byta tid kostnadsfritt senast 48 timmar före kursstart. Byt tid via länken i din bokningsbekräftelse, eller kontakta oss på info@uppsalahalkbana.se. Avbokar du senare, eller uteblir, debiteras hela kursavgiften.',
   },
   {
     question: 'Erbjuder ni kurser för motorcykel?',
@@ -44,6 +44,16 @@ const FAQ_SV: FaqItem[] = [
     question: 'Är ni godkända av Transportstyrelsen?',
     answer:
       'Ja, Uppsala Halkbana är godkänd av Transportstyrelsen och alla våra kurser uppfyller de lagstadgade kraven för riskutbildning i Sverige.',
+  },
+  {
+    question: 'Kan jag betala med Klarna?',
+    answer:
+      'Ja. I kassan väljer du Swish eller Klarna. Med Klarna kan du betala direkt (t.ex. med kort eller bank) eller betala senare. Beloppet reserveras när du bokar och dras när kursen är genomförd. Avbokar du senast 48 timmar före kursstart släpps reservationen och du betalar ingenting.',
+  },
+  {
+    question: 'Var ser jag min Klarna-betalning?',
+    answer:
+      'Du får ett mejl från Klarna med information om betalningen. Du kan se och hantera den i Klarna-appen eller på klarna.com/se. Frågor om själva betalningen besvarar Klarnas kundservice: klarna.com/se/kundservice.',
   },
 ];
 
@@ -83,6 +93,16 @@ const FAQ_EN: FaqItem[] = [
     answer:
       'Yes, Uppsala Halkbana is approved by Transportstyrelsen and all our courses meet the statutory requirements for risk training in Sweden.',
   },
+  {
+    question: 'Can I pay with Klarna?',
+    answer:
+      'Yes. At checkout you choose Swish or Klarna. With Klarna you can pay now (e.g. by card or bank) or pay later. The amount is reserved when you book and charged when the course is completed. If you cancel at least 48 hours before the course starts, the reservation is released and you pay nothing.',
+  },
+  {
+    question: 'Where can I see my Klarna payment?',
+    answer:
+      'Klarna sends you an email about the payment. You can view and manage it in the Klarna app or at klarna.com. Questions about the payment itself are answered by Klarna customer service: klarna.com/se/kundservice.',
+  },
 ];
 
 export default function FaqSection({ locale }: { locale: string }) {
@@ -90,7 +110,7 @@ export default function FaqSection({ locale }: { locale: string }) {
   const [open, setOpen] = useState<number | null>(null);
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section id="klarna" className="py-16 bg-gray-50 scroll-mt-20">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="text-3xl font-extrabold text-gray-900">

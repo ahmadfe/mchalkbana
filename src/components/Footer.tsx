@@ -4,6 +4,7 @@ import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import { KlarnaBadge } from '@/components/Klarna';
 
 function FacebookIcon() {
   return (
@@ -102,10 +103,17 @@ export default function Footer() {
             {[
               [`${base}/courses`, 'Kurser'], [`${base}/about`, 'Om oss'], [`${base}/contact`, 'Kontakt'],
               [`${base}/faq`, 'FAQ'], [`${base}/login`, 'För trafikskolor'],
+              [`${base}/bokningsvillkor`, 'Bokningsvillkor'], [`${base}/integritetspolicy`, 'Integritetspolicy'],
             ].map(([href, label]) => (
               <Link key={href} href={href} className="h-10 px-4 rounded-full bg-gray-800 text-sm text-gray-300 hover:text-white inline-flex items-center">{label}</Link>
             ))}
           </nav>
+          {/* Mobil: betalsätt */}
+          <div className="md:hidden flex items-center gap-3 text-sm text-gray-400">
+            <span>Betala med</span>
+            <Image src="/swish-logo.png" alt="Swish" width={32} height={32} className="rounded-md object-contain" />
+            <KlarnaBadge small />
+          </div>
 
           {/* Quick links */}
           <div className="hidden md:block">
@@ -142,25 +150,25 @@ export default function Footer() {
           <div className="hidden md:block">
             <h3 className="font-bold text-white text-sm uppercase tracking-wider mb-4">Juridiskt</h3>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href="#" className="text-gray-400 hover:text-swedish-blue transition-colors">Integritetspolicy</Link></li>
-              <li><Link href="#" className="text-gray-400 hover:text-swedish-blue transition-colors">Cookiepolicy</Link></li>
-              <li><Link href="#" className="text-gray-400 hover:text-swedish-blue transition-colors">Bokningsvillkor</Link></li>
+              <li><Link href={`${base}/integritetspolicy`} className="text-gray-400 hover:text-swedish-blue transition-colors">Integritetspolicy</Link></li>
+              <li><Link href={`${base}/bokningsvillkor`} className="text-gray-400 hover:text-swedish-blue transition-colors">Bokningsvillkor</Link></li>
+              <li><Link href={`${base}/faq#klarna`} className="text-gray-400 hover:text-swedish-blue transition-colors">Betala med Klarna</Link></li>
             </ul>
             <div className="mt-5 p-3 bg-gray-800 rounded-xl text-xs text-gray-400">
               <p className="font-semibold text-gray-300 mb-1">GDPR</p>
               <p>Vi behandlar dina personuppgifter i enlighet med GDPR och Dataskyddslagen (2018:218).</p>
             </div>
 
-            {/* Swish payment badge */}
+            {/* Betalsätt: Swish och Klarna */}
             <div className="mt-5 flex items-center gap-3">
               <Image
                 src="/swish-logo.png"
                 alt="Swish"
-                width={48}
-                height={48}
+                width={40}
+                height={40}
                 className="rounded-lg object-contain"
               />
-              <span className="text-gray-300 text-sm font-medium">uppsalahalkbana</span>
+              <KlarnaBadge />
             </div>
           </div>
         </div>

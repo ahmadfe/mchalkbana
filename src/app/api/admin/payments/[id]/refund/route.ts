@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireOwner } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
+import { cancelOrder, KlarnaError, refundOrder } from '@/lib/klarna';
 import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
@@ -27,26 +28,42 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   if (!payment) return NextResponse.json({ error: 'Betalning hittades inte' }, { status: 404 });
-  if (payment.status === 'Refunded') return NextResponse.json({ error: 'Redan återbetald' }, { status: 400 });
+  if (payment.status === 'Refunded' || payment.status === 'Canceled') return NextResponse.json({ error: 'Redan återbetald' }, { status: 400 });
 
-  // transactionId holds the Swish paymentReference from the callback
-  if (!payment.transactionId || payment.transactionId.startsWith('swish_')) {
-    return NextResponse.json(
-      { error: 'Swish betalningsreferens saknas – återbetalning kan inte göras automatiskt' },
-      { status: 422 },
-    );
+  let newStatus = 'Refunded';
+  if (payment.provider === 'Klarna') {
+    // Klarna: en reservation släpps, ett draget belopp återbetalas
+    if (!payment.transactionId) return NextResponse.json({ error: 'Klarna order-ID saknas' }, { status: 422 });
+    try {
+      if (payment.status === 'Authorized') {
+        await cancelOrder(payment.transactionId);
+        newStatus = 'Canceled';
+      } else {
+        await refundOrder(payment.transactionId, payment.amount, `Återbetalning bokning #${payment.bookingId}`);
+      }
+    } catch (e) {
+      return NextResponse.json({ error: `Klarna: ${e instanceof KlarnaError ? e.code : 'fel'} – återbetalningen gjordes inte` }, { status: 502 });
+    }
+  } else {
+    // transactionId holds the Swish paymentReference from the callback
+    if (!payment.transactionId || payment.transactionId.startsWith('swish_')) {
+      return NextResponse.json(
+        { error: 'Swish betalningsreferens saknas – återbetalning kan inte göras automatiskt' },
+        { status: 422 },
+      );
+    }
+
+    // Call Swish refund API
+    await createRefund({
+      originalPaymentReference: payment.transactionId,
+      amount: payment.amount,
+      message: `Aterbetalning bokning #${payment.bookingId}`,
+    });
   }
-
-  // Call Swish refund API
-  await createRefund({
-    originalPaymentReference: payment.transactionId,
-    amount: payment.amount,
-    message: `Aterbetalning bokning #${payment.bookingId}`,
-  });
 
   // Mark payment as refunded and booking as canceled, restore seat
   const [updated] = await prisma.$transaction([
-    prisma.payment.update({ where: { id: paymentId }, data: { status: 'Refunded' } }),
+    prisma.payment.update({ where: { id: paymentId }, data: { status: newStatus } }),
     prisma.booking.update({ where: { id: payment.bookingId }, data: { status: 'Canceled' } }),
     prisma.session.update({
       where: { id: payment.booking.sessionId },

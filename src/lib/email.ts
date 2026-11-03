@@ -16,6 +16,8 @@ interface ReceiptEmailData {
   changeUrl?: string;
   /** Rabattkod som använts, visas som egen rad på kvittot */
   coupon?: { code: string; discount: number } | null;
+  /** Betalt med Klarna: Klarnas order-ID, visas med info om hur betalningen hanteras */
+  klarnaOrderId?: string | null;
 }
 
 function toGCalDate(iso: string): string {
@@ -120,11 +122,20 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
             <td style="color:#374151;text-align:right;">${vatAmount.toLocaleString('sv-SE')} kr</td>
           </tr>
           <tr style="border-top:2px solid #00C4D4;">
-            <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">Totalt betalt</td>
+            <td style="color:#111827;font-weight:700;font-size:16px;padding:12px 0 4px;">${data.klarnaOrderId ? 'Totalt (betalas via Klarna)' : 'Totalt betalt'}</td>
             <td style="color:#00C4D4;font-weight:700;font-size:18px;text-align:right;padding:12px 0 4px;">${data.price.toLocaleString('sv-SE')} kr</td>
           </tr>
         </table>
       </div>
+
+      ${data.klarnaOrderId ? `
+      <!-- Klarna -->
+      <div style="background:#FFF0F5;border:1px solid #FFB3C7;border-radius:12px;padding:16px;margin-bottom:24px;font-size:14px;color:#111827;">
+        <p style="margin:0 0 8px;font-weight:700;"><span style="display:inline-block;background:#FFB3C7;color:#0B051D;border-radius:6px;padding:2px 8px;margin-right:6px;">Klarna.</span> Betalning via Klarna</p>
+        <p style="margin:0 0 8px;">Du får ett mejl från Klarna med information om din betalning. Beloppet dras när kursen är genomförd. Avbokar du senast 48 timmar före kursstart släpps reservationen och du betalar ingenting.</p>
+        <p style="margin:0 0 4px;">Se och hantera betalningen i <a href="https://www.klarna.com/se/app/" style="color:#0B051D;font-weight:600;">Klarna-appen</a>. Frågor om betalningen: <a href="https://www.klarna.com/se/kundservice/" style="color:#0B051D;font-weight:600;">Klarnas kundservice</a>.</p>
+        <p style="margin:0;color:#6b7280;font-size:12px;">Klarna order-ID: ${data.klarnaOrderId}</p>
+      </div>` : ''}
 
       <!-- Calendar buttons -->
       <div style="text-align:center;margin-top:8px;">

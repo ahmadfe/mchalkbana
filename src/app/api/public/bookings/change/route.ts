@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { verifyBookingToken, signBookingToken } from '@/lib/booking-token';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
-const LOCK_HOURS = 74;
+const LOCK_HOURS = 48; // samma gräns som fri avbokning (bokningsvillkoren)
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));

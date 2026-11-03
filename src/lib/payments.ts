@@ -11,7 +11,10 @@ export function amountToPay(booking: { price: number | null }, session: { discou
  * Markerar bokningen som betald, sparar betalningen och skickar kvitto, intern avisering och
  * ev. WhatsApp-bekräftelse. Används av Swish-callbacken och av 100 %-rabattkoder.
  */
-export async function completePaidBooking(bookingId: number, { provider, transactionId }: { provider: string; transactionId: string }) {
+export async function completePaidBooking(
+  bookingId: number,
+  { provider, transactionId, status = 'Succeeded' }: { provider: string; transactionId: string; /** Klarna: 'Authorized' tills beloppet dras efter kursen */ status?: 'Succeeded' | 'Authorized' },
+) {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: {
@@ -25,7 +28,7 @@ export async function completePaidBooking(bookingId: number, { provider, transac
   const amount = amountToPay(booking, booking.session);
   await prisma.$transaction([
     prisma.booking.update({ where: { id: bookingId }, data: { status: 'Paid' } }),
-    prisma.payment.create({ data: { bookingId, amount, provider, status: 'Succeeded', transactionId } }),
+    prisma.payment.create({ data: { bookingId, amount, provider, status, transactionId } }),
   ]);
 
   const start = new Date(booking.session.startTime);
@@ -53,6 +56,7 @@ export async function completePaidBooking(bookingId: number, { provider, transac
       phone: booking.guestPhone,
       customMessage: booking.session.receiptMessage || booking.session.course.receiptMessage || '',
       coupon: booking.coupon && booking.couponDiscount ? { code: formatCode(booking.coupon.code), discount: booking.couponDiscount } : null,
+      klarnaOrderId: provider === 'Klarna' ? transactionId : null,
     });
   }
 
