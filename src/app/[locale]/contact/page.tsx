@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard, CheckCircle2, Loader2 } from 'lucide-react';
+import { MapPin, Mail, Phone, Clock, Shield, Calendar, CreditCard, CheckCircle2, Loader2, Building2 } from 'lucide-react';
 import { WHATSAPP_URL, WhatsAppIcon } from '@/components/WhatsAppButton';
 
 export default function ContactPage() {
@@ -87,6 +87,7 @@ export default function ContactPage() {
                   { icon: <Mail className="w-5 h-5" />, label: 'E-post', value: 'info@uppsalahalkbana.se', color: 'bg-green-50 text-green-700' },
                   { icon: <Phone className="w-5 h-5" />, label: 'Telefon', value: '07 07 66 66 61', href: 'tel:+46707666661', color: 'bg-yellow-50 text-yellow-700' },
                   { icon: <WhatsAppIcon className="w-5 h-5" />, label: 'WhatsApp', value: 'Chatta med oss – 07 07 66 66 61', href: WHATSAPP_URL, color: 'bg-green-50 text-[#1da851]' },
+                  { icon: <Building2 className="w-5 h-5" />, label: 'Organisationsnummer', value: '559188-6410', color: 'bg-gray-100 text-gray-700' },
                   { icon: <Clock className="w-5 h-5" />, label: 'Öppettider', value: 'Lör–Tor 08:00–17:00', color: 'bg-purple-50 text-purple-700' },
                 ].map((item) => (
                   <div key={item.label} className="flex items-start gap-4">

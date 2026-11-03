@@ -36,6 +36,7 @@ const jsonLd = {
   logo: 'https://uppsalahalkbana.se/logo.png',
   telephone: '+46707666661',
   email: 'info@uppsalahalkbana.se',
+  taxID: '559188-6410',
   address: {
     '@type': 'PostalAddress',
     streetAddress: 'Norrlövsta 147',

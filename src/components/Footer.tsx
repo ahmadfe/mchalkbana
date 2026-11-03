@@ -174,7 +174,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-700 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} Uppsala Halkbana. Alla rättigheter förbehållna.</p>
+          <p>© {new Date().getFullYear()} Uppsala Halkbana · Org.nr 559188-6410 · Alla rättigheter förbehållna.</p>
           <p>Uppsala/Stockholm Region, Sverige</p>
         </div>
       </div>
