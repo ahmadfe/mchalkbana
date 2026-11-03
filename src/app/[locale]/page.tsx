@@ -6,6 +6,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
 import HomeCardsSection from '@/components/HomeCardsSection';
+import { KlarnaBadge } from '@/components/Klarna';
 import { Shield, MapPin, CheckCircle2 } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { releaseExpiredAllocations } from '@/lib/allocations';
@@ -142,6 +143,17 @@ export default async function HomePage({ params }: { params: { locale: string } 
           <div className="w-0.5 h-6 bg-white rounded-full animate-pulse" />
         </div>
       </section>
+
+      {/* ─── KLARNA BAR ──────────────────────────────────────── */}
+      <Link
+        href="/sv/faq#klarna"
+        className="block bg-gradient-to-r from-gray-900 via-[#1f1f1f] to-gray-900 hover:from-gray-800 hover:to-gray-800 transition"
+      >
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-center gap-4">
+          <span className="text-white text-base sm:text-lg font-medium">Nu kan du betala med Klarna!</span>
+          <KlarnaBadge />
+        </div>
+      </Link>
 
       {/* ─── INFO CARDS (admin-editable) ─────────────────────── */}
       <HomeCardsSection initialCards={infoCards} isAdmin={isAdmin} />
