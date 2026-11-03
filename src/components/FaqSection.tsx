@@ -38,7 +38,7 @@ const FAQ_SV: FaqItem[] = [
   {
     question: 'Hur lång tid tar kursen?',
     answer:
-      'Risk 1 varar ungefär 3 timmar och genomförs i klassrum eller online. Risk 2 på halkbana varar normalt 4–5 timmar inklusive praktiska övningar.',
+      'Risk 1 varar ungefär 3 timmar och genomförs i klassrum. Risk 2 på halkbana varar normalt 4–5 timmar inklusive praktiska övningar.',
   },
   {
     question: 'Är ni godkända av Transportstyrelsen?',
@@ -86,7 +86,7 @@ const FAQ_EN: FaqItem[] = [
   {
     question: 'How long does the course take?',
     answer:
-      'Risk 1 lasts approximately 3 hours and is conducted in a classroom or online. Risk 2 on the skid track normally takes 4–5 hours including practical exercises.',
+      'Risk 1 lasts approximately 3 hours and is conducted in a classroom. Risk 2 on the skid track normally takes 4–5 hours including practical exercises.',
   },
   {
     question: 'Are you approved by the Swedish Transport Agency?',
