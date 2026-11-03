@@ -3,7 +3,7 @@
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
-import { MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import { MapPin, Mail, Phone, ExternalLink, Building2 } from 'lucide-react';
 import { KlarnaBadge } from '@/components/Klarna';
 
 function FacebookIcon() {
@@ -60,6 +60,10 @@ export default function Footer() {
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-swedish-blue shrink-0" />
                 <a href="tel:+46707666661" className="hover:text-white">07 07 66 66 61</a>
+              </div>
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-swedish-blue shrink-0" />
+                <span>Org.nr 559188-6410</span>
               </div>
             </div>
 
