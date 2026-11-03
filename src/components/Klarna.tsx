@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import Image from 'next/image';
 
 /** Klarnas märke: rosa bricka med "Klarna." (Klarnas varumärkesfärger) */
 export function KlarnaBadge({ small = false, className }: { small?: boolean; className?: string }) {
@@ -13,6 +14,17 @@ export function KlarnaBadge({ small = false, className }: { small?: boolean; cla
     >
       Klarna.
     </span>
+  );
+}
+
+/** Liten rad med betalsätt – används på kurskorten */
+export function PayWith({ className }: { className?: string }) {
+  return (
+    <div className={clsx('flex items-center gap-2 text-xs text-gray-500', className)}>
+      <span>Betala med</span>
+      <Image src="/swish-logo.png" alt="Swish" width={24} height={24} className="rounded object-contain" />
+      <KlarnaBadge small />
+    </div>
   );
 }
 
