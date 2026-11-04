@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { DraftDeduction, pickDeductions, unusedCredits } from './schoolCredits';
 
 /*
  * Fakturor till trafikskolor.
@@ -126,6 +127,11 @@ export interface Draft {
   email: string;
   period: string;
   lines: DraftLine[];
+  /** Summa för eleverna, före avdrag */
+  gross: number;
+  /** Skolans saldo som dras av (elever som betalat själva, tillgodo) */
+  deductions: DraftDeduction[];
+  /** Att betala = gross − avdrag */
   total: number;
   students: number;
 }
@@ -159,7 +165,7 @@ export async function getDrafts(opts: { schoolUserId?: number; period?: string }
     const key = `${school.id}|${period}`;
     let d = drafts.get(key);
     if (!d) {
-      d = { schoolUserId: school.id, schoolName: school.name, email: school.email, period, lines: [], total: 0, students: 0 };
+      d = { schoolUserId: school.id, schoolName: school.name, email: school.email, period, lines: [], gross: 0, deductions: [], total: 0, students: 0 };
       drafts.set(key, d);
     }
     // Pris satt för hand på eleven går före skolans pris
@@ -178,15 +184,23 @@ export async function getDrafts(opts: { schoolUserId?: number; period?: string }
     line.amount += unitPrice;
     line.students.push(b.guestName || b.personnummer || `Bokning #${b.id}`);
     line.bookingIds.push(b.id);
-    d.total += unitPrice;
+    d.gross += unitPrice;
     d.students++;
   }
-  return Array.from(drafts.values()).sort((a, b) => a.period.localeCompare(b.period) || a.schoolName.localeCompare(b.schoolName, 'sv'));
+  const sorted = Array.from(drafts.values()).sort((a, b) => a.period.localeCompare(b.period) || a.schoolName.localeCompare(b.schoolName, 'sv'));
+  // Skolans saldo dras av – äldsta månaden först, så samma tillgodo aldrig räknas två gånger
+  const credits = await unusedCredits(Array.from(new Set(sorted.map(d => d.schoolUserId))));
+  for (const d of sorted) {
+    d.deductions = pickDeductions(credits.get(d.schoolUserId) ?? [], d.schoolUserId, new Set(d.lines.flatMap(l => l.bookingIds)), d.gross);
+    d.total = d.gross - d.deductions.reduce((sum, x) => sum + x.amount, 0);
+  }
+  return sorted;
 }
 
 /** Skapar fakturan för en skola och månad: fakturanummer, rader och kopplade bokningar. */
 export async function createInvoice(schoolUserId: number, period: string): Promise<{ error: string } | { id: number }> {
-  const [draft] = await getDrafts({ schoolUserId, period });
+  // Hela skolans utkast behövs för att saldot ska fördelas likadant som i listan (äldsta månaden först)
+  const draft = (await getDrafts({ schoolUserId })).find(d => d.period === period);
   if (!draft || draft.lines.length === 0) return { error: 'Det finns inget att fakturera för den här skolan och månaden' };
 
   const company = await getCompany();
@@ -207,20 +221,43 @@ export async function createInvoice(schoolUserId: number, period: string): Promi
         // Bokningarna får inte ha hunnit faktureras av någon annan
         const taken = await tx.booking.count({ where: { id: { in: bookingIds }, invoiceId: { not: null } } });
         if (taken > 0) throw new Error('ALREADY_INVOICED');
+        const creditIds = draft.deductions.map(x => x.creditId);
+        const freeCredits = await tx.schoolCredit.findMany({ where: { id: { in: creditIds }, invoiceId: null } });
+        if (freeCredits.length !== creditIds.length) throw new Error('ALREADY_INVOICED');
         const inv = await tx.invoice.create({
           data: {
             number, schoolUserId, period, issueDate, dueDate, total: draft.total, vat,
             buyerName: school.name, buyerEmail: school.email, buyerOrgNr: school.orgNr, buyerAddress: school.billingAddress,
             seller: JSON.stringify(company),
             lines: {
-              create: draft.lines.map(l => ({
-                sessionId: l.sessionId, date: new Date(l.date), description: l.description,
-                quantity: l.quantity, unitPrice: l.unitPrice, amount: l.amount, students: l.students.join('\n'),
-              })),
+              create: [
+                ...draft.lines.map(l => ({
+                  sessionId: l.sessionId, date: new Date(l.date), description: l.description,
+                  quantity: l.quantity, unitPrice: l.unitPrice, amount: l.amount, students: l.students.join('\n'),
+                })),
+                // Avdrag för skolans saldo – minusrader
+                ...draft.deductions.map(x => ({
+                  sessionId: null, date: new Date(x.date), description: x.description,
+                  quantity: 1, unitPrice: -x.amount, amount: -x.amount, students: x.student,
+                })),
+              ],
             },
           },
         });
         await tx.booking.updateMany({ where: { id: { in: bookingIds } }, data: { invoiceId: inv.id } });
+        for (const x of draft.deductions) {
+          const c = freeCredits.find(fc => fc.id === x.creditId)!;
+          await tx.schoolCredit.update({ where: { id: c.id }, data: { invoiceId: inv.id, amount: x.amount } });
+          // Det som inte fick plats på fakturan ligger kvar som tillgodo till nästa faktura
+          if (x.amount < c.amount) {
+            await tx.schoolCredit.create({
+              data: {
+                schoolUserId, amount: c.amount - x.amount, method: c.method, createdById: c.createdById, restOfId: c.id,
+                note: `Rest från faktura ${number}${x.student ? ` (${x.student})` : c.note ? ` (${c.note})` : ''}`,
+              },
+            });
+          }
+        }
         return inv;
       });
       return { id: invoice.id };
@@ -231,6 +268,22 @@ export async function createInvoice(schoolUserId: number, period: string): Promi
     }
   }
   return { error: 'Kunde inte skapa fakturanummer, försök igen' };
+}
+
+/**
+ * Fakturan togs bort eller krediterades: skolans saldo som drogs av blir oanvänt igen,
+ * och rester som delades av vid faktureringen slås ihop med sitt original.
+ */
+async function releaseCredits(invoiceId: number) {
+  await prisma.$transaction(async tx => {
+    const used = await tx.schoolCredit.findMany({ where: { invoiceId } });
+    for (const c of used) {
+      const rests = await tx.schoolCredit.findMany({ where: { restOfId: c.id, invoiceId: null } });
+      const back = rests.reduce((sum, r) => sum + r.amount, 0);
+      if (rests.length) await tx.schoolCredit.deleteMany({ where: { id: { in: rests.map(r => r.id) } } });
+      await tx.schoolCredit.update({ where: { id: c.id }, data: { invoiceId: null, amount: c.amount + back } });
+    }
+  });
 }
 
 export type InvoiceAction = 'sent' | 'paid' | 'unpaid' | 'delete';
@@ -259,6 +312,8 @@ export async function updateInvoice(id: number, action: InvoiceAction): Promise<
     case 'delete':
       if (inv.creditOfId) return { error: 'En kreditfaktura kan inte tas bort – skicka den till skolan' };
       if (inv.status !== 'created') return { error: 'En skickad faktura kan inte tas bort – kreditera den i stället' };
+      // Saldot först – när fakturan är borta går det inte längre att se vad som drogs av
+      await releaseCredits(id);
       await prisma.$transaction([
         prisma.booking.updateMany({ where: { invoiceId: id }, data: { invoiceId: null } }),
         prisma.invoice.delete({ where: { id } }),
@@ -381,6 +436,7 @@ export async function creditInvoice(id: number): Promise<{ error: string } | { i
         await tx.booking.updateMany({ where: { invoiceId: inv.id }, data: { invoiceId: null } });
         return cn;
       });
+      await releaseCredits(inv.id);
       return { id: creditNote.id };
     } catch (e) {
       if ((e as { code?: string }).code === 'P2002') continue;

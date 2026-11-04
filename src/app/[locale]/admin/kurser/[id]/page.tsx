@@ -13,6 +13,7 @@ import { DEL_LABEL, buildTsReportXml, reportBookings, reportParts, type Del } fr
 import { COMBO_PARTS, COMBO_PARTS_LABEL, courseKind, type ComboParts } from '@/lib/courseKind';
 import { normalizePersonnummer } from '@/lib/pnr';
 import { Badge, Button, Card, Checkbox, Select, formatDate } from '@/components/admin/ui';
+import { CREDIT_METHOD_LABEL } from '@/lib/schoolCreditLabels';
 import { ReservationFields, newReservation, reservationPayload, useReservationData, type ReservationDraft } from '@/components/admin/Reservations';
 
 interface Kurs {
@@ -53,6 +54,8 @@ interface Participant {
   price: number;
   priceOverride: number | null;
   invoiced: boolean;
+  /** Skolelev som betalat en del själv – dras av på skolans faktura */
+  studentPaid: { id: number; amount: number; method: string; invoiceId: number | null }[];
   comboParts: ComboParts;
   payment: { amount: number; provider: string; status: string; createdAt: string } | null;
   paid: boolean;
@@ -401,6 +404,19 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
     setPaying(false);
   };
 
+  const [partPay, setPartPay] = useState<{ amount: string; method: string } | null>(null);
+
+  const savePartPay = async () => {
+    if (!partPay) return;
+    await call('/api/admin/skolsaldo', 'POST', { bookingId: p.bookingId, amount: Number(partPay.amount), method: partPay.method });
+    setPartPay(null);
+  };
+
+  const removePartPay = (id: number, amount: number) => {
+    if (!confirm(`Ta bort elevens betalning på ${kr(amount)}? Den dras då inte av på skolans faktura.`)) return;
+    call(`/api/admin/skolsaldo?id=${id}`, 'DELETE', {});
+  };
+
   const removeSchool = () => {
     if (!confirm(`Ta bort ${p.schoolName} som betalare? ${p.name} blir då obetald och får betala själv.`)) return;
     call(`/api/checkin/${p.bookingId}/school`, 'PATCH', { schoolUserId: null });
@@ -465,6 +481,47 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           <Button variant="primary" className="!h-10" disabled={busy || priceInput === '' || !Number.isInteger(Number(priceInput)) || Number(priceInput) < 0} onClick={() => savePrice(Number(priceInput))}>Spara</Button>
           {p.priceOverride != null && <Button className="!h-10" disabled={busy} onClick={() => savePrice(null)}>Ordinarie pris</Button>}
           <Button className="!h-10" onClick={() => setEditingPrice(false)}>Avbryt</Button>
+        </div>
+      )}
+
+      {p.schoolName && (p.studentPaid.length > 0 || !p.invoiced) && (
+        <div className="mt-3 space-y-2">
+          {p.studentPaid.map(c => (
+            <div key={c.id} className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge tone="green">Eleven betalade {kr(c.amount)}</Badge>
+              <span className="text-white/60">{CREDIT_METHOD_LABEL[c.method] ?? ''} – {c.invoiceId ? 'avdraget på skolans faktura' : `dras av på ${p.schoolName}s faktura`}</span>
+              {!c.invoiceId && <button onClick={() => removePartPay(c.id, c.amount)} disabled={busy} className="text-xs text-white/50 hover:text-red-400 underline">Ta bort</button>}
+            </div>
+          ))}
+          {!p.invoiced && (partPay ? (
+            <div className="rounded-2xl bg-white/5 p-4 space-y-3">
+              <p className="text-sm text-white/60">Hur mycket betalade {p.name} själv? Beloppet dras av på {p.schoolName}s faktura.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  value={partPay.amount}
+                  onChange={e => setPartPay({ ...partPay, amount: e.target.value })}
+                  aria-label="Belopp eleven betalade (kr)"
+                  placeholder="kr"
+                  autoFocus
+                  className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
+                />
+                <Select value={partPay.method} onChange={e => setPartPay({ ...partPay, method: e.target.value })} className="!w-32 !h-10" aria-label="Betalsätt">
+                  <option value="cash">Kontant</option>
+                  <option value="card">Kort</option>
+                  <option value="swish">Swish</option>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" className="!h-10" onClick={savePartPay} disabled={busy || !Number.isInteger(Number(partPay.amount)) || Number(partPay.amount) <= 0}>Spara</Button>
+                <Button className="!h-10" onClick={() => setPartPay(null)}>Avbryt</Button>
+              </div>
+            </div>
+          ) : (
+            <Button className="!h-10" onClick={() => setPartPay({ amount: '', method: 'cash' })}>Eleven betalar en del</Button>
+          ))}
         </div>
       )}
 

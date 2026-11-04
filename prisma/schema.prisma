@@ -9,26 +9,27 @@ datasource db {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  name             String
-  email            String    @unique
-  password         String
-  phone            String?
-  role             String    @default("student")
-  hidden           Boolean   @default(false)
-  disabled         Boolean   @default(false) // inaktiverat konto: kan inte logga in, historiken finns kvar
-  languagePref     String    @default("sv")
-  bookings         Booking[]
-  checkIns         Booking[] @relation("BookingCheckedInBy")
-  schoolBookings   Booking[] @relation("BookingSchoolUser")
-  assignedSessions Session[] @relation("AssignedSchoolSessions")
+  id                 Int                       @id @default(autoincrement())
+  name               String
+  email              String                    @unique
+  password           String
+  phone              String?
+  role               String                    @default("student")
+  hidden             Boolean                   @default(false)
+  disabled           Boolean                   @default(false) // inaktiverat konto: kan inte logga in, historiken finns kvar
+  languagePref       String                    @default("sv")
+  bookings           Booking[]
+  checkIns           Booking[]                 @relation("BookingCheckedInBy")
+  schoolBookings     Booking[]                 @relation("BookingSchoolUser")
+  assignedSessions   Session[]                 @relation("AssignedSchoolSessions")
   schoolCoursePrices SchoolCoursePrice[]
   schoolAllocations  SessionSchoolAllocation[] @relation("SchoolAllocations")
-  invoices           Invoice[] @relation("SchoolInvoices")
+  invoices           Invoice[]                 @relation("SchoolInvoices")
+  schoolCredits      SchoolCredit[]            @relation("SchoolCredits")
   // Faktureringsuppgifter för trafikskolor
-  orgNr              String    @default("")
-  billingAddress     String    @default("")
-  createdAt        DateTime  @default(now())
+  orgNr              String                    @default("")
+  billingAddress     String                    @default("")
+  createdAt          DateTime                  @default(now())
 }
 
 // Används som filial (plats/kontor) i admin
@@ -71,16 +72,16 @@ model Student {
 }
 
 model Course {
-  id          Int       @id @default(autoincrement())
-  titleSv     String
-  titleEn     String
-  description String
-  type        String
-  vehicle     String
-  behorighet  String    @default("B")
+  id             Int                 @id @default(autoincrement())
+  titleSv        String
+  titleEn        String
+  description    String
+  type           String
+  vehicle        String
+  behorighet     String              @default("B")
   price          Int
-  location       String    @default("")
-  receiptMessage String    @default("")
+  location       String              @default("")
+  receiptMessage String              @default("")
   sessions       Session[]
   schoolPrices   SchoolCoursePrice[]
 }
@@ -92,45 +93,46 @@ model SchoolCoursePrice {
   courseId     Int
   course       Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   price        Int
+
   @@unique([schoolUserId, courseId])
 }
 
 model Session {
-  id                   Int       @id @default(autoincrement())
-  courseId             Int
-  course               Course    @relation(fields: [courseId], references: [id])
-  schoolId             Int
-  school               School    @relation(fields: [schoolId], references: [id])
-  startTime            DateTime
-  endTime              DateTime
-  seatLimit            Int
-  seatsAvailable       Int
-  discountPrice        Int?
-  visibility           String    @default("public")
-  receiptMessage       String    @default("")
-  meetingPlace         String    @default("") // tom = kursslagets mötesplats
-  status               String    @default("planned") // planned | completed | canceled
-  reportToTS           Boolean   @default(true)
-  reportedAt           DateTime?
-  resultsSentAt        DateTime? // när läraren senast skickade resultaten (Godkänn & skicka)
-  internalNotes        String    @default("")
-  comboRisk1SessionId  Int?
-  comboRisk2SessionId  Int?
-  comboRisk1Session    Session?  @relation("ComboR1", fields: [comboRisk1SessionId], references: [id])
-  comboRisk2Session    Session?  @relation("ComboR2", fields: [comboRisk2SessionId], references: [id])
-  usedAsComboR1        Session[] @relation("ComboR1")
-  usedAsComboR2        Session[] @relation("ComboR2")
-  assignedSchoolUsers  User[]    @relation("AssignedSchoolSessions")
-  bookings             Booking[]
-  schoolAllocations    SessionSchoolAllocation[]
+  id                  Int                       @id @default(autoincrement())
+  courseId            Int
+  course              Course                    @relation(fields: [courseId], references: [id])
+  schoolId            Int
+  school              School                    @relation(fields: [schoolId], references: [id])
+  startTime           DateTime
+  endTime             DateTime
+  seatLimit           Int
+  seatsAvailable      Int
+  discountPrice       Int?
+  visibility          String                    @default("public")
+  receiptMessage      String                    @default("")
+  meetingPlace        String                    @default("") // tom = kursslagets mötesplats
+  status              String                    @default("planned") // planned | completed | canceled
+  reportToTS          Boolean                   @default(true)
+  reportedAt          DateTime?
+  resultsSentAt       DateTime? // när läraren senast skickade resultaten (Godkänn & skicka)
+  internalNotes       String                    @default("")
+  comboRisk1SessionId Int?
+  comboRisk2SessionId Int?
+  comboRisk1Session   Session?                  @relation("ComboR1", fields: [comboRisk1SessionId], references: [id])
+  comboRisk2Session   Session?                  @relation("ComboR2", fields: [comboRisk2SessionId], references: [id])
+  usedAsComboR1       Session[]                 @relation("ComboR1")
+  usedAsComboR2       Session[]                 @relation("ComboR2")
+  assignedSchoolUsers User[]                    @relation("AssignedSchoolSessions")
+  bookings            Booking[]
+  schoolAllocations   SessionSchoolAllocation[]
 }
 
 model SessionSchoolAllocation {
-  id             Int     @id @default(autoincrement())
+  id             Int       @id @default(autoincrement())
   sessionId      Int
-  session        Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session        Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   schoolUserId   Int
-  schoolUser     User    @relation("SchoolAllocations", fields: [schoolUserId], references: [id], onDelete: Cascade)
+  schoolUser     User      @relation("SchoolAllocations", fields: [schoolUserId], references: [id], onDelete: Cascade)
   allocatedSeats Int
   meetingPlace   String    @default("") // skolans egen mötesplats, annars kursens
   fillBy         DateTime? // outnyttjade platser släpps efter detta
@@ -138,48 +140,50 @@ model SessionSchoolAllocation {
   notifiedAt     DateTime?
   releasedAt     DateTime?
   createdAt      DateTime  @default(now())
+
   @@unique([sessionId, schoolUserId])
 }
 
 model Booking {
-  id           Int      @id @default(autoincrement())
-  sessionId    Int
-  session      Session  @relation(fields: [sessionId], references: [id])
-  userId       Int?
-  user         User?    @relation(fields: [userId], references: [id])
-  studentId    Int?
-  student      Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  guestName    String?
-  personnummer String?
-  guestPhone   String?
-  guestEmail   String?
-  note         String?  // anteckning från skolan eller admin, t.ex. "behöver tolk"
-  bookingTime          DateTime @default(now())
-  status               String   @default("Pending")
-  bookedByRole         String   @default("student")
-  bookedBySchoolUserId Int?
-  bookedBySchoolUser   User?    @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
-  reminderSentAt       DateTime?
-  emailReminderSentAt  DateTime?
-  result               String?
-  resultNote           String?
-  attendance           String   @default("registered") // registered | attended | no_show | late_cancel
-  checkedInAt          DateTime?
-  checkedInById        Int?
-  checkedInBy          User?    @relation("BookingCheckedInBy", fields: [checkedInById], references: [id])
-  idType               String?  // korkort | pass | nationellt_id | id_kort
+  id                    Int            @id @default(autoincrement())
+  sessionId             Int
+  session               Session        @relation(fields: [sessionId], references: [id])
+  userId                Int?
+  user                  User?          @relation(fields: [userId], references: [id])
+  studentId             Int?
+  student               Student?       @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  guestName             String?
+  personnummer          String?
+  guestPhone            String?
+  guestEmail            String?
+  note                  String? // anteckning från skolan eller admin, t.ex. "behöver tolk"
+  bookingTime           DateTime       @default(now())
+  status                String         @default("Pending")
+  bookedByRole          String         @default("student")
+  bookedBySchoolUserId  Int?
+  bookedBySchoolUser    User?          @relation("BookingSchoolUser", fields: [bookedBySchoolUserId], references: [id])
+  reminderSentAt        DateTime?
+  emailReminderSentAt   DateTime?
+  result                String?
+  resultNote            String?
+  attendance            String         @default("registered") // registered | attended | no_show | late_cancel
+  checkedInAt           DateTime?
+  checkedInById         Int?
+  checkedInBy           User?          @relation("BookingCheckedInBy", fields: [checkedInById], references: [id])
+  idType                String? // korkort | pass | nationellt_id | id_kort
   checkInInstructorId   Int?
   checkInInstructorName String? // lärare som checkade in (kursens tilldelade lärare)
-  payment              Payment?
-  invoiceId            Int?
-  invoice              Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment               Payment?
+  invoiceId             Int?
+  invoice               Invoice?       @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   // Pris eleven ska betala, satt när betalningen startar (rabattkod eller rea inräknad)
-  price                Int?
-  couponId             Int?
-  coupon               Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  couponDiscount       Int?     // kronor som rabattkoden drog av
-  priceOverride        Int?     // pris satt för hand av admin (går före skolpris och kurspris)
-  comboParts           String   @default("both") // kombokurs: both | risk1 | risk2
+  price                 Int?
+  couponId              Int?
+  coupon                Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  schoolCredits         SchoolCredit[]
+  couponDiscount        Int? // kronor som rabattkoden drog av
+  priceOverride         Int? // pris satt för hand av admin (går före skolpris och kurspris)
+  comboParts            String         @default("both") // kombokurs: both | risk1 | risk2
 
   @@index([studentId])
   @@index([invoiceId])
@@ -200,7 +204,7 @@ model RiskRegisterEntry {
   idType          String
   checkedInAt     DateTime
   checkedInById   Int?
-  checkedInByName String   // registrerad av (den som klickade)
+  checkedInByName String // registrerad av (den som klickade)
   instructorId    Int?
   instructorName  String   @default("") // "Incheckad av" – kursens lärare
   createdAt       DateTime @default(now())
@@ -279,46 +283,47 @@ model WhatsappConversation {
 }
 
 model InfoCard {
-  id                 Int      @id @default(autoincrement())
-  badge              String   @default("")
-  title              String
-  description        String
-  price              String   @default("")
-  imageUrl           String   @default("")
-  videoUrl           String   @default("")
-  primaryButtonText  String   @default("Läs mer")
-  primaryButtonLink  String   @default("/courses")
-  secondaryButtonText String  @default("")
-  secondaryButtonLink String  @default("")
-  sortOrder          Int      @default(0)
-  visible            Boolean  @default(true)
-  createdAt          DateTime @default(now())
+  id                  Int      @id @default(autoincrement())
+  badge               String   @default("")
+  title               String
+  description         String
+  price               String   @default("")
+  imageUrl            String   @default("")
+  videoUrl            String   @default("")
+  primaryButtonText   String   @default("Läs mer")
+  primaryButtonLink   String   @default("/courses")
+  secondaryButtonText String   @default("")
+  secondaryButtonLink String   @default("")
+  sortOrder           Int      @default(0)
+  visible             Boolean  @default(true)
+  createdAt           DateTime @default(now())
 }
 
 /// Faktura till en trafikskola. Säljare och köpare sparas som de såg ut när fakturan skapades.
 model Invoice {
-  id           Int       @id @default(autoincrement())
-  number       Int       @unique
+  id           Int            @id @default(autoincrement())
+  number       Int            @unique
   schoolUserId Int
-  schoolUser   User      @relation("SchoolInvoices", fields: [schoolUserId], references: [id])
-  period       String    // "2026-11" – kursernas månad
-  status       String    @default("created") // created | sent | paid | credited
+  schoolUser   User           @relation("SchoolInvoices", fields: [schoolUserId], references: [id])
+  period       String // "2026-11" – kursernas månad
+  status       String         @default("created") // created | sent | paid | credited
   issueDate    DateTime
   dueDate      DateTime
-  total        Int       // kr inkl. moms
-  vat          Int       // kr
+  total        Int // kr inkl. moms
+  vat          Int // kr
   buyerName    String
   buyerEmail   String
-  buyerOrgNr   String    @default("")
-  buyerAddress String    @default("")
-  seller       String    // JSON med företagsuppgifterna
+  buyerOrgNr   String         @default("")
+  buyerAddress String         @default("")
+  seller       String // JSON med företagsuppgifterna
   sentAt       DateTime?
   paidAt       DateTime?
   creditedAt   DateTime?
-  creditOfId   Int?      // kreditfaktura: vilken faktura den krediterar
+  creditOfId   Int? // kreditfaktura: vilken faktura den krediterar
   lines        InvoiceLine[]
   bookings     Booking[]
-  createdAt    DateTime  @default(now())
+  credits      SchoolCredit[]
+  createdAt    DateTime       @default(now())
 
   @@index([schoolUserId])
   @@index([status])
@@ -332,22 +337,22 @@ model InvoiceLine {
   date        DateTime?
   description String
   quantity    Int
-  unitPrice   Int       // kr inkl. moms
-  amount      Int       // kr inkl. moms
+  unitPrice   Int // kr inkl. moms
+  amount      Int // kr inkl. moms
   students    String    @default("") // namn, en per rad
 }
 
 // Rabattkoder: skapas i omgångar, varje kod kan användas en gång
 model CouponBatch {
-  id          Int      @id @default(autoincrement())
-  name        String
-  kind        String   // percent | amount
-  value       Int      // procent eller kronor
-  validTo     DateTime?
-  courseIds   Int[]    // tom = alla kurser
-  createdBy   String   @default("")
-  createdAt   DateTime @default(now())
-  coupons     Coupon[]
+  id        Int       @id @default(autoincrement())
+  name      String
+  kind      String // percent | amount
+  value     Int // procent eller kronor
+  validTo   DateTime?
+  courseIds Int[] // tom = alla kurser
+  createdBy String    @default("")
+  createdAt DateTime  @default(now())
+  coupons   Coupon[]
 }
 
 model Coupon {
@@ -360,4 +365,26 @@ model Coupon {
   bookings  Booking[]
 
   @@index([batchId])
+}
+
+/// Skolans saldo: pengar vi redan fått för skolans räkning (t.ex. en skolelev som betalat en del själv).
+/// Dras av på skolans nästa faktura. bookingId satt = elevens betalning, dras av på fakturan där eleven finns.
+model SchoolCredit {
+  id           Int      @id @default(autoincrement())
+  schoolUserId Int
+  schoolUser   User     @relation("SchoolCredits", fields: [schoolUserId], references: [id])
+  bookingId    Int?
+  booking      Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  amount       Int // kr inkl. moms
+  method       String   @default("") // cash | card | swish | "" (annat)
+  note         String   @default("")
+  invoiceId    Int? // fakturan där beloppet dragits av
+  invoice      Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdById  Int?
+  restOfId     Int? // resten av ett tillgodo som inte fick plats på en faktura
+  createdAt    DateTime @default(now())
+
+  @@index([schoolUserId])
+  @@index([bookingId])
+  @@index([invoiceId])
 }

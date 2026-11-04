@@ -168,12 +168,15 @@ export interface SchoolChoice {
 }
 
 /** Nuvarande skola och om den går att ändra (betald med Swish eller redan fakturerad = låst). */
-export function schoolChoiceFor(booking: { bookedBySchoolUserId: number | null; invoiceId: number | null; payment: { status: string } | null }): SchoolChoice {
+export function schoolChoiceFor(booking: { bookedBySchoolUserId: number | null; invoiceId: number | null; payment: { status: string } | null; schoolCredits?: unknown[] }): SchoolChoice {
   // Bara en genomförd betalning låser (betalningar skapas först när de har gått igenom)
   const paid = booking.payment?.status === 'Succeeded';
   return {
     schoolUserId: booking.bookedBySchoolUserId,
-    locked: booking.invoiceId ? 'Eleven finns redan på en faktura' : paid ? 'Eleven har betalat själv med Swish' : null,
+    locked: booking.invoiceId ? 'Eleven finns redan på en faktura'
+      : paid ? 'Eleven har betalat själv med Swish'
+      : booking.schoolCredits?.length ? 'Eleven har betalat en del – ta bort elevens betalning först'
+      : null,
   };
 }
 
@@ -184,7 +187,7 @@ export function schoolChoiceFor(booking: { bookedBySchoolUserId: number | null; 
 export async function setBookingSchool(bookingId: number, user: JWTPayload, schoolUserId: number | null): Promise<Result> {
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    select: { id: true, sessionId: true, status: true, bookedBySchoolUserId: true, invoiceId: true, payment: { select: { status: true } } },
+    select: { id: true, sessionId: true, status: true, bookedBySchoolUserId: true, invoiceId: true, payment: { select: { status: true } }, schoolCredits: { select: { id: true } } },
   });
   if (!booking) return { ok: false, status: 404, error: 'Bokningen hittades inte' };
   if (user.role !== 'admin') return { ok: false, status: 403, error: 'Bara admin kan välja trafikskola' };

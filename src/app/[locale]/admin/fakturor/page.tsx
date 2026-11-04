@@ -10,7 +10,8 @@ import { Button, Checkbox, Field, Input, formatDate } from '@/components/admin/u
 import { InvoiceStatus, kr, periodLabel } from '@/components/admin/invoice';
 
 interface DraftLine { sessionId: number; date: string; description: string; quantity: number; unitPrice: number; amount: number; students: string[] }
-interface Draft { schoolUserId: number; schoolName: string; email: string; period: string; lines: DraftLine[]; total: number; students: number }
+interface Deduction { creditId: number; date: string; description: string; student: string; amount: number; full: number }
+interface Draft { schoolUserId: number; schoolName: string; email: string; period: string; lines: DraftLine[]; gross: number; deductions: Deduction[]; total: number; students: number }
 interface InvoiceRow {
   id: number; number: number; period: string; status: 'created' | 'sent' | 'paid' | 'credited';
   issueDate: string; dueDate: string; total: number; buyerName: string; sentAt: string | null; paidAt: string | null; students: number; creditOfId: number | null;
@@ -124,7 +125,10 @@ export default function FakturorPage() {
                     </div>
                   </button>
                   <div className="flex items-center justify-between sm:justify-end gap-4">
-                    <span className="font-headline font-extrabold">{kr(d.total)}</span>
+                    <div className="text-right">
+                      <span className="font-headline font-extrabold">{kr(d.total)}</span>
+                      {d.deductions.length > 0 && <p className="text-xs text-emerald-300">−{kr(d.gross - d.total)} saldo</p>}
+                    </div>
                     <Button variant="primary" onClick={() => create(d)} disabled={busy !== null}>
                       {busy === key ? 'Skapar…' : 'Skapa faktura'}
                     </Button>
@@ -139,6 +143,15 @@ export default function FakturorPage() {
                           <p className="text-white/45">{l.students.join(', ')}</p>
                         </div>
                         <p className="shrink-0 text-white/70">{l.quantity} × {kr(l.unitPrice)}</p>
+                      </div>
+                    ))}
+                    {d.deductions.map(x => (
+                      <div key={x.creditId} className="flex items-start justify-between gap-4 text-sm">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-emerald-300">{x.description}</p>
+                          <p className="text-white/45">{[x.student, formatDate(x.date, { day: 'numeric', month: 'short' })].filter(Boolean).join(' · ')}{x.amount < x.full ? ` · ${kr(x.full - x.amount)} sparas till nästa faktura` : ''}</p>
+                        </div>
+                        <p className="shrink-0 text-emerald-300">−{kr(x.amount)}</p>
                       </div>
                     ))}
                   </div>

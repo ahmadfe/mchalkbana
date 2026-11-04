@@ -124,10 +124,13 @@ export async function GET(request: Request) {
   if (owner) {
     const { y, m } = localParts(now);
     const yearAgo = midnight(y, m - 11, 1);
-    const [payments, invoices] = await Promise.all([
+    const [paid, credits, invoices] = await Promise.all([
       prisma.payment.findMany({ where: { status: 'Succeeded', createdAt: { gte: yearAgo } }, select: { amount: true, createdAt: true } }),
+      // Skolelever som betalat en del själva / tillgodo – pengarna kom in till oss, fakturan blev lika mycket lägre
+      prisma.schoolCredit.findMany({ where: { createdAt: { gte: yearAgo } }, select: { amount: true, createdAt: true } }),
       prisma.invoice.findMany({ where: { status: { not: 'created' }, issueDate: { gte: yearAgo } }, select: { total: true, issueDate: true } }),
     ]);
+    const payments = [...paid, ...credits];
     const months = Array.from({ length: 12 }, (_, i) => {
       const d = midnight(y, m - 11 + i, 15);
       return { month: monthKey(d), swish: 0, schools: 0 };

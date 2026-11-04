@@ -9,6 +9,7 @@ import AdminShell from '@/components/admin/AdminShell';
 import KindBadge from '@/components/admin/KindBadge';
 import { Badge, Button, Card, Checkbox, Field, Input, Select, Textarea, formatDate } from '@/components/admin/ui';
 import { InvoiceStatus, kr, periodLabel } from '@/components/admin/invoice';
+import { CREDIT_METHOD_LABEL } from '@/lib/schoolCreditLabels';
 import { ReservationFields, defaultFillBy, newReservation, reservationPayload, useReservationData, type ReservationDraft } from '@/components/admin/Reservations';
 
 interface Student {
@@ -26,7 +27,7 @@ interface Price { courseId: number; title: string; listPrice: number; price: num
 interface Invoice { id: number; number: number; period: string; status: string; dueDate: string; issueDate: string; total: number; creditOfId: number | null }
 interface Data { school: School; prices: Price[]; invoices: Invoice[]; courses: Course[] }
 
-type Tab = 'kurser' | 'priser' | 'fakturor' | 'uppgifter';
+type Tab = 'kurser' | 'priser' | 'saldo' | 'fakturor' | 'uppgifter';
 
 const tz = { timeZone: 'Europe/Stockholm' } as const;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
@@ -56,7 +57,7 @@ export default function TrafikskolaPage({ params }: { params: { id: string } }) 
     );
   }
 
-  const tabs: [Tab, string][] = [['kurser', 'Kurser'], ['priser', 'Priser'], ['fakturor', `Fakturor (${data.invoices.length})`], ['uppgifter', 'Uppgifter']];
+  const tabs: [Tab, string][] = [['kurser', 'Kurser'], ['priser', 'Priser'], ['saldo', 'Saldo'], ['fakturor', `Fakturor (${data.invoices.length})`], ['uppgifter', 'Uppgifter']];
 
   return (
     <AdminShell
@@ -80,6 +81,7 @@ export default function TrafikskolaPage({ params }: { params: { id: string } }) 
 
       {tab === 'kurser' && <Courses schoolId={data.school.id} schoolName={data.school.name} courses={data.courses} reload={load} />}
       {tab === 'priser' && <Prices schoolId={data.school.id} prices={data.prices} reload={load} />}
+      {tab === 'saldo' && <Balance schoolId={data.school.id} schoolName={data.school.name} locale={locale} />}
       {tab === 'fakturor' && <Invoices invoices={data.invoices} locale={locale} />}
       {tab === 'uppgifter' && <Details school={data.school} reload={load} />}
 
@@ -504,6 +506,107 @@ function Prices({ schoolId, prices, reload }: { schoolId: number; prices: Price[
         {msg && <span className={clsx('text-sm', msg === 'Sparat' ? 'text-emerald-300' : 'text-red-400')}>{msg}</span>}
       </div>
     </Card>
+  );
+}
+
+interface Credit {
+  id: number; amount: number; method: string; note: string; createdAt: string;
+  student: string | null; courseDate: string | null; invoice: { id: number; number: number } | null;
+}
+
+/** Skolans saldo: pengar vi redan fått för skolan. Dras av på skolans nästa faktura. */
+function Balance({ schoolId, schoolName, locale }: { schoolId: number; schoolName: string; locale: string }) {
+  const [data, setData] = useState<{ balance: number; credits: Credit[] } | null>(null);
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [method, setMethod] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => fetch(`/api/admin/skolsaldo?schoolUserId=${schoolId}`).then(r => r.json()).then(setData), [schoolId]);
+  useEffect(() => { load(); }, [load]);
+
+  const add = async () => {
+    setBusy(true);
+    setError('');
+    const res = await fetch('/api/admin/skolsaldo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schoolUserId: schoolId, amount: Number(amount), note, method }),
+    });
+    setBusy(false);
+    if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
+    setAmount('');
+    setNote('');
+    load();
+  };
+
+  const remove = async (c: Credit) => {
+    if (!confirm(`Ta bort ${kr(c.amount)} från ${schoolName}s saldo?`)) return;
+    const res = await fetch(`/api/admin/skolsaldo?id=${c.id}`, { method: 'DELETE' });
+    if (!res.ok) alert((await res.json()).error ?? 'Något gick fel');
+    load();
+  };
+
+  if (!data) return <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>;
+  const valid = Number.isInteger(Number(amount)) && Number(amount) > 0 && note.trim() !== '';
+
+  return (
+    <div className="space-y-4">
+      <Card title="Saldo">
+        <p className="font-headline text-3xl font-extrabold">{kr(data.balance)}</p>
+        <p className="text-sm text-white/60 mt-1">
+          Pengar vi redan har fått för {schoolName}. Dras av på skolans nästa faktura (inkl. moms).
+          Elever som betalat en del själva läggs in på kurssidan med <strong className="text-white">Eleven betalar en del</strong>.
+        </p>
+      </Card>
+
+      <Card title="Lägg till tillgodo">
+        <div className="grid sm:grid-cols-[8rem_1fr_9rem] gap-3">
+          <Field label="Belopp (kr inkl. moms)"><Input inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value)} placeholder="2000" /></Field>
+          <Field label="Vad gäller det?"><Input value={note} onChange={e => setNote(e.target.value)} placeholder="T.ex. 3 elever betalade på plats 12 nov" /></Field>
+          <Field label="Betalsätt">
+            <Select value={method} onChange={e => setMethod(e.target.value)}>
+              <option value="">Annat</option>
+              <option value="cash">Kontant</option>
+              <option value="card">Kort</option>
+              <option value="swish">Swish</option>
+            </Select>
+          </Field>
+        </div>
+        {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+        <Button variant="primary" className="mt-4" disabled={busy || !valid} onClick={add}>{busy ? 'Sparar…' : 'Lägg till'}</Button>
+      </Card>
+
+      {data.credits.length > 0 && (
+        <div className="space-y-2">
+          {data.credits.map(c => (
+            <div key={c.id} className="flex items-center gap-4 rounded-2xl bg-[#1c1c1f] px-5 py-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate">
+                  {c.student ? `${c.student} betalade själv` : c.note}
+                  {c.method && <span className="text-white/50 font-normal"> · {CREDIT_METHOD_LABEL[c.method]}</span>}
+                </p>
+                <p className="text-sm text-white/50 mt-0.5">
+                  {formatDate(c.createdAt)}{c.courseDate ? ` · kurs ${formatDate(c.courseDate, { day: 'numeric', month: 'short' })}` : ''}
+                  {c.student && c.note ? ` · ${c.note}` : ''}
+                  {' · '}
+                  {c.invoice
+                    ? <Link href={`/${locale}/admin/fakturor/${c.invoice.id}`} className="underline">avdraget på faktura #{c.invoice.number}</Link>
+                    : <span className="text-emerald-300">dras av på nästa faktura</span>}
+                </p>
+              </div>
+              <span className="font-headline font-extrabold shrink-0">{kr(c.amount)}</span>
+              {!c.invoice && (
+                <button onClick={() => remove(c)} aria-label="Ta bort" className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-red-400 shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
