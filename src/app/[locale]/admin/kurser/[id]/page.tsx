@@ -405,6 +405,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   };
 
   const [partPay, setPartPay] = useState<{ amount: string; method: string } | null>(null);
+  const [moving, setMoving] = useState(false);
 
   const savePartPay = async () => {
     if (!partPay) return;
@@ -441,7 +442,10 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           <p className="text-sm text-white/50 truncate">{[p.phone, p.email].filter(Boolean).join(' · ') || 'Inga kontaktuppgifter'}</p>
           {p.note && <p className="text-sm text-amber-200/90 bg-amber-500/10 rounded-lg px-2.5 py-1.5 mt-1.5 whitespace-pre-wrap">📝 {p.note}{p.schoolName ? ` – ${p.schoolName}` : ''}</p>}
         </div>
-        <button onClick={cancel} disabled={busy} className="text-sm text-white/40 hover:text-red-400 shrink-0">Avboka</button>
+        <div className="flex items-center gap-4 shrink-0">
+          {!p.checkedInAt && !p.invoiced && <button onClick={() => setMoving(true)} disabled={busy} className="text-sm text-white/60 hover:text-white">Flytta</button>}
+          <button onClick={cancel} disabled={busy} className="text-sm text-white/40 hover:text-red-400">Avboka</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
@@ -616,6 +620,8 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
         {p.result === 'passed' && <Badge tone="green">Godkänd av lärare</Badge>}
       </div>
 
+      {moving && <MoveSheet p={p} onClose={() => setMoving(false)} onMoved={async () => { setMoving(false); await onChange(); }} />}
+
       {checkingIn && (
         <CheckInModal
           person={{ bookingId: p.bookingId, name: p.name, email: p.email, phone: p.phone, personnummer: p.personnummer, behorighet }}
@@ -625,6 +631,89 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           comboParts={isKombo ? p.comboParts : undefined}
         />
       )}
+    </div>
+  );
+}
+
+interface MoveOption { id: number; startTime: string; endTime: string; booked: number; seatLimit: number; sameDay: boolean }
+
+/** Flytta eleven till ett annat tillfälle av samma kurs – samma dag först. */
+function MoveSheet({ p, onClose, onMoved }: { p: Participant; onClose: () => void; onMoved: () => Promise<void> }) {
+  const [options, setOptions] = useState<MoveOption[] | null>(null);
+  const [picked, setPicked] = useState<MoveOption | null>(null);
+  const [notify, setNotify] = useState(!!p.email);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch(`/api/admin/deltagare/${p.bookingId}/flytta`).then(r => r.json()).then(d => setOptions(d.options ?? []));
+  }, [p.bookingId]);
+
+  const move = async () => {
+    if (!picked) return;
+    setBusy(true);
+    setError('');
+    const res = await fetch(`/api/admin/deltagare/${p.bookingId}/flytta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: picked.id, notify }),
+    });
+    const body = await res.json();
+    setBusy(false);
+    if (!res.ok) { setError(body.error ?? 'Något gick fel'); return; }
+    await onMoved();
+  };
+
+  const day = (iso: string) => formatDate(iso, { weekday: 'short', day: 'numeric', month: 'short' });
+  const full = (o: MoveOption) => o.booked >= o.seatLimit;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4" onClick={() => !busy && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={`Flytta ${p.name}`} onClick={e => e.stopPropagation()}
+        className="w-full sm:max-w-lg bg-[#1c1c1f] text-white rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-h-[90vh] flex flex-col">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60">Flytta elev</p>
+            <h2 className="font-headline text-xl font-extrabold mt-1 break-words">{p.name}</h2>
+            <p className="text-sm text-white/60 mt-1">Välj ett annat tillfälle av samma kurs. Betalning och skola följer med.</p>
+          </div>
+          <button onClick={onClose} disabled={busy} aria-label="Stäng" className="w-10 h-10 shrink-0 rounded-full bg-white/10 hover:bg-white/15 text-lg">×</button>
+        </div>
+
+        <div className="overflow-y-auto -mx-1 px-1 space-y-2 flex-1">
+          {!options ? (
+            <div className="py-10 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
+          ) : options.length === 0 ? (
+            <p className="text-sm text-white/50 py-6 text-center">Inga andra kommande tillfällen av den här kursen.</p>
+          ) : options.map((o, i) => (
+            <div key={o.id}>
+              {(i === 0 || options[i - 1].sameDay !== o.sameDay) && (
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/50 mt-3 mb-1.5">{o.sameDay ? 'Samma dag' : 'Andra dagar'}</p>
+              )}
+              <button
+                onClick={() => setPicked(o)}
+                className={clsx('w-full flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition',
+                  picked?.id === o.id ? 'border-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-400' : 'border-white/10 hover:border-white/30')}
+              >
+                <span className="font-semibold">{day(o.startTime)} · {hm(o.startTime)}–{hm(o.endTime)}</span>
+                <span className={clsx('text-sm shrink-0', full(o) ? 'text-amber-300' : 'text-white/60')}>
+                  {full(o) ? 'Fullt' : `${o.seatLimit - o.booked} lediga`} · {o.booked}/{o.seatLimit}
+                </span>
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {picked && full(picked) && <p className="text-sm text-amber-300 mt-3">Tillfället är fullt – eleven blir en extra plats ({picked.booked + 1}/{picked.seatLimit}).</p>}
+        {p.email && <div className="mt-3"><Checkbox checked={notify} onChange={setNotify}>Skicka ny bekräftelse till eleven ({p.email})</Checkbox></div>}
+        {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
+        <div className="flex gap-3 mt-4">
+          <Button className="!h-12" onClick={onClose} disabled={busy}>Avbryt</Button>
+          <Button variant="primary" className="flex-1 !h-12" onClick={move} disabled={busy || !picked}>
+            {busy ? 'Flyttar…' : picked ? `Flytta till ${day(picked.startTime)} ${hm(picked.startTime)}` : 'Välj tillfälle'}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
