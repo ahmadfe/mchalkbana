@@ -392,9 +392,18 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
     setEditingPrice(false);
   };
 
+  const [payer, setPayer] = useState<'student' | 'school'>('student');
+  const [schoolId, setSchoolId] = useState('');
+
   const pay = async () => {
-    await call(`/api/admin/bookings/${p.bookingId}/payment`, 'POST', { amount: Number(amount), provider });
+    if (payer === 'school') await call(`/api/checkin/${p.bookingId}/school`, 'PATCH', { schoolUserId: Number(schoolId) });
+    else await call(`/api/admin/bookings/${p.bookingId}/payment`, 'POST', { amount: Number(amount), provider });
     setPaying(false);
+  };
+
+  const removeSchool = () => {
+    if (!confirm(`Ta bort ${p.schoolName} som betalare? ${p.name} blir då obetald och får betala själv.`)) return;
+    call(`/api/checkin/${p.bookingId}/school`, 'PATCH', { schoolUserId: null });
   };
 
   const cancel = () => {
@@ -421,7 +430,8 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
 
       <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
         {p.schoolName ? (
-          <><Badge tone="blue">Skola</Badge><span className="text-white/60">{kr(p.price)} – faktureras {p.schoolName}</span></>
+          <><Badge tone="blue">Skola</Badge><span className="text-white/60">{kr(p.price)} – faktureras {p.schoolName}</span>
+            {!p.schoolLocked && <button onClick={removeSchool} disabled={busy} className="text-xs text-white/50 hover:text-white underline">Ta bort skola</button>}</>
         ) : p.payment?.provider === 'Klarna' && p.payment.status === 'Authorized' ? (
           <><Badge tone="blue">Klarna – reserverad</Badge><span className="text-white/60">{kr(p.price)} – dras efter kursen</span></>
         ) : p.payment?.provider === 'Klarna' && p.payment.status === 'Canceled' ? (
@@ -460,23 +470,51 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
 
       {!p.paid && !p.schoolName && (
         paying ? (
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <input
-              type="number"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
-            />
-            <Select value={provider} onChange={e => setProvider(e.target.value)} className="!w-32 !h-10">
-              <option value="cash">Kontant</option>
-              <option value="card">Kort</option>
-              <option value="swish">Swish</option>
-            </Select>
-            <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || !Number(amount)}>Bekräfta</Button>
-            <Button className="!h-10" onClick={() => setPaying(false)}>Avbryt</Button>
+          <div className="mt-3 rounded-2xl bg-white/5 p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-white/60 mr-1">Vem betalar?</span>
+              {(['student', 'school'] as const).map(v => (
+                <button
+                  key={v}
+                  onClick={() => setPayer(v)}
+                  className={clsx('h-9 px-4 rounded-full text-sm font-semibold border transition',
+                    payer === v ? 'bg-white text-gray-900 border-white' : 'border-white/15 text-white/70 hover:text-white')}
+                >
+                  {v === 'student' ? 'Eleven' : 'Trafikskola'}
+                </button>
+              ))}
+            </div>
+            {payer === 'student' ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  aria-label="Belopp (kr)"
+                  className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
+                />
+                <Select value={provider} onChange={e => setProvider(e.target.value)} className="!w-32 !h-10">
+                  <option value="cash">Kontant</option>
+                  <option value="card">Kort</option>
+                  <option value="swish">Swish</option>
+                </Select>
+              </div>
+            ) : (
+              <div>
+                <Select value={schoolId} onChange={e => setSchoolId(e.target.value)} className="!h-10 sm:!w-72" aria-label="Trafikskola">
+                  <option value="">Välj trafikskola…</option>
+                  {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </Select>
+                <p className="text-xs text-white/50 mt-1.5">Eleven läggs på skolans faktura med skolans pris.</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || (payer === 'student' ? !Number(amount) : !schoolId)}>Bekräfta</Button>
+              <Button className="!h-10" onClick={() => setPaying(false)}>Avbryt</Button>
+            </div>
           </div>
         ) : (
-          <Button className="!h-10 mt-3" onClick={() => setPaying(true)}>Ta betalt i kassan</Button>
+          <Button className="!h-10 mt-3" onClick={() => setPaying(true)}>Betalning</Button>
         )
       )}
 
@@ -527,7 +565,6 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           onClose={() => setCheckingIn(false)}
           onDone={async () => { setCheckingIn(false); await onChange(); }}
           instructors={instructors}
-          school={{ schools, current: p.schoolUserId, currentName: p.schoolName, locked: p.schoolLocked }}
           comboParts={isKombo ? p.comboParts : undefined}
         />
       )}
