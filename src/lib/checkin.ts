@@ -158,7 +158,7 @@ export async function undoCheckIn(bookingId: number, user: JWTPayload): Promise<
   return { ok: true };
 }
 
-// ── Vilken trafikskola eleven kommer från (väljs vid incheckningen) ──
+// ── Vilken trafikskola som betalar för eleven (väljs av admin i betalningssteget på kurssidan) ──
 
 export interface SchoolChoice {
   /** Skolan som betalar för eleven, null = privat */
@@ -187,7 +187,7 @@ export async function setBookingSchool(bookingId: number, user: JWTPayload, scho
     select: { id: true, sessionId: true, status: true, bookedBySchoolUserId: true, invoiceId: true, payment: { select: { status: true } } },
   });
   if (!booking) return { ok: false, status: 404, error: 'Bokningen hittades inte' };
-  if (!(await canCheckIn(user, booking.sessionId))) return { ok: false, status: 403, error: 'Ej behörig' };
+  if (user.role !== 'admin') return { ok: false, status: 403, error: 'Bara admin kan välja trafikskola' };
   if (booking.bookedBySchoolUserId === schoolUserId) return { ok: true };
   const choice = schoolChoiceFor(booking);
   if (choice.locked) return { ok: false, status: 400, error: choice.locked };
@@ -206,11 +206,6 @@ export async function setBookingSchool(bookingId: number, user: JWTPayload, scho
   const { recalcSeats } = await import('./kurser');
   await recalcSeats(booking.sessionId);
   return { ok: true };
-}
-
-/** Aktiva trafikskolor att välja bland vid incheckningen. */
-export function activeSchools() {
-  return prisma.user.findMany({ where: { role: 'school', disabled: false, hidden: false }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
 }
 
 // ── Kombokurs: vilka delar eleven gör ──

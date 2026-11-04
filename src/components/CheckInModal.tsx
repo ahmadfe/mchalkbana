@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Mail, Phone, X } from 'lucide-react';
+import { Mail, Phone, X } from 'lucide-react';
 import clsx from 'clsx';
 import { ageFromPersonnummer, formatPersonnummer, normalizePersonnummer } from '@/lib/pnr';
 import { COMBO_PARTS, COMBO_PARTS_LABEL, type ComboParts } from '@/lib/courseKind';
@@ -23,23 +23,12 @@ const ID_OPTIONS = [
 ];
 
 /** Incheckning: kontrollera legitimation och personnummer innan deltagaren får vara med. Används av admin och lärare. */
-/** Vilken trafikskola eleven kommer från – skolan faktureras för eleven. */
-export interface SchoolPick {
-  schools: { id: number; name: string }[];
-  /** Nuvarande skola, null = privat */
-  current: number | null;
-  currentName?: string | null;
-  /** Varför valet inte går att ändra (betald med Swish, redan fakturerad) */
-  locked: string | null;
-}
-
-export default function CheckInModal({ person, onClose, onDone, instructors, school, comboParts }: {
+export default function CheckInModal({ person, onClose, onDone, instructors, comboParts }: {
   person: CheckInPerson;
   onClose: () => void;
   onDone: () => void;
   /** Kursens lärare – skickas från admin. Läraren som checkar in själv behöver inte välja. */
   instructors?: { id: number; name: string }[];
-  school?: SchoolPick;
   /** Kombokurs (admin): vilka delar eleven gör – visas som val */
   comboParts?: ComboParts;
 }) {
@@ -48,7 +37,6 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
   const [pnrInput, setPnrInput] = useState(original ? formatPersonnummer(original) : '');
   const [idType, setIdType] = useState('');
   const [instructorId, setInstructorId] = useState(instructors?.[0]?.id ?? 0);
-  const [schoolId, setSchoolId] = useState(school?.current ? String(school.current) : '');
   const [parts, setParts] = useState<ComboParts | undefined>(comboParts);
   const noInstructor = !!instructors && instructors.length === 0;
   const [busy, setBusy] = useState(false);
@@ -73,14 +61,12 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
         idType,
         ...(editing && pnr !== original ? { personnummer: pnrInput } : {}),
         ...(instructors && instructorId ? { instructorId } : {}),
-        ...(school && !school.locked ? { schoolUserId: schoolId ? Number(schoolId) : null } : {}),
         ...(parts ? { comboParts: parts } : {}),
       }),
     });
     setBusy(false);
     const body = await res.json();
     if (!res.ok) { setError(body.error ?? 'Något gick fel'); return; }
-    if (body.warning) alert(`Eleven är incheckad, men skolan kunde inte sparas: ${body.warning}`);
     onDone();
   };
 
@@ -169,30 +155,6 @@ export default function CheckInModal({ person, onClose, onDone, instructors, sch
               ))}
             </div>
             <p className="text-xs text-white/50 mt-1.5">Styr vilka rapportfiler (Risk 1/Risk 2) eleven kommer med i.</p>
-          </div>
-        )}
-
-        {school && (
-          <div className="mt-5">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/60 mb-2">Vilken trafikskola kommer eleven från?</p>
-            {school.locked ? (
-              <p className="flex items-start gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm">
-                <Lock className="w-4 h-4 text-white/40 shrink-0 mt-0.5" />
-                <span><strong>{school.currentName ?? 'Privat'}</strong><span className="text-white/50"> · {school.locked}</span></span>
-              </p>
-            ) : (
-              <>
-                <select
-                  value={schoolId}
-                  onChange={e => setSchoolId(e.target.value)}
-                  className="w-full h-14 px-4 rounded-2xl bg-[#26262a] border border-white/10 text-white text-[15px] font-semibold [color-scheme:dark] focus:outline-none focus:border-white/40"
-                >
-                  <option value="">Ingen – privat (betalar själv)</option>
-                  {school.schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                {schoolId && <p className="text-xs text-white/50 mt-1.5">Skolan faktureras för eleven.</p>}
-              </>
-            )}
           </div>
         )}
 

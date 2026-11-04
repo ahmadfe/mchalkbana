@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ContactRound, MessageSquare, Phone, School, Search, Send, UserPlus, X, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ContactRound, MessageSquare, Phone, School, Search, Send, UserPlus, X, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import InstructorShell from '@/components/InstructorShell';
 import KindBadge from '@/components/admin/KindBadge';
@@ -25,7 +25,6 @@ interface Student {
   note: string | null;
   bookedBySchoolUserId: number | null;
   schoolName: string | null;
-  schoolLocked: string | null;
   user: { name: string; phone: string | null; email: string } | null;
 }
 interface SessionDetail {
@@ -33,7 +32,6 @@ interface SessionDetail {
   course: { titleSv: string; type: string; behorighet: string };
   bookings: Student[];
 }
-interface SchoolOption { id: number; name: string }
 
 const ID_LABEL: Record<string, string> = { korkort: 'Körkort', pass: 'Pass', nationellt_id: 'Nationellt id-kort', id_kort: 'Id-kort' };
 const tz = { timeZone: 'Europe/Stockholm' } as const;
@@ -45,12 +43,10 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
   const locale = useLocale();
   const { user } = useAuth();
   const [session, setSession] = useState<SessionDetail | null>(null);
-  const [schools, setSchools] = useState<SchoolOption[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [q, setQ] = useState('');
   const [saving, setSaving] = useState<number | null>(null);
   const [checkInFor, setCheckInFor] = useState<Student | null>(null);
-  const [schoolFor, setSchoolFor] = useState<Student | null>(null);
   const [noteFor, setNoteFor] = useState<Student | null>(null);
   const [adding, setAdding] = useState(false);
   const [sending, setSending] = useState(false);
@@ -61,7 +57,6 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
     if (!res.ok) { setNotFound(true); return; }
     const d = await res.json();
     setSession(d.session);
-    setSchools(d.schools ?? []);
   }, [id]);
   useEffect(() => { if (user?.role === 'instructor') reload(); }, [user, reload]);
 
@@ -156,7 +151,6 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
             s={s}
             saving={saving === s.id}
             onCheckIn={() => setCheckInFor(s)}
-            onSchool={() => setSchoolFor(s)}
             onNote={() => setNoteFor(s)}
             onResult={r => patchStudent(s.id, { result: s.result === r ? null : r })}
           />
@@ -200,12 +194,10 @@ export default function InstruktorSessionPage({ params }: { params: { id: string
             personnummer: checkInFor.personnummer,
             behorighet: session.course.behorighet,
           }}
-          school={{ schools, current: checkInFor.bookedBySchoolUserId, currentName: checkInFor.schoolName, locked: checkInFor.schoolLocked }}
           onClose={() => setCheckInFor(null)}
           onDone={() => { setCheckInFor(null); reload(); }}
         />
       )}
-      {schoolFor && <SchoolSheet student={schoolFor} schools={schools} onClose={() => setSchoolFor(null)} onSaved={() => { setSchoolFor(null); reload(); }} />}
       {noteFor && (
         <NoteSheet
           student={noteFor}
@@ -235,9 +227,9 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
   );
 }
 
-function StudentCard({ s, saving, onCheckIn, onSchool, onNote, onResult }: {
+function StudentCard({ s, saving, onCheckIn, onNote, onResult }: {
   s: Student; saving: boolean;
-  onCheckIn: () => void; onSchool: () => void; onNote: () => void; onResult: (r: 'passed' | 'failed') => void;
+  onCheckIn: () => void; onNote: () => void; onResult: (r: 'passed' | 'failed') => void;
 }) {
   const phone = s.guestPhone || s.user?.phone || null;
   return (
@@ -254,9 +246,9 @@ function StudentCard({ s, saving, onCheckIn, onSchool, onNote, onResult }: {
           {saving && <div className="w-4 h-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin shrink-0 mt-1" />}
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 text-sm">
-          <button onClick={onSchool} className={clsx('inline-flex items-center gap-1.5 font-semibold', s.schoolName ? 'text-sky-300' : 'text-white/50')}>
+          <span className={clsx('inline-flex items-center gap-1.5 font-semibold', s.schoolName ? 'text-sky-300' : 'text-white/50')}>
             <School className="w-4 h-4" /> {s.schoolName ?? 'Privat'}
-          </button>
+          </span>
           {phone && <a href={`tel:${phone}`} className="inline-flex items-center gap-1.5 text-white/60"><Phone className="w-4 h-4" /> {phone}</a>}
         </div>
         {s.note && <p className="text-sm text-amber-200 bg-amber-500/10 rounded-xl px-3 py-2 mt-2 whitespace-pre-wrap">📝 {s.note}</p>}
@@ -318,47 +310,6 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 const field = 'w-full h-14 px-4 rounded-2xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40';
-
-/** Byt skola efteråt, t.ex. om fel skola valdes vid incheckningen. */
-function SchoolSheet({ student, schools, onClose, onSaved }: { student: Student; schools: SchoolOption[]; onClose: () => void; onSaved: () => void }) {
-  const [value, setValue] = useState(student.bookedBySchoolUserId ? String(student.bookedBySchoolUserId) : '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const save = async () => {
-    setBusy(true);
-    setError('');
-    const res = await fetch(`/api/checkin/${student.id}/school`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ schoolUserId: value ? Number(value) : null }),
-    });
-    setBusy(false);
-    if (!res.ok) { setError((await res.json()).error ?? 'Något gick fel'); return; }
-    onSaved();
-  };
-  return (
-    <Sheet title="Trafikskola" onClose={onClose}>
-      <p className="text-sm text-white/60 mb-4">Vilken trafikskola kommer {nameOf(student)} från? Skolan faktureras för eleven.</p>
-      {student.schoolLocked ? (
-        <p className="flex items-start gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm">
-          <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" /> {student.schoolName ?? 'Privat'} – {student.schoolLocked}.
-        </p>
-      ) : (
-        <>
-          <select value={value} onChange={e => setValue(e.target.value)} className={clsx(field, 'font-semibold [color-scheme:dark]')}>
-            <option value="">Ingen – privat (betalar själv)</option>
-            {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          {error && <p className="text-sm text-red-400 mt-3">{error}</p>}
-          <div className="flex gap-3 mt-5">
-            <button onClick={onClose} className="h-12 px-6 rounded-full bg-white/10 font-bold">Avbryt</button>
-            <button onClick={save} disabled={busy} className="flex-1 h-12 rounded-full bg-white text-black font-bold disabled:opacity-50">{busy ? 'Sparar…' : 'Spara'}</button>
-          </div>
-        </>
-      )}
-    </Sheet>
-  );
-}
 
 function NoteSheet({ student, onClose, onSave }: { student: Student; onClose: () => void; onSave: (note: string) => Promise<void> }) {
   const [note, setNote] = useState(student.resultNote ?? '');

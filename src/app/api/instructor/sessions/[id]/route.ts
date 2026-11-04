@@ -2,9 +2,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireInstructor } from '@/lib/auth';
-import { activeSchools, schoolChoiceFor } from '@/lib/checkin';
 
-/** En kurs för läraren: elever med incheckning, bedömning och vilken skola som betalar. */
+/** En kurs för läraren: elever med incheckning, bedömning och vilken skola de kommer från (skolan väljs av admin). */
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const authUser = await requireInstructor(request);
   if (!authUser) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
@@ -30,8 +29,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
           idType: true,
           note: true,
           bookedBySchoolUserId: true,
-          invoiceId: true,
-          payment: { select: { status: true } },
           bookedBySchoolUser: { select: { name: true } },
           user: { select: { name: true, phone: true, email: true } },
         },
@@ -50,12 +47,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
       endTime: session.endTime.toISOString(),
       resultsSentAt: session.resultsSentAt?.toISOString() ?? null,
       course: session.course,
-      bookings: session.bookings.map(({ payment, invoiceId, bookedBySchoolUser, ...b }) => ({
+      bookings: session.bookings.map(({ bookedBySchoolUser, ...b }) => ({
         ...b,
         schoolName: bookedBySchoolUser?.name ?? null,
-        schoolLocked: schoolChoiceFor({ bookedBySchoolUserId: b.bookedBySchoolUserId, invoiceId, payment }).locked,
       })),
     },
-    schools: await activeSchools(),
   });
 }
