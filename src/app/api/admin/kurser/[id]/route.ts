@@ -26,11 +26,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
       comboRisk2Session: { select: { id: true, startTime: true } },
       bookings: {
         include: {
-          payment: { select: { amount: true, provider: true, status: true, createdAt: true } },
+          payment: { select: { amount: true, provider: true, status: true, createdAt: true, note: true } },
           bookedBySchoolUser: { select: { name: true } },
           checkedInBy: { select: { name: true } },
           coupon: { select: { code: true } },
-          schoolCredits: { select: { id: true, amount: true, method: true, invoiceId: true }, orderBy: { createdAt: 'asc' } },
+          schoolCredits: { select: { id: true, amount: true, method: true, invoiceId: true, note: true }, orderBy: { createdAt: 'asc' } },
           user: { select: { name: true, email: true, phone: true } },
         },
         orderBy: { bookingTime: 'asc' },

@@ -55,9 +55,9 @@ interface Participant {
   priceOverride: number | null;
   invoiced: boolean;
   /** Skolelev som betalat en del själv – dras av på skolans faktura */
-  studentPaid: { id: number; amount: number; method: string; invoiceId: number | null }[];
+  studentPaid: { id: number; amount: number; method: string; invoiceId: number | null; note: string }[];
   comboParts: ComboParts;
-  payment: { amount: number; provider: string; status: string; createdAt: string } | null;
+  payment: { amount: number; provider: string; status: string; createdAt: string; note: string } | null;
   paid: boolean;
   attendance: string;
   result: string | null;
@@ -396,20 +396,21 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   };
 
   const [payer, setPayer] = useState<'student' | 'school'>('student');
+  const [payNote, setPayNote] = useState('');
   const [schoolId, setSchoolId] = useState('');
 
   const pay = async () => {
     if (payer === 'school') await call(`/api/checkin/${p.bookingId}/school`, 'PATCH', { schoolUserId: Number(schoolId) });
-    else await call(`/api/admin/bookings/${p.bookingId}/payment`, 'POST', { amount: Number(amount), provider });
+    else await call(`/api/admin/bookings/${p.bookingId}/payment`, 'POST', { amount: Number(amount), provider, note: payNote });
     setPaying(false);
   };
 
-  const [partPay, setPartPay] = useState<{ amount: string; method: string } | null>(null);
+  const [partPay, setPartPay] = useState<{ amount: string; method: string; note: string } | null>(null);
   const [moving, setMoving] = useState(false);
 
   const savePartPay = async () => {
     if (!partPay) return;
-    await call('/api/admin/skolsaldo', 'POST', { bookingId: p.bookingId, amount: Number(partPay.amount), method: partPay.method });
+    await call('/api/admin/skolsaldo', 'POST', { bookingId: p.bookingId, amount: Number(partPay.amount), method: partPay.method, note: partPay.note });
     setPartPay(null);
   };
 
@@ -459,7 +460,8 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
         ) : p.paid ? (
           <><Badge tone="green">Betald</Badge><span className="text-white/60">
             {kr(p.price)}{p.payment ? ` · ${PROVIDER_LABEL[p.payment.provider] ?? p.payment.provider} ${formatDate(p.payment.createdAt, { day: 'numeric', month: 'short' })}` : ''}
-          </span>{p.coupon && <Badge tone="green">Rabattkod {p.coupon.code} −{kr(p.coupon.discount)}</Badge>}</>
+          </span>{p.coupon && <Badge tone="green">Rabattkod {p.coupon.code} −{kr(p.coupon.discount)}</Badge>}
+          {p.payment?.note && <span className="text-white/50">📝 {p.payment.note}</span>}</>
         ) : (
           <><Badge tone="amber">Inte betald</Badge><span className="text-white/60">{kr(p.price)} – eleven har inte betalat än.</span></>
         )}
@@ -493,7 +495,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
           {p.studentPaid.map(c => (
             <div key={c.id} className="flex flex-wrap items-center gap-2 text-sm">
               <Badge tone="green">Eleven betalade {kr(c.amount)}</Badge>
-              <span className="text-white/60">{CREDIT_METHOD_LABEL[c.method] ?? ''} – {c.invoiceId ? 'avdraget på skolans faktura' : `dras av på ${p.schoolName}s faktura`}</span>
+              <span className="text-white/60">{CREDIT_METHOD_LABEL[c.method] ?? ''}{c.note ? ` · ${c.note}` : ''} – {c.invoiceId ? 'avdraget på skolans faktura' : `dras av på ${p.schoolName}s faktura`}</span>
               {!c.invoiceId && <button onClick={() => removePartPay(c.id, c.amount)} disabled={busy} className="text-xs text-white/50 hover:text-red-400 underline">Ta bort</button>}
             </div>
           ))}
@@ -517,6 +519,13 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
                   <option value="card">Kort</option>
                   <option value="swish">Swish</option>
                 </Select>
+                <input
+                  value={partPay.note}
+                  onChange={e => setPartPay({ ...partPay, note: e.target.value })}
+                  placeholder="Anteckning (valfritt)"
+                  aria-label="Anteckning"
+                  className="flex-1 min-w-[12rem] h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+                />
               </div>
               <div className="flex gap-2">
                 <Button variant="primary" className="!h-10" onClick={savePartPay} disabled={busy || !Number.isInteger(Number(partPay.amount)) || Number(partPay.amount) <= 0}>Spara</Button>
@@ -524,7 +533,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
               </div>
             </div>
           ) : (
-            <Button className="!h-10" onClick={() => setPartPay({ amount: '', method: 'cash' })}>Eleven betalar en del</Button>
+            <Button className="!h-10" onClick={() => setPartPay({ amount: '', method: 'cash', note: '' })}>Eleven betalar en del</Button>
           ))}
         </div>
       )}
@@ -559,6 +568,13 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
                   <option value="card">Kort</option>
                   <option value="swish">Swish</option>
                 </Select>
+                <input
+                  value={payNote}
+                  onChange={e => setPayNote(e.target.value)}
+                  placeholder="Anteckning (valfritt), t.ex. kontant till Ali"
+                  aria-label="Anteckning"
+                  className="flex-1 min-w-[12rem] h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+                />
               </div>
             ) : (
               <div>

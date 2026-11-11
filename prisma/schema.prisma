@@ -252,6 +252,7 @@ model Payment {
   provider      String
   status        String   @default("Pending")
   transactionId String?
+  note          String   @default("") // t.ex. "kontant till Ali"
   createdAt     DateTime @default(now())
 }
 

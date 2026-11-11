@@ -9,7 +9,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const bookingId = parseInt(params.id);
-  const { amount, provider, transactionId } = await request.json();
+  const { amount, provider, transactionId, note } = await request.json();
 
   if (!amount || !provider) {
     return NextResponse.json({ error: 'Belopp och betalningsmetod krävs' }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         provider,
         status: 'Succeeded',
         transactionId: transactionId?.trim() || null,
+        note: typeof note === 'string' ? note.trim().slice(0, 300) : '',
       },
     }),
     prisma.booking.update({

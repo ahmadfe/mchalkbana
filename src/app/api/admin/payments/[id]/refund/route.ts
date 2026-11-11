@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireOwner } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
+import { recalcSeats } from '@/lib/kurser';
 import { cancelOrder, KlarnaError, refundOrder } from '@/lib/klarna';
 import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
@@ -44,6 +45,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     } catch (e) {
       return NextResponse.json({ error: `Klarna: ${e instanceof KlarnaError ? e.code : 'fel'} – återbetalningen gjordes inte` }, { status: 502 });
     }
+  } else if (['cash', 'kontant', 'card', 'kort'].includes(payment.provider.toLowerCase())) {
+    // Kontant/kort i kassan: pengarna lämnas tillbaka för hand – bara markera som återbetald
   } else {
     // transactionId holds the Swish paymentReference from the callback
     if (!payment.transactionId || payment.transactionId.startsWith('swish_')) {
@@ -65,11 +68,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const [updated] = await prisma.$transaction([
     prisma.payment.update({ where: { id: paymentId }, data: { status: newStatus } }),
     prisma.booking.update({ where: { id: payment.bookingId }, data: { status: 'Canceled' } }),
-    prisma.session.update({
-      where: { id: payment.booking.sessionId },
-      data: { seatsAvailable: { increment: 1 } },
-    }),
   ]);
+  await recalcSeats(payment.booking.sessionId);
 
   // Send cancellation + refund confirmation email + internal notification
   const booking = payment.booking;

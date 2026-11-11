@@ -34,7 +34,7 @@ const SECTIONS: { title?: string; items: Item[] }[] = [
     items: [
       { tab: 'sessions', label: 'Pass och bokningar', short: 'Pass', icon: Calendar },
       { tab: 'courses', label: 'Kursslag', icon: Layers },
-      { tab: 'payments', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
+      { href: '/admin/betalningar', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
       { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School },
       { href: '/admin/rabattkoder', label: 'Rabattkoder', short: 'Koder', icon: TicketPercent },
       { href: '/admin/personal', label: 'Personal', icon: Contact },
