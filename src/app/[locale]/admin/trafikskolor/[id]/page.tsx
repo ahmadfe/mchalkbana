@@ -23,7 +23,7 @@ interface Course {
   students: Student[];
 }
 interface School { id: number; name: string; email: string; phone: string | null; orgNr: string; billingAddress: string; createdAt: string }
-interface Price { courseId: number; title: string; listPrice: number; price: number | null }
+interface Price { courseId: number; part: 'both' | 'risk1' | 'risk2'; title: string; kombo: boolean; listPrice: number; price: number | null; auto: number | null }
 interface Invoice { id: number; number: number; period: string; status: string; dueDate: string; issueDate: string; total: number; creditOfId: number | null }
 interface Data { school: School; prices: Price[]; invoices: Invoice[]; courses: Course[] }
 
@@ -458,17 +458,20 @@ const VAT = 1.25;
 const exVat = (incl: number) => String(Math.round(incl / VAT));
 const parseEx = (v: string) => Number(v.replace(/\s/g, '').replace(',', '.'));
 
+const PART_LABEL = { both: 'Risk 1 + 2', risk1: 'bara Risk 1', risk2: 'bara Risk 2' } as const;
+
 function Prices({ schoolId, prices, reload }: { schoolId: number; prices: Price[]; reload: () => void }) {
-  const [values, setValues] = useState<Record<number, string>>(() => Object.fromEntries(prices.map(p => [p.courseId, p.price === null ? '' : exVat(p.price)])));
+  const key = (p: { courseId: number; part: string }) => `${p.courseId}:${p.part}`;
+  const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(prices.map(p => [key(p), p.price === null ? '' : exVat(p.price)])));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
   const save = async () => {
     setBusy(true);
     setMsg('');
-    const parsed = Object.entries(values).filter(([, v]) => v.trim() !== '').map(([courseId, v]) => ({ courseId: Number(courseId), ex: parseEx(v) }));
+    const parsed = Object.entries(values).filter(([, v]) => v.trim() !== '').map(([k, v]) => ({ courseId: Number(k.split(':')[0]), part: k.split(':')[1], ex: parseEx(v) }));
     if (parsed.some(p => !Number.isFinite(p.ex) || p.ex < 0)) { setBusy(false); setMsg('Skriv priset i kronor, t.ex. 1000'); return; }
-    const list = parsed.map(p => ({ courseId: p.courseId, price: Math.round(p.ex * VAT) }));
+    const list = parsed.map(p => ({ courseId: p.courseId, part: p.part, price: Math.round(p.ex * VAT) }));
     const res = await fetch(`/api/admin/school-accounts/${schoolId}/prices`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -484,17 +487,23 @@ function Prices({ schoolId, prices, reload }: { schoolId: number; prices: Price[
       <p className="text-sm text-white/60 mb-4">Pris per elev <strong className="text-white">exkl. moms</strong> som skolan faktureras. 25 % moms läggs till på fakturan. Lämna tomt för ordinarie pris.</p>
       <div className="space-y-3">
         {prices.map(p => {
-          const v = values[p.courseId] ?? '';
+          const v = values[key(p)] ?? '';
           const ex = parseEx(v);
           const incl = v.trim() !== '' && Number.isFinite(ex) && ex >= 0 ? Math.round(ex * VAT) : null;
           return (
-            <div key={p.courseId} className="flex items-center gap-3">
+            <div key={key(p)} className={clsx('flex items-center gap-3', p.kombo && p.part !== 'both' && 'pl-5 border-l-2 border-white/10')}>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold truncate">{p.title}</p>
-                <p className="text-xs text-white/45">Ordinarie {kr(p.listPrice)} inkl. moms ({exVat(p.listPrice)} kr exkl.)</p>
+                <p className="font-semibold truncate">{p.kombo ? `${p.title} – ${PART_LABEL[p.part]}` : p.title}</p>
+                <p className="text-xs text-white/45">
+                  {p.part === 'both'
+                    ? <>Ordinarie {kr(p.listPrice)} inkl. moms ({exVat(p.listPrice)} kr exkl.)</>
+                    : p.auto !== null
+                      ? <>Tomt = skolans Risk {p.part === 'risk1' ? 1 : 2}-pris {exVat(p.auto)} kr exkl. ({kr(p.auto)} inkl.)</>
+                      : <>Tomt = ordinarie kombopris {kr(p.listPrice)} inkl. moms</>}
+                </p>
               </div>
               <div className="w-36 shrink-0">
-                <Input inputMode="decimal" aria-label={`${p.title} pris exkl. moms`} placeholder="exkl. moms" value={v} onChange={e => setValues({ ...values, [p.courseId]: e.target.value })} />
+                <Input inputMode="decimal" aria-label={`${p.title}${p.kombo ? ` ${PART_LABEL[p.part]}` : ''} pris exkl. moms`} placeholder="exkl. moms" value={v} onChange={e => setValues({ ...values, [key(p)]: e.target.value })} />
                 <p className="text-xs text-white/45 mt-1 text-right">{incl !== null ? `${kr(incl)} inkl. moms` : ' '}</p>
               </div>
             </div>

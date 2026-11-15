@@ -18,8 +18,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   return NextResponse.json({ prices });
 }
 
-// PUT: upsert custom prices for a school account
-// Body: { prices: [{ courseId: number, price: number }] }
+// PUT: skolans priser. Body: { prices: [{ courseId, part?, price }] } – part för kombokurser (both | risk1 | risk2).
+// Kurser/delar som inte skickas med får inget eget pris (ordinarie pris eller automatiskt delpris används).
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const authUser = await getAuthUserFromRequest(request);
   if (!authUser || authUser.role !== 'admin') {
@@ -27,28 +27,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 
   const schoolUserId = parseInt(params.id);
-  const { prices } = await request.json() as { prices: { courseId: number; price: number }[] };
+  const { prices } = await request.json() as { prices: { courseId: number; part?: string; price: number }[] };
+  if (!Array.isArray(prices)) return NextResponse.json({ error: 'Ogiltigt format' }, { status: 400 });
+  const rows = prices.map(p => ({ courseId: Number(p.courseId), part: p.part === 'risk1' || p.part === 'risk2' ? p.part : 'both', price: Math.round(Number(p.price)) }));
+  if (rows.some(r => !Number.isInteger(r.courseId) || !Number.isFinite(r.price) || r.price < 0)) return NextResponse.json({ error: 'Ogiltigt pris' }, { status: 400 });
 
-  if (!Array.isArray(prices)) {
-    return NextResponse.json({ error: 'Ogiltigt format' }, { status: 400 });
-  }
-
-  // Upsert each price entry
-  await Promise.all(
-    prices.map((p) =>
-      prisma.schoolCoursePrice.upsert({
-        where: { schoolUserId_courseId: { schoolUserId, courseId: p.courseId } },
-        create: { schoolUserId, courseId: p.courseId, price: p.price },
-        update: { price: p.price },
-      })
-    )
-  );
-
-  // Delete entries not in the submitted list (courses without a custom price)
-  const submittedCourseIds = prices.map((p) => p.courseId);
-  await prisma.schoolCoursePrice.deleteMany({
-    where: { schoolUserId, courseId: { notIn: submittedCourseIds } },
-  });
-
+  await prisma.$transaction([
+    prisma.schoolCoursePrice.deleteMany({ where: { schoolUserId } }),
+    prisma.schoolCoursePrice.createMany({ data: rows.map(r => ({ schoolUserId, ...r })) }),
+  ]);
   return NextResponse.json({ success: true });
 }

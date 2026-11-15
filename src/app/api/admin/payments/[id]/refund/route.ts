@@ -45,7 +45,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     } catch (e) {
       return NextResponse.json({ error: `Klarna: ${e instanceof KlarnaError ? e.code : 'fel'} – återbetalningen gjordes inte` }, { status: 502 });
     }
-  } else if (['cash', 'kontant', 'card', 'kort'].includes(payment.provider.toLowerCase())) {
+  } else if (['cash', 'kontant', 'card', 'kort', 'free'].includes(payment.provider.toLowerCase())) {
     // Kontant/kort i kassan: pengarna lämnas tillbaka för hand – bara markera som återbetald
   } else {
     // transactionId holds the Swish paymentReference from the callback

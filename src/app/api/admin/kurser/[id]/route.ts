@@ -7,6 +7,7 @@ import { SESSION_STATUSES, expectedPrice, parseKursInput, recalcSeats, setInstru
 import { releaseExpiredAllocations } from '@/lib/allocations';
 import { formatPersonnummer, normalizePersonnummer } from '@/lib/personnummer';
 import { formatCode } from '@/lib/coupons';
+import { schoolPriceFor } from '@/lib/schoolPrice';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
@@ -39,9 +40,13 @@ export async function GET(request: Request, { params }: { params: { id: string }
   });
   if (!s) return NextResponse.json({ error: 'Kursen hittades inte' }, { status: 404 });
 
-  const schoolPrices = new Map(
-    (await prisma.schoolCoursePrice.findMany({ where: { courseId: s.courseId } })).map(p => [p.schoolUserId, p.price]),
-  );
+  const schoolIds = Array.from(new Set(s.bookings.map(b => b.bookedBySchoolUserId).filter((x): x is number => x !== null)));
+  const [priceRows, allCourses] = await Promise.all([
+    prisma.schoolCoursePrice.findMany({ where: { schoolUserId: { in: schoolIds } } }),
+    prisma.course.findMany({ select: { id: true, type: true, behorighet: true } }),
+  ]);
+  const schoolPriceOf = (b: { bookedBySchoolUserId: number | null; comboParts: string }) =>
+    b.bookedBySchoolUserId ? schoolPriceFor(priceRows.filter(p => p.schoolUserId === b.bookedBySchoolUserId), s.course, b.comboParts, allCourses) : null;
 
   const participants = s.bookings.map(b => {
     const pnr = normalizePersonnummer(b.personnummer);
@@ -58,7 +63,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
       schoolUserId: b.bookedBySchoolUserId,
       schoolLocked: schoolChoiceFor(b).locked,
       note: b.note,
-      price: expectedPrice(b, s, schoolPrices),
+      price: expectedPrice(b, s, schoolPriceOf(b)),
+      // Skolan har inget pris för kursen – ordinarie pris används
+      schoolPriceMissing: !!b.bookedBySchoolUserId && b.priceOverride == null && !b.payment && schoolPriceOf(b) === null,
       priceOverride: b.priceOverride,
       invoiced: !!b.invoiceId,
       studentPaid: b.schoolCredits,

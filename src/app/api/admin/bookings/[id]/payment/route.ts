@@ -11,9 +11,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const bookingId = parseInt(params.id);
   const { amount, provider, transactionId, note } = await request.json();
 
-  if (!amount || !provider) {
+  const sum = Math.round(Number(amount));
+  if (!provider || !Number.isFinite(sum) || sum < 0) {
     return NextResponse.json({ error: 'Belopp och betalningsmetod krävs' }, { status: 400 });
   }
+  // 0 kr = gratis plats, t.ex. omprov – anteckningen förklarar varför
+  if (sum === 0 && (provider !== 'free' || typeof note !== 'string' || !note.trim())) {
+    return NextResponse.json({ error: 'Gratis plats (0 kr) kräver en anteckning om varför' }, { status: 400 });
+  }
+  if (sum > 0 && provider === 'free') return NextResponse.json({ error: 'Gratis betyder 0 kr' }, { status: 400 });
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
@@ -26,7 +32,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     prisma.payment.create({
       data: {
         bookingId,
-        amount: Math.round(Number(amount)),
+        amount: sum,
         provider,
         status: 'Succeeded',
         transactionId: transactionId?.trim() || null,

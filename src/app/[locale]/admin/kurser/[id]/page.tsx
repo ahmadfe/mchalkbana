@@ -54,6 +54,8 @@ interface Participant {
   price: number;
   priceOverride: number | null;
   invoiced: boolean;
+  /** Skolan har inget pris för kursen – ordinarie pris används */
+  schoolPriceMissing?: boolean;
   /** Skolelev som betalat en del själv – dras av på skolans faktura */
   studentPaid: { id: number; amount: number; method: string; invoiceId: number | null; note: string }[];
   comboParts: ComboParts;
@@ -71,7 +73,7 @@ const tz = { timeZone: 'Europe/Stockholm' } as const;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 const STATUS_LABEL = { planned: 'Planerad', completed: 'Genomförd', canceled: 'Inställd' } as const;
-const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', invoice: 'Faktura', manual: 'Manuell', Klarna: 'Klarna' };
+const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', invoice: 'Faktura', manual: 'Manuell', Klarna: 'Klarna', free: 'Gratis' };
 const ID_LABEL: Record<string, string> = { korkort: 'körkort', pass: 'pass', nationellt_id: 'nationellt id-kort', id_kort: 'id-kort' };
 
 function download(filename: string, content: string, type: string) {
@@ -452,6 +454,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
       <div className="flex flex-wrap items-center gap-2 mt-2 text-sm">
         {p.schoolName ? (
           <><Badge tone="blue">Skola</Badge><span className="text-white/60">{kr(p.price)} – faktureras {p.schoolName}</span>
+            {p.schoolPriceMissing && <span className="text-xs text-amber-300">Skolan saknar pris – ordinarie pris används</span>}
             {!p.schoolLocked && <button onClick={removeSchool} disabled={busy} className="text-xs text-white/50 hover:text-white underline">Ta bort skola</button>}</>
         ) : p.payment?.provider === 'Klarna' && p.payment.status === 'Authorized' ? (
           <><Badge tone="blue">Klarna – reserverad</Badge><span className="text-white/60">{kr(p.price)} – dras efter kursen</span></>
@@ -558,20 +561,22 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
               <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="number"
+                  min={0}
                   value={amount}
-                  onChange={e => setAmount(e.target.value)}
+                  onChange={e => { setAmount(e.target.value); if (e.target.value === '0') setProvider('free'); else if (provider === 'free') setProvider('cash'); }}
                   aria-label="Belopp (kr)"
                   className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
                 />
-                <Select value={provider} onChange={e => setProvider(e.target.value)} className="!w-32 !h-10">
+                <Select value={provider} onChange={e => { setProvider(e.target.value); if (e.target.value === 'free') setAmount('0'); else if (amount === '0') setAmount(String(p.price)); }} className="!w-36 !h-10">
                   <option value="cash">Kontant</option>
                   <option value="card">Kort</option>
                   <option value="swish">Swish</option>
+                  <option value="free">Gratis (0 kr)</option>
                 </Select>
                 <input
                   value={payNote}
                   onChange={e => setPayNote(e.target.value)}
-                  placeholder="Anteckning (valfritt), t.ex. kontant till Ali"
+                  placeholder={provider === 'free' ? 'Varför gratis? (krävs) t.ex. gratis omprov' : 'Anteckning (valfritt), t.ex. kontant till Ali'}
                   aria-label="Anteckning"
                   className="flex-1 min-w-[12rem] h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
                 />
@@ -586,7 +591,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
               </div>
             )}
             <div className="flex gap-2">
-              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || (payer === 'student' ? !Number(amount) : !schoolId)}>Bekräfta</Button>
+              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || (payer === 'student' ? (provider === 'free' ? !payNote.trim() : !(Number(amount) > 0)) : !schoolId)}>Bekräfta</Button>
               <Button className="!h-10" onClick={() => setPaying(false)}>Avbryt</Button>
             </div>
           </div>

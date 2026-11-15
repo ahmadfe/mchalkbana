@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
+import { courseKind } from '@/lib/courseKind';
+import { schoolPriceFor } from '@/lib/schoolPrice';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
@@ -36,8 +38,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         },
       },
     }),
-    prisma.course.findMany({ orderBy: { titleSv: 'asc' }, select: { id: true, titleSv: true, price: true } }),
-    prisma.schoolCoursePrice.findMany({ where: { schoolUserId: id }, select: { courseId: true, price: true } }),
+    prisma.course.findMany({ orderBy: { titleSv: 'asc' }, select: { id: true, titleSv: true, price: true, type: true, behorighet: true } }),
+    prisma.schoolCoursePrice.findMany({ where: { schoolUserId: id }, select: { courseId: true, price: true, part: true } }),
     prisma.invoice.findMany({
       where: { schoolUserId: id },
       orderBy: { number: 'desc' },
@@ -47,7 +49,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   return NextResponse.json({
     school,
-    prices: courses.map(c => ({ courseId: c.id, title: c.titleSv, listPrice: c.price, price: prices.find(p => p.courseId === c.id)?.price ?? null })),
+    // Kombokurs: en rad per del. auto = priset som används när fältet är tomt (skolans vanliga Risk 1/2-pris)
+    prices: courses.flatMap(c => (courseKind(c.type) === 'kombo' ? (['both', 'risk1', 'risk2'] as const) : (['both'] as const)).map(part => ({
+      courseId: c.id,
+      part,
+      title: c.titleSv.trim(),
+      kombo: courseKind(c.type) === 'kombo',
+      listPrice: c.price,
+      price: prices.find(p => p.courseId === c.id && p.part === part)?.price ?? null,
+      auto: part === 'both' ? null : schoolPriceFor(prices.filter(p => p.part === 'both'), c, part, courses),
+    }))),
     invoices,
     courses: sessions.map(s => {
       const a = s.schoolAllocations[0] ?? null;

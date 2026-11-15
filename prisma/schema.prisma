@@ -93,8 +93,9 @@ model SchoolCoursePrice {
   courseId     Int
   course       Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   price        Int
+  part         String @default("both") // kombokurs: both | risk1 | risk2 – övriga kurser alltid both
 
-  @@unique([schoolUserId, courseId])
+  @@unique([schoolUserId, courseId, part])
 }
 
 model Session {

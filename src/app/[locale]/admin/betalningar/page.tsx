@@ -39,7 +39,7 @@ type Mode = 'day' | 'week' | 'month' | 'year' | 'custom';
 type Who = 'all' | 'private' | 'school';
 
 const METHOD_LABEL: Record<string, string> = {
-  swish: 'Swish', cash: 'Kontant', card: 'Kort', klarna: 'Klarna', invoice: 'Faktura', manual: 'Manuell', stripe: 'Kort', other: 'Annat',
+  swish: 'Swish', cash: 'Kontant', card: 'Kort', free: 'Gratis', klarna: 'Klarna', invoice: 'Faktura', manual: 'Manuell', stripe: 'Kort', other: 'Annat',
 };
 const STATUS: Record<string, { label: string; tone: 'green' | 'amber' | 'blue' | 'neutral' }> = {
   Succeeded: { label: 'Betald', tone: 'green' },

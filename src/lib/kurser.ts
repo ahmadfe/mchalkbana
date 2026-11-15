@@ -30,17 +30,20 @@ export function stockholmDay(at: Date): { from: Date; to: Date } {
   return { from, to: new Date(from.getTime() + 24 * 3600_000) };
 }
 
-/** Vad eleven ska betala: inbetalt belopp, annars skolpris, kampanjpris eller kursens pris. */
+/**
+ * Vad eleven ska betala: inbetalt belopp, annars skolpris, kampanjpris eller kursens pris.
+ * schoolPrice: skolans pris för eleven (lib/schoolPrice), null om skolan saknar pris.
+ */
 export function expectedPrice(
   booking: { bookedBySchoolUserId: number | null; payment: { amount: number } | null; price?: number | null; priceOverride?: number | null },
   session: { discountPrice: number | null; course: { price: number } },
-  schoolPrices: Map<number, number>,
+  schoolPrice: number | null,
 ): number {
   if (booking.payment) return booking.payment.amount;
   if (booking.priceOverride != null) return booking.priceOverride;
   // Pris satt när betalningen startade (t.ex. med rabattkod)
   if (booking.price != null && !booking.bookedBySchoolUserId) return booking.price;
-  if (booking.bookedBySchoolUserId) return schoolPrices.get(booking.bookedBySchoolUserId) ?? session.course.price;
+  if (booking.bookedBySchoolUserId) return schoolPrice ?? session.course.price;
   return session.discountPrice ?? session.course.price;
 }
 

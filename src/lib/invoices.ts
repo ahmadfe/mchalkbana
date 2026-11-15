@@ -1,5 +1,6 @@
 import { prisma } from './db';
 import { DraftDeduction, pickDeductions, unusedCredits } from './schoolCredits';
+import { schoolPriceFor } from './schoolPrice';
 
 /*
  * Fakturor till trafikskolor.
@@ -150,12 +151,13 @@ export async function getDrafts(opts: { schoolUserId?: number; period?: string }
       session: { startTime: { gte: from, lt: new Date() }, status: { not: 'canceled' } },
     },
     include: {
-      session: { select: { id: true, startTime: true, courseId: true, course: { select: { titleSv: true, price: true } } } },
-      bookedBySchoolUser: { select: { id: true, name: true, email: true, schoolCoursePrices: { select: { courseId: true, price: true } } } },
+      session: { select: { id: true, startTime: true, courseId: true, course: { select: { id: true, titleSv: true, price: true, type: true, behorighet: true } } } },
+      bookedBySchoolUser: { select: { id: true, name: true, email: true, schoolCoursePrices: { select: { courseId: true, price: true, part: true } } } },
     },
     orderBy: { session: { startTime: 'asc' } },
   });
 
+  const allCourses = await prisma.course.findMany({ select: { id: true, type: true, behorighet: true } });
   const drafts = new Map<string, Draft>();
   for (const b of bookings) {
     const school = b.bookedBySchoolUser!;
@@ -169,7 +171,7 @@ export async function getDrafts(opts: { schoolUserId?: number; period?: string }
       drafts.set(key, d);
     }
     // Pris satt för hand på eleven går före skolans pris
-    const unitPrice = b.priceOverride ?? school.schoolCoursePrices.find(p => p.courseId === b.session.courseId)?.price ?? b.session.course.price;
+    const unitPrice = b.priceOverride ?? schoolPriceFor(school.schoolCoursePrices, b.session.course, b.comboParts, allCourses) ?? b.session.course.price;
     let line = d.lines.find(l => l.sessionId === b.session.id && l.unitPrice === unitPrice);
     if (!line) {
       line = {
