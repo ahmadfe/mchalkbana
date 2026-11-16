@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { Calendar, FileText, Home, LogOut, Menu, Tag, Users, X, type LucideIcon } from 'lucide-react';
@@ -87,7 +88,9 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
 
   const brand = (
     <div className="flex items-center gap-2.5">
-      <span className="w-7 h-7 rounded-lg bg-white text-black flex items-center justify-center font-headline font-extrabold text-sm">U</span>
+      <span className="w-9 h-9 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+        <Image src="/logo.png" alt="Uppsala Halkbana" width={36} height={36} className="w-full h-full object-contain scale-110" />
+      </span>
       <span className="font-headline font-extrabold text-[15px] text-white">Uppsala Halkbana</span>
     </div>
   );
@@ -142,6 +145,9 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
       <div className="min-h-screen bg-[#0b0b0d] text-white">
         {/* Surfplatta: smal ikonmeny */}
         <aside className="admin-dark hidden md:flex xl:hidden fixed inset-y-0 left-0 z-30 w-[84px] flex-col items-center bg-[#161618] border-r border-white/5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <span className="w-11 h-11 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0 mb-3">
+            <Image src="/logo.png" alt="Uppsala Halkbana" width={44} height={44} className="w-full h-full object-contain scale-110" />
+          </span>
           <nav className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-1">{NAV.map(n => item(n, true))}</nav>
           <div className="flex flex-col items-center gap-2 pt-3 mt-2 border-t border-white/5 w-full">
             <InstallAppButton dark iconOnly />
