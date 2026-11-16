@@ -21,6 +21,15 @@ export interface SchoolStudentInput {
   sendConfirmation?: boolean;
 }
 
+/** Text i bekräftelsen till en elev som skolan har bokat (skolan betalar – inget om pris). */
+const SCHOOL_STUDENT_MESSAGE = [
+  'Din trafikskola har bokat och betalar kursen.',
+  'Ta med giltig legitimation (körkort, pass eller nationellt id-kort) och ditt körkortstillstånd.',
+  'Klä dig efter väder – varma och vattentåliga kläder rekommenderas.',
+  'Ta gärna med egen mat och dryck.',
+  'Kom i god tid före kursstart.',
+].join('\n');
+
 const tz = { timeZone: 'Europe/Stockholm' } as const;
 const when = (start: Date, end: Date) => ({
   courseDate: start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...tz }),
@@ -119,6 +128,8 @@ export async function addSchoolBooking(
       schoolName: school.name,
       personnummer,
       phone: input.guestPhone || null,
+      // Skolan betalar: inget pris och inte kursens kvittotext ("Tack för din betalning …") – bara praktisk info
+      customMessage: SCHOOL_STUDENT_MESSAGE,
     });
   }
   if (by === 'school') {

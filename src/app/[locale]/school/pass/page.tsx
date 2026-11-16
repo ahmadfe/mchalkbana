@@ -209,7 +209,7 @@ export default function SchoolPassPage() {
                       </div>
                       {s.email && (
                         <Checkbox checked={s.sendConfirmation} onChange={(v) => updateStudentRow(i, 'sendConfirmation', v)}>
-                          <span className="text-sm text-white/70">Skicka bokningsbekräftelse via e-post</span>
+                          <span className="text-sm text-white/70">Skicka bokningsbekräftelse via e-post<span className="block text-xs text-white/45 mt-0.5">Eleven får tid, plats och vad hen ska ta med – inget pris.</span></span>
                         </Checkbox>
                       )}
                     </div>
@@ -292,7 +292,7 @@ function PassDetail({ item, onAdd, onDelete }: { item: PassItem; onAdd: () => vo
         {item.price !== undefined && (
           <p className="flex items-center gap-2">
             <span className="w-4 text-center text-white/40 font-bold shrink-0 text-xs">kr</span>
-            <span className="font-semibold">{kr(item.price)}/elev</span>
+            <span className="font-semibold">{kr(item.price)}/elev <span className="font-normal text-white/50">inkl. moms</span></span>
             {item.customPrice && <span className="text-xs text-sky-300">(ert pris)</span>}
           </p>
         )}
