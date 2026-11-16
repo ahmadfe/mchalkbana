@@ -23,7 +23,7 @@ export interface SchoolStudentInput {
 
 /** Text i bekräftelsen till en elev som skolan har bokat (skolan betalar – inget om pris). */
 const SCHOOL_STUDENT_MESSAGE = [
-  'Din trafikskola har bokat och betalar kursen.',
+  'Din trafikskola har bokat kursen åt dig.',
   'Ta med giltig legitimation (körkort, pass eller nationellt id-kort) och ditt körkortstillstånd.',
   'Klä dig efter väder – varma och vattentåliga kläder rekommenderas.',
   'Ta gärna med egen mat och dryck.',
