@@ -125,13 +125,15 @@ export async function GET(request: Request) {
   return NextResponse.json({ rows });
 }
 
-/** Anteckning på en betalning eller ett skolsaldo: { kind: 'payment' | 'credit', id, note } */
+/** Anteckning på en betalning, ett skolsaldo eller en obetald bokning: { kind: 'payment' | 'credit' | 'booking', id, note } */
 export async function PATCH(request: Request) {
   if (!(await requireOwner(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   const { kind, id, note } = await request.json();
   const text = typeof note === 'string' ? note.trim().slice(0, 300) : '';
   if (kind === 'payment') await prisma.payment.update({ where: { id: Number(id) }, data: { note: text } });
   else if (kind === 'credit') await prisma.schoolCredit.update({ where: { id: Number(id) }, data: { note: text } });
+  // Obetald elev – anteckningen sparas på bokningen
+  else if (kind === 'booking') await prisma.booking.update({ where: { id: Number(id) }, data: { payNote: text } });
   else return NextResponse.json({ error: 'Okänd typ' }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

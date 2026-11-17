@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { ChevronLeft, ChevronRight, Download, Pencil, RotateCcw, Search } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Download, Pencil, RotateCcw, Search } from 'lucide-react';
 import clsx from 'clsx';
 import AdminShell from '@/components/admin/AdminShell';
 import { Badge, Button, Input, Select, formatDate } from '@/components/admin/ui';
@@ -33,6 +33,21 @@ interface Row {
   invoice?: { id: number; number: number } | null;
   period?: string;
   students?: number;
+}
+
+/** Elev som inte har betalat och inte har någon trafikskola */
+interface UnpaidRow {
+  bookingId: number;
+  name: string;
+  personnummer: string | null;
+  phone: string | null;
+  email: string | null;
+  studentId: number | null;
+  attendance: string;
+  note: string;
+  pending: string | null;
+  amount: number;
+  slot: { id: number; startTime: string; endTime: string; course: string };
 }
 
 type Mode = 'day' | 'week' | 'month' | 'year' | 'custom';
@@ -100,6 +115,8 @@ export default function BetalningarPage() {
   const [method, setMethod] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
+  const [view, setView] = useState<'paid' | 'unpaid'>('paid');
+  const [unpaid, setUnpaid] = useState<UnpaidRow[] | null>(null);
 
   const period = useMemo(() => range(mode, offset, custom), [mode, offset, custom]);
 
@@ -113,6 +130,15 @@ export default function BetalningarPage() {
     setRows(body.rows);
   }, [period]);
   useEffect(() => { if (owner) load(); }, [owner, load]);
+
+  // Obetalda – alltid alla, oavsett period
+  const loadUnpaid = useCallback(async () => {
+    const res = await fetch('/api/admin/betalningar/obetalda');
+    const body = await res.json().catch(() => ({}));
+    setUnpaid(res.ok ? body.rows : []);
+  }, []);
+  useEffect(() => { if (owner) loadUnpaid(); }, [owner, loadUnpaid]);
+  const unpaidSum = (unpaid ?? []).reduce((s, r) => s + r.amount, 0);
 
   const isSchool = (r: Row) => r.kind !== 'payment' || !!r.school;
   const shown = useMemo(() => {
@@ -135,9 +161,14 @@ export default function BetalningarPage() {
     schools: sum(paid.filter(r => r.kind === 'invoice')),
     refunded: sum(shown.filter(r => r.status === 'Refunded')),
   };
+  const unpaidShown = (unpaid ?? []).filter(r => {
+    const needle = q.trim().toLowerCase();
+    return !needle || [r.name, r.personnummer, r.phone, r.email, r.note, r.slot.course].some(v => v?.toLowerCase().includes(needle));
+  });
   const methods = Array.from(new Set((rows ?? []).map(r => r.method)));
 
   const exportCsv = () => {
+    if (view === 'unpaid') return exportUnpaidCsv(unpaidShown);
     const head = ['Datum', 'Namn', 'Personnummer', 'Privat/Skola', 'Kurs', 'Kurstillfälle', 'Betalsätt', 'Status', 'Belopp', 'Anteckning'];
     const lines = shown.map(r => [
       ymd(new Date(r.date)), r.name, r.personnummer ?? '', r.school ?? 'Privat', r.slot?.course ?? (r.period ? `Faktura ${periodLabel(r.period)}` : ''),
@@ -186,35 +217,56 @@ export default function BetalningarPage() {
       </div>
 
       {/* Summor */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-5">
         <Stat label="Totalt in" value={totals.all} sub={`${paid.length} betalningar${totals.refunded ? ` · återbetalt ${kr(totals.refunded)}` : ''}`} big />
         <Stat label="Swish" value={totals.swish} />
         <Stat label="Kontant / kort" value={totals.cashCard} />
         <Stat label="Klarna" value={totals.klarna} />
         <Stat label="Skolor (faktura)" value={totals.schools} />
+        <button
+          onClick={() => setView(view === 'unpaid' ? 'paid' : 'unpaid')}
+          className={clsx(
+            'rounded-2xl p-4 text-left transition col-span-2 lg:col-span-1 ring-1',
+            unpaid?.length ? 'bg-red-500/10 hover:bg-red-500/15' : 'bg-[#1c1c1f]',
+            view === 'unpaid' ? 'ring-red-400/60' : 'ring-transparent',
+          )}
+        >
+          <p className={clsx('text-xs font-bold uppercase tracking-[0.1em]', unpaid?.length ? 'text-red-300' : 'text-white/50')}>Obetalt</p>
+          <p className="font-headline text-2xl font-extrabold mt-1">{unpaid ? kr(unpaidSum) : '…'}</p>
+          <p className="text-xs mt-0.5 text-white/50">{unpaid ? `${unpaid.length} ${unpaid.length === 1 ? 'elev' : 'elever'} · utan skola` : ' '}</p>
+        </button>
+      </div>
+
+      {/* Betalningar / Obetalda */}
+      <div className="flex p-1 rounded-2xl bg-[#1c1c1f] mb-3 w-full sm:w-auto sm:inline-flex">
+        {([['paid', 'Betalningar'], ['unpaid', `Obetalda${unpaid ? ` (${unpaid.length})` : ''}`]] as const).map(([v, label]) => (
+          <button key={v} onClick={() => setView(v)} className={clsx('flex-1 sm:flex-none h-10 px-5 rounded-xl text-sm font-semibold transition', view === v ? 'bg-white text-black' : 'text-white/60 hover:text-white')}>{label}</button>
+        ))}
       </div>
 
       {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
-        <div className="flex p-1 rounded-2xl bg-[#1c1c1f] shrink-0">
+        {view === 'paid' && <div className="flex p-1 rounded-2xl bg-[#1c1c1f] shrink-0">
           {([['all', 'Alla'], ['private', 'Privat'], ['school', 'Skola']] as [Who, string][]).map(([w, label]) => (
             <button key={w} onClick={() => setWho(w)} className={clsx('h-9 px-4 rounded-xl text-sm font-semibold transition', who === w ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>{label}</button>
           ))}
-        </div>
-        <Select value={method} onChange={e => setMethod(e.target.value)} className="sm:!w-44" aria-label="Betalsätt">
+        </div>}
+        {view === 'paid' && <Select value={method} onChange={e => setMethod(e.target.value)} className="sm:!w-44" aria-label="Betalsätt">
           <option value="all">Alla betalsätt</option>
           {methods.map(m => <option key={m} value={m}>{METHOD_LABEL[m] ?? m}</option>)}
-        </Select>
+        </Select>}
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Sök namn, personnummer, skola, anteckning…" className="!pl-10" />
         </div>
-        <Button onClick={exportCsv} disabled={!shown.length}><Download className="w-4 h-4" /> CSV</Button>
+        <Button onClick={exportCsv} disabled={view === 'paid' ? !shown.length : !unpaidShown.length}><Download className="w-4 h-4" /> CSV</Button>
       </div>
 
       {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 
-      {!rows ? (
+      {view === 'unpaid' ? (
+        <UnpaidList rows={unpaid} shown={unpaidShown} locale={locale} onChange={loadUnpaid} />
+      ) : !rows ? (
         <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
       ) : shown.length === 0 ? (
         <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Inga betalningar {rows.length ? 'som matchar filtret' : 'under perioden'}.</div>
@@ -330,6 +382,127 @@ function PaymentRow({ r, locale, onChange }: { r: Row; locale: string; onChange:
                   <RotateCcw className="w-3.5 h-3.5" /> Återbetala
                 </button>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function exportUnpaidCsv(list: UnpaidRow[]) {
+  const head = ['Kursdatum', 'Namn', 'Personnummer', 'Telefon', 'E-post', 'Kurs', 'Belopp', 'Anteckning'];
+  const lines = list.map(r => [`${ymd(new Date(r.slot.startTime))} ${hm(r.slot.startTime)}`, r.name, r.personnummer ?? '', r.phone ?? '', r.email ?? '', r.slot.course, String(r.amount), r.note]);
+  const csv = [head, ...lines].map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `obetalda-${ymd(new Date())}.csv`;
+  a.click();
+}
+
+const ATTENDANCE: Record<string, { label: string; tone: 'green' | 'red' | 'neutral' | 'amber' }> = {
+  attended: { label: 'Närvarande', tone: 'green' },
+  no_show: { label: 'Kom inte', tone: 'red' },
+  late_cancel: { label: 'Sen avbokning', tone: 'amber' },
+};
+
+/** Obetalda elever i två grupper: kursen har varit / kommande kurs */
+function UnpaidList({ rows, shown, locale, onChange }: { rows: UnpaidRow[] | null; shown: UnpaidRow[]; locale: string; onChange: () => Promise<void> }) {
+  if (!rows) return <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>;
+  if (rows.length === 0) return <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Alla elever har betalat eller har en trafikskola.</div>;
+
+  const now = Date.now();
+  const held = shown.filter(r => new Date(r.slot.startTime).getTime() <= now);
+  const coming = shown.filter(r => new Date(r.slot.startTime).getTime() > now).reverse(); // närmast först
+  const sum = (l: UnpaidRow[]) => l.reduce((s, r) => s + r.amount, 0);
+
+  const group = (title: string, list: UnpaidRow[], tone: string) => list.length > 0 && (
+    <section>
+      <div className="flex items-baseline justify-between gap-3 px-1 mb-2">
+        <h2 className={clsx('text-xs font-bold uppercase tracking-[0.12em]', tone)}>{title} · {list.length} {list.length === 1 ? 'elev' : 'elever'}</h2>
+        <span className="text-sm font-bold">{kr(sum(list))}</span>
+      </div>
+      <div className="rounded-3xl bg-[#1c1c1f] divide-y divide-white/5">
+        {list.map(r => <UnpaidItem key={r.bookingId} r={r} locale={locale} onChange={onChange} />)}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl bg-white/[0.04] px-4 py-3 text-sm text-white/60 flex items-start gap-2">
+        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-white/40" />
+        <span>Elever som inte har någon betalning och ingen trafikskola – alla datum, oavsett period. Öppna kursen för att registrera betalning eller välja skola.</span>
+      </div>
+      {shown.length === 0 && <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Ingen obetald elev matchar sökningen.</div>}
+      {group('Kursen har varit', held, 'text-red-300')}
+      {group('Kommande kurs', coming, 'text-amber-300')}
+    </div>
+  );
+}
+
+function UnpaidItem({ r, locale, onChange }: { r: UnpaidRow; locale: string; onChange: () => Promise<void> }) {
+  const [editing, setEditing] = useState(false);
+  const [note, setNote] = useState(r.note);
+  const [busy, setBusy] = useState(false);
+  const start = new Date(r.slot.startTime);
+  const days = Math.floor((Date.now() - start.getTime()) / 86400000);
+  const ago = days < 0 ? (days === -1 ? 'imorgon' : `om ${-days} dagar`) : days === 0 ? 'idag' : days === 1 ? 'igår' : `${days} dagar sedan`;
+  const att = ATTENDANCE[r.attendance];
+
+  const saveNote = async () => {
+    setBusy(true);
+    const res = await fetch('/api/admin/betalningar', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'booking', id: r.bookingId, note }) });
+    setBusy(false);
+    if (!res.ok) { alert((await res.json().catch(() => ({}))).error ?? 'Något gick fel'); return; }
+    setEditing(false);
+    await onChange();
+  };
+
+  return (
+    <div className="px-5 py-4">
+      <div className="flex items-start gap-4">
+        <div className="w-14 shrink-0 text-sm text-white/50 pt-0.5">{formatDate(r.slot.startTime, { day: 'numeric', month: 'short' })}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-bold truncate">
+                {r.studentId ? <Link href={`/${locale}/admin/elever/${r.studentId}`} className="hover:underline">{r.name}</Link> : r.name}
+              </p>
+              <p className="text-sm text-white/55 mt-0.5">
+                Privat{r.personnummer && <span className="font-mono"> · {r.personnummer}</span>}{r.phone && <> · {r.phone}</>}
+              </p>
+              <Link href={`/${locale}/admin/kurser/${r.slot.id}`} className="inline-flex items-center gap-1 text-sm text-white/70 hover:text-white mt-1">
+                {r.slot.course} · {formatDate(r.slot.startTime, { weekday: 'short', day: 'numeric', month: 'short' })} {hm(r.slot.startTime)}–{hm(r.slot.endTime)}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="font-headline font-extrabold">{kr(r.amount)}</p>
+              <div className="flex items-center justify-end gap-1.5 mt-1">
+                <span className="text-xs text-white/50">{ago}</span>
+                <Badge tone={days >= 0 ? 'red' : 'amber'}>Obetald</Badge>
+              </div>
+              {att && <div className="mt-1"><Badge tone={att.tone}>{att.label}</Badge></div>}
+            </div>
+          </div>
+
+          {editing ? (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Input value={note} onChange={e => setNote(e.target.value)} autoFocus placeholder="T.ex. lovat att Swisha fredag" className="flex-1 min-w-[14rem] !h-10" />
+              <Button variant="primary" className="!h-10" onClick={saveNote} disabled={busy}>Spara</Button>
+              <Button className="!h-10" onClick={() => { setNote(r.note); setEditing(false); }}>Avbryt</Button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm">
+              {r.note && <span className="text-amber-200/90">📝 {r.note}</span>}
+              {r.pending && <span className="text-white/45">Påbörjad: {r.pending}</span>}
+              <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-white/45 hover:text-white">
+                <Pencil className="w-3.5 h-3.5" /> {r.note ? 'Ändra anteckning' : 'Anteckning'}
+              </button>
+              <Link href={`/${locale}/admin/kurser/${r.slot.id}`} className="inline-flex items-center gap-1 text-sky-300 hover:text-sky-200">
+                Öppna kursen <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           )}
         </div>
