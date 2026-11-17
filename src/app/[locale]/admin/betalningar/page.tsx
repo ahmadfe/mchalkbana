@@ -116,7 +116,9 @@ export default function BetalningarPage() {
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
   const [view, setView] = useState<'paid' | 'unpaid'>('paid');
-  const [unpaid, setUnpaid] = useState<UnpaidRow[] | null>(null);
+  const [unpaidAll, setUnpaid] = useState<UnpaidRow[] | null>(null);
+  // Obetalda följer perioden (kursdatum) – eller alla datum
+  const [allDates, setAllDates] = useState(false);
 
   const period = useMemo(() => range(mode, offset, custom), [mode, offset, custom]);
 
@@ -138,6 +140,10 @@ export default function BetalningarPage() {
     setUnpaid(res.ok ? body.rows : []);
   }, []);
   useEffect(() => { if (owner) loadUnpaid(); }, [owner, loadUnpaid]);
+  const unpaid = useMemo(() => unpaidAll && (allDates ? unpaidAll : unpaidAll.filter(r => {
+    const t = new Date(r.slot.startTime).getTime();
+    return t >= period.from.getTime() && t < period.to.getTime();
+  })), [unpaidAll, allDates, period]);
   const unpaidSum = (unpaid ?? []).reduce((s, r) => s + r.amount, 0);
 
   const isSchool = (r: Row) => r.kind !== 'payment' || !!r.school;
@@ -233,7 +239,7 @@ export default function BetalningarPage() {
         >
           <p className={clsx('text-xs font-bold uppercase tracking-[0.1em]', unpaid?.length ? 'text-red-300' : 'text-white/50')}>Obetalt</p>
           <p className="font-headline text-2xl font-extrabold mt-1">{unpaid ? kr(unpaidSum) : '…'}</p>
-          <p className="text-xs mt-0.5 text-white/50">{unpaid ? `${unpaid.length} ${unpaid.length === 1 ? 'elev' : 'elever'} · utan skola` : ' '}</p>
+          <p className="text-xs mt-0.5 text-white/50">{unpaid ? `${unpaid.length} ${unpaid.length === 1 ? 'elev' : 'elever'} · ${allDates ? 'alla datum' : 'kurser i perioden'}` : ' '}</p>
         </button>
       </div>
 
@@ -265,7 +271,7 @@ export default function BetalningarPage() {
       {error && <p className="text-sm text-red-400 mb-4">{error}</p>}
 
       {view === 'unpaid' ? (
-        <UnpaidList rows={unpaid} shown={unpaidShown} locale={locale} onChange={loadUnpaid} />
+        <UnpaidList rows={unpaid} shown={unpaidShown} locale={locale} onChange={loadUnpaid} allDates={allDates} setAllDates={setAllDates} totalAll={unpaidAll?.length ?? 0} periodLabel={period.label} />
       ) : !rows ? (
         <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
       ) : shown.length === 0 ? (
@@ -407,9 +413,8 @@ const ATTENDANCE: Record<string, { label: string; tone: 'green' | 'red' | 'neutr
 };
 
 /** Obetalda elever i två grupper: kursen har varit / kommande kurs */
-function UnpaidList({ rows, shown, locale, onChange }: { rows: UnpaidRow[] | null; shown: UnpaidRow[]; locale: string; onChange: () => Promise<void> }) {
+function UnpaidList({ rows, shown, locale, onChange, allDates, setAllDates, totalAll, periodLabel: label }: { rows: UnpaidRow[] | null; shown: UnpaidRow[]; locale: string; onChange: () => Promise<void>; allDates: boolean; setAllDates: (v: boolean) => void; totalAll: number; periodLabel: string }) {
   if (!rows) return <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>;
-  if (rows.length === 0) return <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Alla elever har betalat eller har en trafikskola.</div>;
 
   const now = Date.now();
   const held = shown.filter(r => new Date(r.slot.startTime).getTime() <= now);
@@ -430,11 +435,20 @@ function UnpaidList({ rows, shown, locale, onChange }: { rows: UnpaidRow[] | nul
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl bg-white/[0.04] px-4 py-3 text-sm text-white/60 flex items-start gap-2">
-        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-white/40" />
-        <span>Elever som inte har någon betalning och ingen trafikskola – alla datum, oavsett period. Öppna kursen för att registrera betalning eller välja skola.</span>
+      <div className="rounded-2xl bg-white/[0.04] px-4 py-3 text-sm text-white/60 flex flex-col sm:flex-row sm:items-center gap-3">
+        <span className="flex items-start gap-2 flex-1">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-white/40" />
+          <span>Elever utan betalning och utan trafikskola – {allDates ? 'alla datum' : <>kurser i <strong className="text-white/80">{label}</strong></>}. Öppna kursen för att registrera betalning eller välja skola.</span>
+        </span>
+        <div className="flex p-1 rounded-xl bg-[#1c1c1f] shrink-0">
+          {([[false, 'Perioden'], [true, `Alla datum (${totalAll})`]] as const).map(([v, t]) => (
+            <button key={String(v)} onClick={() => setAllDates(v)} className={clsx('h-8 px-3 rounded-lg text-xs font-semibold transition', allDates === v ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white')}>{t}</button>
+          ))}
+        </div>
       </div>
-      {shown.length === 0 && <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Ingen obetald elev matchar sökningen.</div>}
+      {rows.length === 0 ? (
+        <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Inga obetalda elever {allDates ? '' : 'med kurs i perioden'} – alla har betalat eller har en trafikskola.</div>
+      ) : shown.length === 0 && <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Ingen obetald elev matchar sökningen.</div>}
       {group('Kursen har varit', held, 'text-red-300')}
       {group('Kommande kurs', coming, 'text-amber-300')}
     </div>
