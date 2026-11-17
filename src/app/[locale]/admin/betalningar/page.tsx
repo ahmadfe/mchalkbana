@@ -115,7 +115,7 @@ export default function BetalningarPage() {
   const [method, setMethod] = useState('all');
   const [q, setQ] = useState('');
   const [error, setError] = useState('');
-  const [view, setView] = useState<'paid' | 'unpaid'>('paid');
+  const [view, setView] = useState<'paid' | 'unpaid' | 'month'>('paid');
   const [unpaidAll, setUnpaid] = useState<UnpaidRow[] | null>(null);
   // Obetalda följer perioden (kursdatum) – eller alla datum
   const [allDates, setAllDates] = useState(false);
@@ -187,12 +187,26 @@ export default function BetalningarPage() {
     a.click();
   };
 
+  const tabs = (
+    <div className="flex p-1 rounded-2xl bg-[#1c1c1f] mb-3 w-full sm:w-auto sm:inline-flex">
+      {([['paid', 'Betalningar'], ['unpaid', `Obetalda${unpaid ? ` (${unpaid.length})` : ''}`], ['month', 'Per månad']] as const).map(([v, label]) => (
+        <button key={v} onClick={() => setView(v)} className={clsx('flex-1 sm:flex-none h-10 px-4 sm:px-5 rounded-xl text-sm font-semibold transition whitespace-nowrap', view === v ? 'bg-white text-black' : 'text-white/60 hover:text-white')}>{label}</button>
+      ))}
+    </div>
+  );
+
   if (!authLoading && !owner) {
     return <AdminShell title="Betalningar"><p className="text-white/60">Bara ägaren kan se betalningarna.</p></AdminShell>;
   }
 
   return (
     <AdminShell title="Betalningar">
+      {view === 'month' ? (
+        <>
+          {tabs}
+          <MonthView locale={locale} onUnpaid={(from, to) => { setMode('custom'); setCustom({ from, to }); setAllDates(false); setView('unpaid'); }} />
+        </>
+      ) : (<>
       {/* Period */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-5">
         <div className="flex p-1 rounded-2xl bg-[#1c1c1f] overflow-x-auto">
@@ -243,12 +257,7 @@ export default function BetalningarPage() {
         </button>
       </div>
 
-      {/* Betalningar / Obetalda */}
-      <div className="flex p-1 rounded-2xl bg-[#1c1c1f] mb-3 w-full sm:w-auto sm:inline-flex">
-        {([['paid', 'Betalningar'], ['unpaid', `Obetalda${unpaid ? ` (${unpaid.length})` : ''}`]] as const).map(([v, label]) => (
-          <button key={v} onClick={() => setView(v)} className={clsx('flex-1 sm:flex-none h-10 px-5 rounded-xl text-sm font-semibold transition', view === v ? 'bg-white text-black' : 'text-white/60 hover:text-white')}>{label}</button>
-        ))}
-      </div>
+      {tabs}
 
       {/* Filter */}
       <div className="flex flex-col sm:flex-row gap-2 mb-4">
@@ -281,6 +290,7 @@ export default function BetalningarPage() {
           {shown.map(r => <PaymentRow key={r.key} r={r} locale={locale} onChange={load} />)}
         </div>
       )}
+      </>)}
     </AdminShell>
   );
 }
@@ -522,5 +532,166 @@ function UnpaidItem({ r, locale, onChange }: { r: UnpaidRow; locale: string; onC
         </div>
       </div>
     </div>
+  );
+}
+
+interface MonthSchool { id: number; name: string; count: number; amount: number; studentPaid: number; notInvoiced: number; invoices: { id: number; number: number; status: string }[] }
+interface MonthRow {
+  period: string;
+  private: { amount: number; count: number; byMethod: Record<string, number> };
+  school: { amount: number; count: number; notInvoiced: number; schools: MonthSchool[] };
+  unpaid: { amount: number; count: number };
+}
+
+const INVOICE_STATUS: Record<string, { label: string; tone: 'green' | 'amber' | 'neutral' | 'blue' }> = {
+  paid: { label: 'Betald', tone: 'green' }, sent: { label: 'Skickad', tone: 'amber' }, created: { label: 'Skapad', tone: 'blue' }, credited: { label: 'Krediterad', tone: 'neutral' },
+};
+
+/** Per månad (kursdatum): privat betalt, skolor (skolpris) och obetalt för ett år */
+function MonthView({ locale, onUnpaid }: { locale: string; onUnpaid: (from: string, to: string) => void }) {
+  const thisYear = new Date().getFullYear();
+  const [year, setYear] = useState(thisYear);
+  const [months, setMonths] = useState<MonthRow[] | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMonths(null);
+    fetch(`/api/admin/betalningar/manad?year=${year}`).then(r => r.json()).then(d => setMonths(d.months ?? [])).catch(() => setMonths([]));
+  }, [year]);
+
+  const nowPeriod = new Date().toLocaleDateString('sv-SE', { year: 'numeric', month: '2-digit', timeZone: 'Europe/Stockholm' }).slice(0, 7);
+  // Bara månader med något i (innevarande månad visas alltid), nyaste först
+  const rows = (months ?? []).filter(m => m.period === nowPeriod || m.private.count + m.school.count + m.unpaid.count > 0).reverse();
+  const total = rows.reduce((t, m) => ({
+    priv: t.priv + m.private.amount, privN: t.privN + m.private.count,
+    school: t.school + m.school.amount, schoolN: t.schoolN + m.school.count,
+    unpaid: t.unpaid + m.unpaid.amount, unpaidN: t.unpaidN + m.unpaid.count,
+  }), { priv: 0, privN: 0, school: 0, schoolN: 0, unpaid: 0, unpaidN: 0 });
+  const monthName = (p: string) => { const t = periodLabel(p); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const n = (c: number) => `${c} ${c === 1 ? 'elev' : 'elever'}`;
+
+  const lastDay = (p: string) => { const [y, m] = p.split('-').map(Number); return ymd(new Date(y, m, 0)); };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setYear(year - 1)} aria-label="Föregående år" className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/15 flex items-center justify-center"><ChevronLeft className="w-4 h-4" /></button>
+          <span className="font-headline font-extrabold text-lg min-w-[5rem] text-center">{year}</span>
+          <button onClick={() => setYear(year + 1)} disabled={year >= thisYear} aria-label="Nästa år" className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/15 flex items-center justify-center disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+        </div>
+        <p className="text-sm text-white/50">Månad = kursdatum. Skolor räknas med skolpris, fakturerat eller inte.</p>
+      </div>
+
+      {/* Året */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-2xl p-4 bg-white text-black col-span-2 lg:col-span-1">
+          <p className="text-xs font-bold uppercase tracking-[0.1em] text-black/60">Intjänat {year}</p>
+          <p className="font-headline text-2xl font-extrabold mt-1">{kr(total.priv + total.school)}</p>
+          <p className="text-xs mt-0.5 text-black/60">Privat + skolor · {n(total.privN + total.schoolN)}</p>
+        </div>
+        <div className="rounded-2xl p-4 bg-[#1c1c1f]"><p className="text-xs font-bold uppercase tracking-[0.1em] text-white/50">Privat betalt</p><p className="font-headline text-2xl font-extrabold mt-1">{kr(total.priv)}</p><p className="text-xs mt-0.5 text-white/50">{n(total.privN)}</p></div>
+        <div className="rounded-2xl p-4 bg-[#1c1c1f]"><p className="text-xs font-bold uppercase tracking-[0.1em] text-sky-300">Skolor</p><p className="font-headline text-2xl font-extrabold mt-1">{kr(total.school)}</p><p className="text-xs mt-0.5 text-white/50">{n(total.schoolN)}</p></div>
+        <div className={clsx('rounded-2xl p-4 col-span-2 lg:col-span-1', total.unpaidN ? 'bg-red-500/10' : 'bg-[#1c1c1f]')}><p className={clsx('text-xs font-bold uppercase tracking-[0.1em]', total.unpaidN ? 'text-red-300' : 'text-white/50')}>Obetalt</p><p className="font-headline text-2xl font-extrabold mt-1">{kr(total.unpaid)}</p><p className="text-xs mt-0.5 text-white/50">{n(total.unpaidN)} · räknas inte som intjänat</p></div>
+      </div>
+
+      {!months ? (
+        <div className="py-20 flex justify-center"><div className="w-6 h-6 border-2 border-white/50 border-t-transparent rounded-full animate-spin" /></div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-3xl bg-[#1c1c1f] p-10 text-center text-white/50">Inga kurser {year}.</div>
+      ) : (
+        <div className="rounded-3xl bg-[#1c1c1f] overflow-hidden">
+          {/* Rubriker (dator) */}
+          <div className="hidden md:grid grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_2rem] gap-3 px-5 py-3 text-xs font-bold uppercase tracking-[0.1em] text-white/45 border-b border-white/5">
+            <span>Månad</span><span className="text-right">Privat betalt</span><span className="text-right">Skolor (skolpris)</span><span className="text-right">Obetalt</span><span className="text-right">Intjänat</span><span />
+          </div>
+          <div className="divide-y divide-white/5">
+            {rows.map(m => {
+              const earned = m.private.amount + m.school.amount;
+              const isOpen = open === m.period;
+              return (
+                <div key={m.period}>
+                  <button onClick={() => setOpen(isOpen ? null : m.period)} className="w-full text-left px-5 py-4 hover:bg-white/[0.03] grid grid-cols-2 md:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_2rem] gap-x-3 gap-y-2 items-center">
+                    <span className="col-span-2 md:col-span-1 font-bold flex items-center justify-between md:block">
+                      {monthName(m.period)}
+                      <span className="md:hidden font-headline font-extrabold">{kr(earned)}</span>
+                    </span>
+                    <Cell label="Privat" amount={m.private.amount} sub={n(m.private.count)} />
+                    <Cell label="Skolor" amount={m.school.amount} sub={`${n(m.school.count)}${m.school.notInvoiced ? ` · ${m.school.notInvoiced} ej fakt.` : ''}`} tone="text-sky-300" />
+                    <Cell label="Obetalt" amount={m.unpaid.amount} sub={n(m.unpaid.count)} tone={m.unpaid.count ? 'text-red-300' : undefined} />
+                    <span className="hidden md:block text-right font-headline font-extrabold">{kr(earned)}</span>
+                    <ChevronRight className={clsx('hidden md:block w-4 h-4 text-white/30 justify-self-end transition', isOpen && 'rotate-90')} />
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 pb-5 grid md:grid-cols-3 gap-3">
+                      <div className="rounded-2xl bg-white/[0.04] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.1em] text-white/50 mb-2">Privat betalt</p>
+                        {Object.keys(m.private.byMethod).length === 0 ? <p className="text-sm text-white/40">Inga betalningar.</p> : (
+                          <ul className="space-y-1 text-sm">
+                            {Object.entries(m.private.byMethod).sort((a, b) => b[1] - a[1]).map(([k, v]) => (
+                              <li key={k} className="flex justify-between"><span className="text-white/70">{METHOD_LABEL[k] ?? k}</span><span className="font-semibold">{kr(v)}</span></li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <div className="rounded-2xl bg-white/[0.04] p-4 md:col-span-2">
+                        <p className="text-xs font-bold uppercase tracking-[0.1em] text-sky-300 mb-2">Skolor</p>
+                        {m.school.schools.length === 0 ? <p className="text-sm text-white/40">Inga skolelever.</p> : (
+                          <ul className="divide-y divide-white/5 -my-1">
+                            {m.school.schools.map(sc => (
+                              <li key={sc.id} className="py-2 flex items-start justify-between gap-3 text-sm">
+                                <div className="min-w-0">
+                                  <Link href={`/${locale}/admin/trafikskolor/${sc.id}`} className="font-semibold hover:underline">{sc.name}</Link>
+                                  <p className="text-white/50 text-xs mt-0.5">
+                                    {n(sc.count)}{sc.studentPaid ? ` · varav eleverna betalat ${kr(sc.studentPaid)} själva` : ''}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    {sc.invoices.map(i => (
+                                      <Link key={i.id} href={`/${locale}/admin/fakturor/${i.id}`} className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white">
+                                        Faktura #{i.number} <Badge tone={INVOICE_STATUS[i.status]?.tone ?? 'neutral'}>{INVOICE_STATUS[i.status]?.label ?? i.status}</Badge>
+                                      </Link>
+                                    ))}
+                                    {sc.notInvoiced > 0 && <Badge tone="amber">{sc.notInvoiced} ej fakturerade</Badge>}
+                                  </div>
+                                </div>
+                                <span className="font-semibold shrink-0">{kr(sc.amount)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {m.unpaid.count > 0 && (
+                        <button onClick={() => onUnpaid(m.period + '-01', lastDay(m.period))} className="md:col-span-3 rounded-2xl bg-red-500/10 hover:bg-red-500/15 p-4 text-left flex items-center justify-between gap-3">
+                          <span className="text-sm"><span className="font-semibold text-red-300">{n(m.unpaid.count)} har inte betalat</span> <span className="text-white/60">– {kr(m.unpaid.amount)}. Visa listan</span></span>
+                          <ChevronRight className="w-4 h-4 text-red-300" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="hidden md:grid grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,1fr))_2rem] gap-3 px-5 py-4 border-t border-white/10 bg-white/[0.03] font-bold">
+            <span>Hela {year}</span>
+            <span className="text-right">{kr(total.priv)}</span>
+            <span className="text-right text-sky-300">{kr(total.school)}</span>
+            <span className="text-right text-red-300">{kr(total.unpaid)}</span>
+            <span className="text-right font-headline font-extrabold">{kr(total.priv + total.school)}</span>
+            <span />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Cell({ label, amount, sub, tone }: { label: string; amount: number; sub: string; tone?: string }) {
+  return (
+    <span className="md:text-right">
+      <span className="md:hidden block text-[11px] font-bold uppercase tracking-[0.1em] text-white/40">{label}</span>
+      <span className={clsx('block font-semibold', tone)}>{kr(amount)}</span>
+      <span className="block text-xs text-white/45">{sub}</span>
+    </span>
   );
 }
