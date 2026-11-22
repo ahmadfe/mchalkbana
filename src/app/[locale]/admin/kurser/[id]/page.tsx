@@ -402,7 +402,38 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   const [payNote, setPayNote] = useState('');
   const [schoolId, setSchoolId] = useState('');
 
+  // Telefonbokning: Swish-förfrågan till elevens telefon
+  const [swishPhone, setSwishPhone] = useState(p.phone ?? '');
+  const [swishReq, setSwishReq] = useState<{ id: string; status: string; error?: string } | null>(null);
+  const sendSwish = async () => {
+    setBusy(true);
+    const res = await fetch(`/api/admin/deltagare/${p.bookingId}/swish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: swishPhone }) });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) { setSwishReq({ id: '', status: 'FAILED', error: d.error ?? 'Något gick fel' }); return; }
+    setSwishReq({ id: d.swishRequestId, status: 'CREATED' });
+  };
+  useEffect(() => {
+    if (!swishReq?.id || swishReq.status !== 'CREATED') return;
+    let stop = false;
+    const started = Date.now();
+    const tick = async () => {
+      if (stop) return;
+      const d = await fetch(`/api/admin/deltagare/${p.bookingId}/swish?id=${swishReq.id}`).then(r => r.json()).catch(() => ({}));
+      if (stop) return;
+      if (d.status === 'PAID') { setSwishReq(null); setPaying(false); await onChange(); return; }
+      if (['DECLINED', 'ERROR', 'CANCELLED'].includes(d.status)) { setSwishReq({ ...swishReq, status: d.status, error: d.errorMessage ?? undefined }); return; }
+      // Swish ger eleven ca 3 minuter
+      if (Date.now() - started > 4 * 60_000) { setSwishReq({ ...swishReq, status: 'TIMEOUT' }); return; }
+      setTimeout(tick, 2500);
+    };
+    const t = setTimeout(tick, 2500);
+    return () => { stop = true; clearTimeout(t); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swishReq?.id, swishReq?.status]);
+
   const pay = async () => {
+    if (provider === 'swishreq') return sendSwish();
     if (payer === 'school') await call(`/api/checkin/${p.bookingId}/school`, 'PATCH', { schoolUserId: Number(schoolId) });
     else await call(`/api/admin/bookings/${p.bookingId}/payment`, 'POST', { amount: Number(amount), provider, note: payNote });
     setPaying(false);
@@ -565,27 +596,39 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
             </div>
             {payer === 'student' ? (
               <div className="flex flex-wrap items-center gap-2">
-                <input
+                {provider === 'swishreq' ? (
+                  <span className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-white/80 inline-flex items-center">{kr(p.price)}</span>
+                ) : <input
                   type="number"
                   min={0}
                   value={amount}
                   onChange={e => { setAmount(e.target.value); if (e.target.value === '0') setProvider('free'); else if (provider === 'free') setProvider('cash'); }}
                   aria-label="Belopp (kr)"
                   className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
-                />
-                <Select value={provider} onChange={e => { setProvider(e.target.value); if (e.target.value === 'free') setAmount('0'); else if (amount === '0') setAmount(String(p.price)); }} className="!w-36 !h-10">
+                />}
+                <Select value={provider} onChange={e => { setProvider(e.target.value); if (e.target.value === 'free') setAmount('0'); else if (amount === '0') setAmount(String(p.price)); }} className="!w-44 !h-10">
                   <option value="cash">Kontant</option>
                   <option value="card">Kort</option>
                   <option value="swish">Swish</option>
                   <option value="free">Gratis (0 kr)</option>
+                  <option value="swishreq">Swish-förfrågan</option>
                 </Select>
-                <input
+                {provider === 'swishreq' ? (
+                  <input
+                    type="tel"
+                    value={swishPhone}
+                    onChange={e => setSwishPhone(e.target.value)}
+                    placeholder="Elevens Swish-nummer, t.ex. 070-123 45 67"
+                    aria-label="Elevens Swish-nummer"
+                    className="flex-1 min-w-[12rem] h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
+                  />
+                ) : <input
                   value={payNote}
                   onChange={e => setPayNote(e.target.value)}
                   placeholder={provider === 'free' ? 'Varför gratis? (krävs) t.ex. gratis omprov' : 'Anteckning (valfritt), t.ex. kontant till Ali'}
                   aria-label="Anteckning"
                   className="flex-1 min-w-[12rem] h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-white/40"
-                />
+                />}
               </div>
             ) : (
               <div>
@@ -596,9 +639,25 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
                 <p className="text-xs text-white/50 mt-1.5">Eleven läggs på skolans faktura med skolans pris.</p>
               </div>
             )}
+            {payer === 'student' && provider === 'swishreq' && (
+              swishReq?.status === 'CREATED' ? (
+                <p className="text-sm text-sky-300 flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-sky-300 border-t-transparent rounded-full animate-spin" />
+                  Väntar på Swish… be eleven öppna Swish-appen och godkänna {kr(p.price)}.
+                </p>
+              ) : swishReq ? (
+                <p className="text-sm text-red-300">
+                  {swishReq.status === 'TIMEOUT' ? 'Eleven godkände inte i tid.' : swishReq.status === 'DECLINED' ? 'Eleven nekade betalningen.' : swishReq.error ?? 'Swish-betalningen gick inte igenom.'} Bokningen finns kvar – skicka igen eller välj ett annat betalsätt.
+                </p>
+              ) : (
+                <p className="text-xs text-white/50">Eleven får betalningen direkt i Swish-appen. När hen godkänner markeras bokningen som betald automatiskt. På bankutdraget står namn + bokningsnummer.</p>
+              )
+            )}
             <div className="flex gap-2">
-              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || (payer === 'student' ? (provider === 'free' ? !payNote.trim() : !(Number(amount) > 0)) : !schoolId)}>Bekräfta</Button>
-              <Button className="!h-10" onClick={() => setPaying(false)}>Avbryt</Button>
+              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || swishReq?.status === 'CREATED' || (payer === 'student' ? (provider === 'free' ? !payNote.trim() : provider === 'swishreq' ? !swishPhone.trim() : !(Number(amount) > 0)) : !schoolId)}>
+                {payer === 'student' && provider === 'swishreq' ? (swishReq ? 'Skicka igen' : 'Skicka') : 'Bekräfta'}
+              </Button>
+              <Button className="!h-10" onClick={() => { setPaying(false); setSwishReq(null); }}>Avbryt</Button>
             </div>
           </div>
         ) : (
