@@ -55,7 +55,7 @@ type Mode = 'day' | 'week' | 'month' | 'year' | 'custom';
 type Who = 'all' | 'private' | 'school';
 
 const METHOD_LABEL: Record<string, string> = {
-  swish: 'Swish', cash: 'Kontant', card: 'Kort', free: 'Gratis', klarna: 'Klarna', invoice: 'Faktura', manual: 'Manuell', stripe: 'Kort', other: 'Annat',
+  swish: 'Swish', cash: 'Kontant', card: 'Kort', free: 'Gratis', klarna: 'Klarna', stripe_klarna: 'Klarna', invoice: 'Faktura', manual: 'Manuell', stripe: 'Kort', other: 'Annat',
 };
 const STATUS: Record<string, { label: string; tone: 'green' | 'amber' | 'blue' | 'neutral' }> = {
   Succeeded: { label: 'Betald', tone: 'green' },
@@ -166,7 +166,7 @@ export default function BetalningarPage() {
     all: sum(paid),
     swish: sum(paid.filter(r => r.method === 'swish')),
     cashCard: sum(paid.filter(r => ['cash', 'card', 'stripe', 'manual', 'other'].includes(r.method))),
-    klarna: sum(paid.filter(r => r.method === 'klarna')),
+    klarna: sum(paid.filter(r => r.method === 'klarna' || r.method === 'stripe_klarna')),
     schools: sum(paid.filter(r => r.kind === 'invoice')),
     refunded: sum(shown.filter(r => r.status === 'Refunded')),
   };
@@ -326,6 +326,7 @@ function PaymentRow({ r, locale, onChange }: { r: Row; locale: string; onChange:
   const refund = async () => {
     const how = r.method === 'swish' ? 'Pengarna skickas tillbaka via Swish.'
       : r.method === 'klarna' ? (r.status === 'Authorized' ? 'Klarna-reservationen släpps.' : 'Beloppet återbetalas via Klarna.')
+      : r.method === 'stripe' || r.method === 'stripe_klarna' ? 'Hela beloppet återbetalas via Stripe (kortet/Klarna) – tar några dagar.'
       : 'Betalningen markeras som återbetald – lämna tillbaka pengarna själv.';
     if (!confirm(`Återbetala ${kr(r.amount)} till ${r.name}?\n\n${how}\nBokningen avbokas och platsen blir ledig.`)) return;
     setBusy(true);
@@ -398,6 +399,11 @@ function PaymentRow({ r, locale, onChange }: { r: Row; locale: string; onChange:
                   className="text-white/45 hover:text-white font-mono text-xs"
                 >
                   Swish-ref {r.transactionId.length > 12 ? `${r.transactionId.slice(0, 6)}…${r.transactionId.slice(-4)}` : r.transactionId}
+                </button>
+              )}
+              {r.transactionId?.startsWith('pi_') && (
+                <button onClick={() => { navigator.clipboard?.writeText(r.transactionId!); }} title={`Stripe ${r.transactionId} – klicka för att kopiera`} className="text-white/45 hover:text-white font-mono text-xs">
+                  Stripe {r.transactionId.slice(0, 7)}…{r.transactionId.slice(-4)}
                 </button>
               )}
               {r.coupon && <span className="text-white/50">Rabattkod {r.coupon}</span>}

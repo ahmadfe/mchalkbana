@@ -185,6 +185,7 @@ model Booking {
   couponDiscount        Int? // kronor som rabattkoden drog av
   priceOverride         Int? // pris satt för hand av admin (går före skolpris och kurspris)
   comboParts            String         @default("both") // kombokurs: both | risk1 | risk2
+  stripeIntentId        String? // Stripe PaymentIntent (pi_…) medan kortbetalningen/Klarna pågår
   payNote               String         @default("") // ägarens anteckning om obetald elev, t.ex. "lovat Swish fredag" (syns inte för skolan)
 
   @@index([studentId])

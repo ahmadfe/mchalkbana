@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
 import { captureOrder, cancelOrder, extendAuthorization, getOrder, KlarnaError } from '@/lib/klarna';
+import { isStripeProvider, refundStripe, stripeConfigured } from '@/lib/stripe';
 
 /*
  * Klarna-reservationer: beloppet reserveras vid bokning och dras när kursen är genomförd.
@@ -23,6 +24,9 @@ const describe = (b: { id: number; session: { startTime: Date; course: { titleSv
 export async function klarnaOnCancel(bookingId: number): Promise<string | null> {
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, include: { payment: true, session: { include: { course: true } } } });
   const pay = booking?.payment;
+  if (booking && pay && isStripeProvider(pay.provider) && pay.status === 'Succeeded' && pay.transactionId?.startsWith('pi_')) {
+    return stripeOnCancel(bookingId, pay.id, pay.transactionId, pay.amount, booking.session);
+  }
   if (!booking || !pay || pay.provider !== 'Klarna' || pay.status !== 'Authorized' || !pay.transactionId) return null;
 
   const inTime = hoursUntil(booking.session.startTime) >= FREE_CANCEL_HOURS || booking.session.status === 'canceled';
@@ -37,6 +41,21 @@ export async function klarnaOnCancel(bookingId: number): Promise<string | null> 
   } catch (e) {
     console.error('[Klarna] Kunde inte släppa reservationen för bokning', bookingId, e);
     return 'Bokningen är avbokad, men Klarna-reservationen kunde inte släppas just nu – den släpps automatiskt i nattens körning.';
+  }
+}
+
+/** Stripe (kort/Klarna via Stripe): pengarna är redan dragna. I tid → full återbetalning, för sent → ingen (villkoren). */
+async function stripeOnCancel(bookingId: number, paymentId: number, intentId: string, amount: number, session: { startTime: Date; status: string }): Promise<string> {
+  const inTime = hoursUntil(session.startTime) >= FREE_CANCEL_HOURS || session.status === 'canceled';
+  if (!inTime) return 'Sen avbokning (mindre än 48 timmar kvar) – ingen återbetalning enligt villkoren.';
+  if (!stripeConfigured()) return 'Bokningen är avbokad, men Stripe är inte aktiverat – gör återbetalningen i Stripe.';
+  try {
+    await refundStripe(intentId);
+    await prisma.payment.update({ where: { id: paymentId }, data: { status: 'Refunded' } });
+    return `${amount.toLocaleString('sv-SE')} kr återbetalas till kortet/Klarna (tar några dagar).`;
+  } catch (e) {
+    console.error('[Stripe] Återbetalning vid avbokning misslyckades', bookingId, e);
+    return 'Bokningen är avbokad, men återbetalningen via Stripe misslyckades – gör den i Stripe eller med "Återbetala" under Betalningar.';
   }
 }
 

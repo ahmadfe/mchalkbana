@@ -9,12 +9,13 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import type { Session } from '@/lib/types';
-import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin, Tag } from 'lucide-react';
+import { CheckCircle2, Smartphone, AlertTriangle, Lock, ArrowLeft, User, Clock, Calendar, MapPin, Tag, CreditCard } from 'lucide-react';
 import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
 import KlarnaCheckout, { type KlarnaCheckoutHandle } from '@/components/KlarnaCheckout';
 import { KlarnaAfterPurchase, KlarnaBadge } from '@/components/Klarna';
 import KlarnaMessage from '@/components/KlarnaMessage';
+import StripePay, { stripeAvailable, type StripePayHandle } from '@/components/StripePay';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
@@ -53,9 +54,39 @@ function CheckoutContent() {
   const [liveSite, setLiveSite] = useState(true);
   useEffect(() => { setLiveSite(/(^|\.)uppsalahalkbana\.se$/.test(window.location.hostname)); }, []);
   const klarnaEnabled = klarnaClient.startsWith('klarna_live_client_') || (!!klarnaClient && !liveSite && process.env.NEXT_PUBLIC_VERCEL_ENV !== 'production');
-  const [method, setMethod] = useState<'swish' | 'klarna'>('swish');
-  const [paidWith, setPaidWith] = useState<'swish' | 'klarna' | 'free'>('swish');
+  // Stripe: kort (Apple Pay / Google Pay) och Klarna via Stripe – ersätter den direkta Klarna-kopplingen när den är på
+  const stripeEnabled = stripeAvailable(liveSite);
+  const methods: ('swish' | 'card' | 'klarna')[] = ['swish', ...(stripeEnabled ? ['card', 'klarna'] as const : klarnaEnabled ? ['klarna'] as const : [])];
+  const [method, setMethod] = useState<'swish' | 'card' | 'klarna'>('swish');
+  const [paidWith, setPaidWith] = useState<'swish' | 'card' | 'klarna' | 'free'>('swish');
   const klarnaRef = useRef<KlarnaCheckoutHandle>(null);
+  const stripeRef = useRef<StripePayHandle>(null);
+
+  // Tillbaka från Klarna / 3-D Secure: kontrollera betalningen på servern
+  useEffect(() => {
+    const bid = Number(searchParams.get('stripe_booking'));
+    const pi = searchParams.get('payment_intent');
+    if (!bid || !pi) return;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('uh_checkout') ?? 'null');
+      if (saved?.guest) setGuest(saved.guest);
+      if (saved?.coupon) setCoupon(saved.coupon);
+      if (saved?.method) { setMethod(saved.method); setPaidWith(saved.method); }
+    } catch { /* inget sparat */ }
+    window.history.replaceState(null, '', `${window.location.pathname}?session=${sessionId}`);
+    setBookingId(bid);
+    setSubmitting(true);
+    fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: bid, paymentIntentId: pi }) })
+      .then(r => r.json())
+      .then(d => {
+        if (d.status === 'paid') setStep('success');
+        else if (d.status === 'processing') setStep('waiting');
+        else setError(d.error ?? 'Betalningen gick inte igenom. Försök igen.');
+      })
+      .catch(() => setError('Kunde inte kontrollera betalningen – kontakta oss om pengar dragits.'))
+      .finally(() => setSubmitting(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetch(`/api/sessions/${sessionId}`)
@@ -128,7 +159,7 @@ function CheckoutContent() {
     else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, '')))
       errs.personnummer = 'Format: YYYYMMDD-XXXX';
     if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
-    if (free || method === 'klarna') { /* Swish-numret behövs inte */ }
+    if (free || method !== 'swish') { /* Swish-numret behövs inte */ }
     else if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
     else if (!/^(\+?46|0)[0-9\s\-]{7,12}$/.test(guest.swishPhone.trim()))
       errs.swishPhone = 'Ange ett giltigt mobilnummer';
@@ -164,6 +195,27 @@ function CheckoutContent() {
       value: effectivePrice,
       currency: 'SEK',
     });
+
+    if (!free && stripeEnabled && (method === 'card' || method === 'klarna')) {
+      // Spara kassan – Klarna skickar kunden till Klarna och tillbaka
+      try { sessionStorage.setItem('uh_checkout', JSON.stringify({ guest, coupon, method })); } catch { /* privat läge */ }
+      const r = await stripeRef.current?.pay({
+        sessionId,
+        couponCode: coupon?.code ?? null,
+        guest: { name: guest.name, personnummer: guest.personnummer, phone: guest.phone || null, email: guest.email },
+        returnUrl: `${window.location.origin}/${locale}/checkout?session=${sessionId}`,
+      });
+      setSubmitting(false);
+      if (!r) { setError('Betalformuläret är inte redo än'); return; }
+      if (r.status === 'error') { setError(r.error); return; }
+      if (r.status === 'redirecting') return;
+      setBookingId(r.bookingId);
+      setPaidWith(method);
+      if (r.status === 'processing') { setStep('waiting'); return; }
+      fbq('track', 'Purchase', { content_name: session?.course?.titleSv ?? 'Riskutbildning', value: effectivePrice, currency: 'SEK' });
+      setStep('success');
+      return;
+    }
 
     if (method === 'klarna' && !free) {
       const auth = await klarnaRef.current?.authorize({ name: guest.name, email: guest.email, phone: guest.phone || undefined });
@@ -245,6 +297,22 @@ function CheckoutContent() {
   };
 
   // ── Waiting state ──────────────────────────────────────────────────────────
+  if (step === 'waiting' && method !== 'swish') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center py-12 px-4">
+          <div className="w-full max-w-md text-center">
+            <div className="w-10 h-10 border-4 border-swedish-blue border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Betalningen behandlas</h1>
+            <p className="text-gray-500">Vi väntar på bekräftelse från {method === 'klarna' ? 'Klarna' : 'kortet'}. Det tar oftast bara några sekunder – stäng inte sidan.</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (step === 'waiting') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
@@ -553,9 +621,9 @@ function CheckoutContent() {
               </div>
 
               {/* Betalsätt */}
-              {!free && klarnaEnabled && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Betalsätt">
-                  {(['swish', 'klarna'] as const).map(m => (
+              {!free && methods.length > 1 && (
+                <div className={clsx('bg-white rounded-2xl border border-gray-100 p-2 grid gap-2', methods.length === 3 ? 'grid-cols-3' : 'grid-cols-2')} role="radiogroup" aria-label="Betalsätt">
+                  {methods.map(m => (
                     <button
                       key={m}
                       type="button"
@@ -566,13 +634,28 @@ function CheckoutContent() {
                     >
                       {m === 'swish'
                         ? <><span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#4B0082] via-[#9B59B6] to-[#E91E8C] flex items-center justify-center"><Smartphone className="w-4 h-4 text-white" /></span>Swish</>
-                        : <><KlarnaBadge /><span className="sr-only">Klarna</span></>}
+                        : m === 'card'
+                          ? <><CreditCard className="w-5 h-5 text-gray-700 shrink-0" /><span className="leading-tight text-sm sm:text-base">Kort<span className="hidden sm:inline"> / Apple Pay</span></span></>
+                          : <><KlarnaBadge /><span className="sr-only">Klarna</span></>}
                     </button>
                   ))}
                 </div>
               )}
 
-              {!free && method === 'klarna' && (
+              {!free && stripeEnabled && (method === 'card' || method === 'klarna') && (
+                <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    {method === 'klarna' ? <KlarnaBadge /> : <span className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center"><CreditCard className="w-5 h-5 text-white" /></span>}
+                    <div>
+                      <h2 className="font-semibold text-gray-900">{method === 'klarna' ? 'Betala med Klarna' : 'Betala med kort'}</h2>
+                      <p className="text-xs text-gray-500">{method === 'klarna' ? 'Betala nu, senare eller dela upp – du skickas till Klarna' : 'Visa, Mastercard, Apple Pay eller Google Pay'}</p>
+                    </div>
+                  </div>
+                  <StripePay ref={stripeRef} method={method} amount={effectivePrice} locale={locale} />
+                </div>
+              )}
+
+              {!free && !stripeEnabled && method === 'klarna' && (
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <KlarnaBadge />
@@ -625,7 +708,7 @@ function CheckoutContent() {
               <div className="flex items-center gap-3 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
                 <Lock className="w-4 h-4 shrink-0" />
                 <p>
-                  Betalningen sker säkert via {method === 'klarna' ? 'Klarna' : 'Swish'}. Vi lagrar aldrig bankuppgifter.
+                  Betalningen sker säkert via {method === 'swish' ? 'Swish' : stripeEnabled ? 'Stripe' : 'Klarna'}. Vi lagrar aldrig kort- eller bankuppgifter.
                   Avbokning är kostnadsfri senast 48 timmar före kursstart – se våra <a href={`/${locale}/bokningsvillkor`} target="_blank" className="underline">bokningsvillkor</a>.
                 </p>
               </div>
@@ -637,19 +720,21 @@ function CheckoutContent() {
                 disabled={submitting}
                 className={clsx(
                   'w-full font-bold text-lg py-4 rounded-2xl lg:rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-60',
-                  method === 'klarna' && !free ? 'bg-[#0B051D] text-white hover:bg-black' : 'bg-swedish-yellow text-gray-900 hover:bg-yellow-300',
+                  method === 'klarna' && !free ? 'bg-[#0B051D] text-white hover:bg-black' : method === 'card' && !free ? 'bg-gray-900 text-white hover:bg-black' : 'bg-swedish-yellow text-gray-900 hover:bg-yellow-300',
                 )}
               >
                 {submitting ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : method === 'klarna' && !free ? (
                   <KlarnaBadge small />
+                ) : method === 'card' && !free ? (
+                  <CreditCard className="w-5 h-5" />
                 ) : free ? (
                   <CheckCircle2 className="w-5 h-5" />
                 ) : (
                   <Smartphone className="w-5 h-5" />
                 )}
-                {submitting ? 'Skickar...' : free ? 'Bekräfta bokningen (0 kr)' : method === 'klarna' ? `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Klarna` : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
+                {submitting ? 'Skickar...' : free ? 'Bekräfta bokningen (0 kr)' : method === 'klarna' ? `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Klarna` : method === 'card' ? `Betala ${effectivePrice.toLocaleString('sv-SE')} kr` : `Betala ${effectivePrice.toLocaleString('sv-SE')} kr med Swish`}
               </button>
               </div>
             </form>
@@ -717,8 +802,8 @@ function CheckoutContent() {
 
                 <div className="mt-5 p-3 bg-gray-50 rounded-xl text-center">
                   <p className="text-xs text-gray-400">Säker betalning via</p>
-                  <p className="font-bold text-gray-700 text-sm">{klarnaEnabled ? 'Swish eller Klarna' : 'Swish'}</p>
-                  <p className="text-xs text-gray-400 mt-1">{klarnaEnabled ? 'Betala direkt eller senare' : 'Sveriges säkraste betaltjänst'}</p>
+                  <p className="font-bold text-gray-700 text-sm">{stripeEnabled ? 'Swish, kort, Apple Pay eller Klarna' : klarnaEnabled ? 'Swish eller Klarna' : 'Swish'}</p>
+                  <p className="text-xs text-gray-400 mt-1">{stripeEnabled || klarnaEnabled ? 'Betala direkt eller senare' : 'Sveriges säkraste betaltjänst'}</p>
                 </div>
               </div>
             </div>

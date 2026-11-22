@@ -74,7 +74,7 @@ const tz = { timeZone: 'Europe/Stockholm' } as const;
 const hm = (iso: string) => new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', ...tz });
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 const STATUS_LABEL = { planned: 'Planerad', completed: 'Genomförd', canceled: 'Inställd' } as const;
-const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', invoice: 'Faktura', manual: 'Manuell', Klarna: 'Klarna', free: 'Gratis' };
+const PROVIDER_LABEL: Record<string, string> = { cash: 'Kontant', card: 'Kort', swish: 'Swish', Swish: 'Swish', invoice: 'Faktura', manual: 'Manuell', Klarna: 'Klarna', free: 'Gratis', stripe: 'Kort', stripe_klarna: 'Klarna' };
 const ID_LABEL: Record<string, string> = { korkort: 'körkort', pass: 'pass', nationellt_id: 'nationellt id-kort', id_kort: 'id-kort' };
 
 function download(filename: string, content: string, type: string) {

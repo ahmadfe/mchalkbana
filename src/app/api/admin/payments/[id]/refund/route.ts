@@ -4,6 +4,7 @@ import { requireOwner } from '@/lib/auth';
 import { createRefund } from '@/lib/swish';
 import { recalcSeats } from '@/lib/kurser';
 import { cancelOrder, KlarnaError, refundOrder } from '@/lib/klarna';
+import { isStripeProvider, refundStripe, stripeConfigured } from '@/lib/stripe';
 import { sendCancellationEmail, sendInternalBookingNotification } from '@/lib/email';
 
 export const runtime = 'nodejs';
@@ -44,6 +45,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
     } catch (e) {
       return NextResponse.json({ error: `Klarna: ${e instanceof KlarnaError ? e.code : 'fel'} – återbetalningen gjordes inte` }, { status: 502 });
+    }
+  } else if (isStripeProvider(payment.provider)) {
+    // Kort / Apple Pay / Google Pay / Klarna via Stripe – hela beloppet tillbaka
+    if (!payment.transactionId?.startsWith('pi_')) return NextResponse.json({ error: 'Stripe-betalningens id saknas' }, { status: 422 });
+    if (!stripeConfigured()) return NextResponse.json({ error: 'Stripe är inte aktiverat' }, { status: 503 });
+    try {
+      await refundStripe(payment.transactionId);
+    } catch (e) {
+      console.error('[Refund] Stripe', e);
+      return NextResponse.json({ error: 'Stripe kunde inte göra återbetalningen – försök igen eller gör den i Stripe' }, { status: 502 });
     }
   } else if (['cash', 'kontant', 'card', 'kort', 'free'].includes(payment.provider.toLowerCase())) {
     // Kontant/kort i kassan: pengarna lämnas tillbaka för hand – bara markera som återbetald
