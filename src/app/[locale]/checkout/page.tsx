@@ -14,7 +14,6 @@ import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
 import KlarnaCheckout, { type KlarnaCheckoutHandle } from '@/components/KlarnaCheckout';
 import { KlarnaAfterPurchase, KlarnaBadge } from '@/components/Klarna';
-import KlarnaMessage from '@/components/KlarnaMessage';
 import StripePay, { stripeAvailable, type StripePayHandle } from '@/components/StripePay';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
@@ -79,7 +78,10 @@ function CheckoutContent() {
     fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: bid, paymentIntentId: pi }) })
       .then(r => r.json())
       .then(d => {
-        if (d.status === 'paid') setStep('success');
+        if (d.status === 'paid') {
+          if (d.guest?.email) setGuest(g => (g.email ? g : { ...g, name: g.name || d.guest.name, email: d.guest.email }));
+          setStep('success');
+        }
         else if (d.status === 'processing') setStep('waiting');
         else setError(d.error ?? 'Betalningen gick inte igenom. Försök igen.');
       })
@@ -505,7 +507,6 @@ function CheckoutContent() {
                 <span className="font-bold text-lg text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
               </span>
             </div>
-            {!free && <KlarnaMessage amount={effectivePrice} className="mt-2" />}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -797,7 +798,6 @@ function CheckoutContent() {
                     <span>Totalt:</span>
                     <span className="text-swedish-blue">{effectivePrice.toLocaleString('sv-SE')} kr</span>
                   </div>
-                  {!free && <KlarnaMessage amount={effectivePrice} className="mt-3" />}
                 </div>
 
                 <div className="mt-5 p-3 bg-gray-50 rounded-xl text-center">
