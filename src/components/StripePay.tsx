@@ -101,7 +101,8 @@ const Inner = forwardRef<StripePayHandle, { method: 'card' | 'klarna' }>(functio
               billing_details: {
                 name: input.guest.name,
                 email: input.guest.email,
-                phone: input.guest.phone || undefined,
+                // Fälten är 'never' i formuläret → Stripe kräver att värdet skickas, även tomt (telefon är frivillig i kassan)
+                phone: input.guest.phone || '',
               },
             },
           },
@@ -110,7 +111,8 @@ const Inner = forwardRef<StripePayHandle, { method: 'card' | 'klarna' }>(functio
         console.error('[Stripe] confirmPayment', e);
         clearStripePending();
         await release();
-        return { status: 'error', error: 'Betalningen kunde inte startas – försök igen eller välj Swish.' };
+        const detail = e instanceof Error && e.message ? ` (${e.message.slice(0, 160)})` : '';
+        return { status: 'error', error: `Betalningen kunde inte startas – försök igen eller välj Swish.${detail}` };
       }
       const { error, paymentIntent } = result;
 
