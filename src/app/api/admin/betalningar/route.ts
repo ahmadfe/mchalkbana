@@ -68,6 +68,8 @@ export async function GET(request: Request) {
       status: p.status,
       note: p.note,
       transactionId: p.transactionId,
+      // Bokningsnumret – samma som referensen på bankutdraget ("Tilda-Julin-436" / "436")
+      bookingId: p.booking.id,
       name: p.booking.guestName || p.booking.user?.name || '–',
       personnummer: p.booking.personnummer,
       contact: [p.booking.guestPhone || p.booking.user?.phone, p.booking.guestEmail || p.booking.user?.email].filter(Boolean).join(' · '),
@@ -88,6 +90,7 @@ export async function GET(request: Request) {
       note: c.note,
       name: c.booking ? c.booking.guestName || c.booking.personnummer || '–' : 'Tillgodo',
       personnummer: c.booking?.personnummer ?? null,
+      bookingId: c.booking?.id ?? null,
       studentId: c.booking?.studentId ?? null,
       school: c.schoolUser.name,
       schoolId: c.schoolUser.id,

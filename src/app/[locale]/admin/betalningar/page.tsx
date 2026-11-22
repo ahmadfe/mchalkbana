@@ -29,6 +29,7 @@ interface Row {
   schoolId?: number;
   coupon?: string | null;
   transactionId?: string | null;
+  bookingId?: number | null;
   slot?: Slot | null;
   invoice?: { id: number; number: number } | null;
   period?: string;
@@ -152,7 +153,9 @@ export default function BetalningarPage() {
     return (rows ?? []).filter(r =>
       (who === 'all' || (who === 'school') === isSchool(r)) &&
       (method === 'all' || r.method === method) &&
-      (!needle || [r.name, r.personnummer, r.school, r.note, r.contact, r.slot?.course].some(v => v?.toLowerCase().includes(needle))),
+      // Bokningsnummer ("436" eller "#436") matchar exakt, annars fritext (även Swish-ref)
+      (!needle || needle.replace('#', '') === String(r.bookingId)
+        || [r.name, r.personnummer, r.school, r.note, r.contact, r.slot?.course, r.transactionId].some(v => v?.toLowerCase().includes(needle))),
     );
   }, [rows, who, method, q]);
 
@@ -169,16 +172,16 @@ export default function BetalningarPage() {
   };
   const unpaidShown = (unpaid ?? []).filter(r => {
     const needle = q.trim().toLowerCase();
-    return !needle || [r.name, r.personnummer, r.phone, r.email, r.note, r.slot.course].some(v => v?.toLowerCase().includes(needle));
+    return !needle || needle.replace('#', '') === String(r.bookingId) || [r.name, r.personnummer, r.phone, r.email, r.note, r.slot.course].some(v => v?.toLowerCase().includes(needle));
   });
   const methods = Array.from(new Set((rows ?? []).map(r => r.method)));
 
   const exportCsv = () => {
     if (view === 'unpaid') return exportUnpaidCsv(unpaidShown);
-    const head = ['Datum', 'Namn', 'Personnummer', 'Privat/Skola', 'Kurs', 'Kurstillfälle', 'Betalsätt', 'Status', 'Belopp', 'Anteckning'];
+    const head = ['Datum', 'Bokning', 'Namn', 'Personnummer', 'Privat/Skola', 'Kurs', 'Kurstillfälle', 'Betalsätt', 'Swish-ref', 'Status', 'Belopp', 'Anteckning'];
     const lines = shown.map(r => [
-      ymd(new Date(r.date)), r.name, r.personnummer ?? '', r.school ?? 'Privat', r.slot?.course ?? (r.period ? `Faktura ${periodLabel(r.period)}` : ''),
-      r.slot ? `${ymd(new Date(r.slot.startTime))} ${hm(r.slot.startTime)}` : '', METHOD_LABEL[r.method] ?? r.method, STATUS[r.status]?.label ?? r.status, String(r.amount), r.note,
+      ymd(new Date(r.date)), r.bookingId != null ? String(r.bookingId) : '', r.name, r.personnummer ?? '', r.school ?? 'Privat', r.slot?.course ?? (r.period ? `Faktura ${periodLabel(r.period)}` : ''),
+      r.slot ? `${ymd(new Date(r.slot.startTime))} ${hm(r.slot.startTime)}` : '', METHOD_LABEL[r.method] ?? r.method, r.method === 'swish' ? r.transactionId ?? '' : '', STATUS[r.status]?.label ?? r.status, String(r.amount), r.note,
     ]);
     const csv = [head, ...lines].map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
     const a = document.createElement('a');
@@ -387,6 +390,16 @@ function PaymentRow({ r, locale, onChange }: { r: Row; locale: string; onChange:
           ) : (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm">
               {r.note && <span className="text-amber-200/90">📝 {r.note}</span>}
+              {r.bookingId != null && <span className="text-white/60 font-mono text-xs bg-white/5 rounded-md px-1.5 py-0.5" title="Samma nummer som på bankutdraget">Bokning #{r.bookingId}</span>}
+              {r.transactionId && r.method === 'swish' && !r.transactionId.startsWith('swish_') && (
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(r.transactionId!); }}
+                  title={`Swish-ref ${r.transactionId} – klicka för att kopiera`}
+                  className="text-white/45 hover:text-white font-mono text-xs"
+                >
+                  Swish-ref {r.transactionId.length > 12 ? `${r.transactionId.slice(0, 6)}…${r.transactionId.slice(-4)}` : r.transactionId}
+                </button>
+              )}
               {r.coupon && <span className="text-white/50">Rabattkod {r.coupon}</span>}
               {r.kind !== 'invoice' && (
                 <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-white/45 hover:text-white">
@@ -520,6 +533,7 @@ function UnpaidItem({ r, locale, onChange }: { r: UnpaidRow; locale: string; onC
           ) : (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm">
               {r.note && <span className="text-amber-200/90">📝 {r.note}</span>}
+              <span className="text-white/60 font-mono text-xs bg-white/5 rounded-md px-1.5 py-0.5">Bokning #{r.bookingId}</span>
               {r.pending && <span className="text-white/45">Påbörjad: {r.pending}</span>}
               <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-white/45 hover:text-white">
                 <Pencil className="w-3.5 h-3.5" /> {r.note ? 'Ändra anteckning' : 'Anteckning'}
