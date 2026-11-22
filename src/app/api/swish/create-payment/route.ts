@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { session: { include: { course: true } } },
+    include: { session: { include: { course: true } }, user: { select: { name: true } } },
   });
 
   if (!booking) return NextResponse.json({ error: 'Bokning hittades inte' }, { status: 404 });
@@ -85,6 +85,7 @@ export async function POST(request: Request) {
   try {
     const { swishRequestId } = await createPaymentRequest({
       bookingId: booking.id,
+      name: booking.guestName || booking.user?.name,
       amount,
       payerPhone,
       message: `Uppsala Halkbana – ${booking.session.course.titleSv}`,

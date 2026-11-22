@@ -99,8 +99,34 @@ function generateInstructionUUID(): string {
   return crypto.randomUUID().replace(/-/g, '').toUpperCase();
 }
 
+/**
+ * Referensen som syns på bankutdraget: elevens namn + bokningsnummer, t.ex. "Tilda-Julin-436".
+ * Swish tillåter bara a-ö, A-Ö, 0-9 och "-" (max 35 tecken). Bokningsnumret står alltid sist –
+ * callbacken hittar bokningen med det.
+ */
+export function swishReference(name: string | null | undefined, bookingId: number): string {
+  const id = String(bookingId);
+  const clean = (name ?? '')
+    .normalize('NFC')
+    // é → e osv., men behåll å ä ö
+    .replace(/[^a-zA-ZåäöÅÄÖ0-9\s-]/g, ch => ch.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+    .replace(/[^a-zA-ZåäöÅÄÖ0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const room = 35 - id.length - 1;
+  const short = clean.slice(0, room).replace(/-+$/, '');
+  return short ? `${short}-${id}` : id;
+}
+
+/** Bokningsnumret ur referensen – sista talet ("Tilda-Julin-436" → 436, gamla "436" → 436). */
+export function bookingIdFromReference(ref: string): number {
+  const m = /(\d+)$/.exec(ref.trim());
+  return m ? parseInt(m[1], 10) : NaN;
+}
+
 export async function createPaymentRequest(params: {
   bookingId: number;
+  /** Elevens namn – visas på bankutdraget */
+  name?: string | null;
   amount: number;
   payerPhone: string;
   message: string;
@@ -127,7 +153,7 @@ export async function createPaymentRequest(params: {
       .replace(/–/g, '-')   // en-dash → ASCII hyphen
       .replace(/[^\w\såäöÅÄÖ.,\-:;!?+()*/]/g, '')  // strip other disallowed chars
       .slice(0, 50),
-    payeePaymentReference: params.bookingId.toString(),
+    payeePaymentReference: swishReference(params.name, params.bookingId),
   });
 
   if (result.status === 201) {

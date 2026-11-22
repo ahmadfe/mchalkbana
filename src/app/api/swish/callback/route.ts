@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getPaymentRequest } from '@/lib/swish';
+import { bookingIdFromReference, getPaymentRequest } from '@/lib/swish';
 import { sendPaymentFailedEmail, sendInternalBookingNotification } from '@/lib/email';
 import { completePaidBooking } from '@/lib/payments';
 
@@ -26,7 +26,8 @@ export async function POST(request: Request) {
 
   if (!payeePaymentReference) return new Response('OK', { status: 200 });
 
-  const bookingId = parseInt(payeePaymentReference);
+  // "Tilda-Julin-436" (nytt) eller "436" (gamla betalningar)
+  const bookingId = bookingIdFromReference(payeePaymentReference);
   if (isNaN(bookingId)) return new Response('OK', { status: 200 });
 
   const booking = await prisma.booking.findUnique({
