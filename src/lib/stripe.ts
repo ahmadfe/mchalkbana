@@ -7,7 +7,7 @@ import { cancelPendingBooking } from '@/lib/publicBooking';
  * Stripe: kort (inkl. Apple Pay / Google Pay) och Klarna via Stripe.
  * Pengarna dras vid bokningen. Avbokning senast 48 h före kursstart → full återbetalning (se paymentOnCancel).
  *
- * SÄKERHETSLÅS: på den skarpa webbplatsen (Vercel production) används Stripe bara med live-nycklar (sk_live_…),
+ * SÄKERHETSLÅS: på den skarpa webbplatsen (Vercel production) används Stripe bara med live-nycklar (sk_live_… eller begränsad rk_live_…),
  * så att testnycklar aldrig kan ta riktiga kunders bokningar.
  */
 
@@ -23,7 +23,8 @@ const STALE_MINUTES = 45;
 export function stripeConfigured(): boolean {
   const key = process.env.STRIPE_SECRET_KEY ?? '';
   if (!key) return false;
-  if (process.env.VERCEL_ENV === 'production' && !key.startsWith('sk_live_')) return false;
+  // Hemlig nyckel (sk_) eller begränsad nyckel (rk_) – på den skarpa webbplatsen bara live
+  if (process.env.VERCEL_ENV === 'production' && !key.startsWith('sk_live_') && !key.startsWith('rk_live_')) return false;
   return true;
 }
 
