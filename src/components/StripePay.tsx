@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
-import { loadStripe, type Stripe as StripeJs } from '@stripe/stripe-js';
+import { loadStripe, type PaymentIntentResult, type Stripe as StripeJs } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
 
 /*
@@ -84,28 +84,43 @@ const Inner = forwardRef<StripePayHandle, { method: 'card' | 'klarna' }>(functio
       if (!res.ok) return { status: 'error', error: d.error ?? 'Betalningen kunde inte startas' };
 
       const returnUrl = `${input.returnUrl}&stripe_booking=${d.bookingId}`;
+      // Kommer kunden tillbaka utan return_url (bakåtknappen) kan kassan ändå kontrollera betalningen
+      savePending({ bookingId: d.bookingId, paymentIntentId: d.paymentIntentId, sessionId: input.sessionId, at: Date.now() });
+      const release = () => fetch('/api/stripe/abandon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: d.bookingId, paymentIntentId: d.paymentIntentId }) }).catch(() => {});
+
       // 3. Bekräfta hos Stripe (Klarna skickar kunden vidare – vi kommer tillbaka till returnUrl)
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        clientSecret: d.clientSecret,
-        redirect: 'if_required',
-        confirmParams: {
-          return_url: returnUrl,
-          payment_method_data: {
-            billing_details: {
-              name: input.guest.name,
-              email: input.guest.email,
-              phone: input.guest.phone || undefined,
+      let result: PaymentIntentResult;
+      try {
+        result = await stripe.confirmPayment({
+          elements,
+          clientSecret: d.clientSecret,
+          redirect: 'if_required',
+          confirmParams: {
+            return_url: returnUrl,
+            payment_method_data: {
+              billing_details: {
+                name: input.guest.name,
+                email: input.guest.email,
+                phone: input.guest.phone || undefined,
+              },
             },
           },
-        },
-      });
+        });
+      } catch (e) {
+        console.error('[Stripe] confirmPayment', e);
+        clearStripePending();
+        await release();
+        return { status: 'error', error: 'Betalningen kunde inte startas – försök igen eller välj Swish.' };
+      }
+      const { error, paymentIntent } = result;
 
       if (error) {
         // Nekat kort / avbrutet – släpp platsen
-        await fetch('/api/stripe/abandon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: d.bookingId, paymentIntentId: d.paymentIntentId }) }).catch(() => {});
+        clearStripePending();
+        await release();
         return { status: 'error', error: error.message ?? 'Betalningen gick inte igenom' };
       }
+      clearStripePending();
 
       // 4. Klart utan omdirigering – servern kontrollerar betalningen och bekräftar bokningen
       const c = await fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: d.bookingId, paymentIntentId: paymentIntent?.id ?? d.paymentIntentId }) });
@@ -130,6 +145,24 @@ const Inner = forwardRef<StripePayHandle, { method: 'card' | 'klarna' }>(functio
 });
 
 export default StripePay;
+
+/* Påbörjad betalning (bokning + PaymentIntent) sparas i fliken medan kunden är hos Klarna */
+const PENDING_KEY = 'uh_stripe_pending';
+type Pending = { bookingId: number; paymentIntentId: string; sessionId: number; at: number };
+function savePending(p: Pending) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch { /* privat läge */ }
+}
+export function clearStripePending() {
+  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* privat läge */ }
+}
+/** Påbörjad betalning för detta pass (högst 45 min gammal) */
+export function readStripePending(sessionId: number): Pending | null {
+  try {
+    const p = JSON.parse(sessionStorage.getItem(PENDING_KEY) ?? 'null') as Pending | null;
+    if (!p?.bookingId || !p.paymentIntentId || p.sessionId !== sessionId || Date.now() - p.at > 45 * 60_000) return null;
+    return p;
+  } catch { return null; }
+}
 
 /** Stripe visas: live-nyckel, eller testnyckel utanför den skarpa webbplatsen (samma lås som servern) */
 export function stripeAvailable(liveSite: boolean): boolean {

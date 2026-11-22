@@ -14,7 +14,7 @@ import clsx from 'clsx';
 import { fbq } from '@/components/MetaPixel';
 import KlarnaCheckout, { type KlarnaCheckoutHandle } from '@/components/KlarnaCheckout';
 import { KlarnaAfterPurchase, KlarnaBadge } from '@/components/Klarna';
-import StripePay, { stripeAvailable, type StripePayHandle } from '@/components/StripePay';
+import StripePay, { clearStripePending, readStripePending, stripeAvailable, type StripePayHandle } from '@/components/StripePay';
 
 type CheckoutStep = 'form' | 'waiting' | 'success' | 'failed';
 
@@ -63,30 +63,53 @@ function CheckoutContent() {
 
   // Tillbaka från Klarna / 3-D Secure: kontrollera betalningen på servern
   useEffect(() => {
+    // Fråga servern hur det gick med betalningen (betald → tack-sidan, avbruten → platsen släpps och kunden kan försöka igen)
+    const verify = (bid: number, pi: string) => {
+      clearStripePending();
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('uh_checkout') ?? 'null');
+        if (saved?.guest) setGuest(saved.guest);
+        if (saved?.coupon) setCoupon(saved.coupon);
+        if (saved?.method) { setMethod(saved.method); setPaidWith(saved.method); }
+      } catch { /* inget sparat */ }
+      setBookingId(bid);
+      setSubmitting(true);
+      setError('');
+      fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: bid, paymentIntentId: pi }) })
+        .then(r => r.json())
+        .then(d => {
+          if (d.status === 'paid') {
+            if (d.guest?.email) setGuest(g => (g.email ? g : { ...g, name: g.name || d.guest.name, email: d.guest.email }));
+            setStep('success');
+          }
+          else if (d.status === 'processing') setStep('waiting');
+          else setError(d.error ?? 'Betalningen gick inte igenom. Försök igen.');
+        })
+        .catch(() => setError('Kunde inte kontrollera betalningen – kontakta oss om pengar dragits.'))
+        .finally(() => setSubmitting(false));
+    };
+
+    // 1. Tillbaka från Klarna / 3-D Secure via return_url
     const bid = Number(searchParams.get('stripe_booking'));
     const pi = searchParams.get('payment_intent');
-    if (!bid || !pi) return;
-    try {
-      const saved = JSON.parse(sessionStorage.getItem('uh_checkout') ?? 'null');
-      if (saved?.guest) setGuest(saved.guest);
-      if (saved?.coupon) setCoupon(saved.coupon);
-      if (saved?.method) { setMethod(saved.method); setPaidWith(saved.method); }
-    } catch { /* inget sparat */ }
-    window.history.replaceState(null, '', `${window.location.pathname}?session=${sessionId}`);
-    setBookingId(bid);
-    setSubmitting(true);
-    fetch('/api/stripe/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bookingId: bid, paymentIntentId: pi }) })
-      .then(r => r.json())
-      .then(d => {
-        if (d.status === 'paid') {
-          if (d.guest?.email) setGuest(g => (g.email ? g : { ...g, name: g.name || d.guest.name, email: d.guest.email }));
-          setStep('success');
-        }
-        else if (d.status === 'processing') setStep('waiting');
-        else setError(d.error ?? 'Betalningen gick inte igenom. Försök igen.');
-      })
-      .catch(() => setError('Kunde inte kontrollera betalningen – kontakta oss om pengar dragits.'))
-      .finally(() => setSubmitting(false));
+    if (bid && pi) {
+      window.history.replaceState(null, '', `${window.location.pathname}?session=${sessionId}`);
+      verify(bid, pi);
+    } else {
+      // 2. Kunden kom tillbaka utan return_url (bakåtknappen, Klarna stängdes) – kontrollera den påbörjade betalningen
+      const p = readStripePending(sessionId);
+      if (p) verify(p.bookingId, p.paymentIntentId);
+    }
+
+    // 3. Bakåtknappen i mobilen visar ofta den gamla sidan ur minnet ("Skickar..." fastnar) – kontrollera i stället
+    const onShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setSubmitting(false);
+      const p = readStripePending(sessionId);
+      if (p) verify(p.bookingId, p.paymentIntentId);
+    };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -201,12 +224,19 @@ function CheckoutContent() {
     if (!free && stripeEnabled && (method === 'card' || method === 'klarna')) {
       // Spara kassan – Klarna skickar kunden till Klarna och tillbaka
       try { sessionStorage.setItem('uh_checkout', JSON.stringify({ guest, coupon, method })); } catch { /* privat läge */ }
-      const r = await stripeRef.current?.pay({
-        sessionId,
-        couponCode: coupon?.code ?? null,
-        guest: { name: guest.name, personnummer: guest.personnummer, phone: guest.phone || null, email: guest.email },
-        returnUrl: `${window.location.origin}/${locale}/checkout?session=${sessionId}`,
-      });
+      let r: Awaited<ReturnType<StripePayHandle['pay']>> | undefined;
+      try {
+        r = await stripeRef.current?.pay({
+          sessionId,
+          couponCode: coupon?.code ?? null,
+          guest: { name: guest.name, personnummer: guest.personnummer, phone: guest.phone || null, email: guest.email },
+          returnUrl: `${window.location.origin}/${locale}/checkout?session=${sessionId}`,
+        });
+      } catch (err) {
+        // Knappen får aldrig fastna på "Skickar..."
+        console.error('[Stripe] pay', err);
+        r = { status: 'error', error: 'Betalningen kunde inte startas – försök igen eller välj Swish.' };
+      }
       setSubmitting(false);
       if (!r) { setError('Betalformuläret är inte redo än'); return; }
       if (r.status === 'error') { setError(r.error); return; }
