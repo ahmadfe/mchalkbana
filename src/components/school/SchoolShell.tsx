@@ -31,12 +31,12 @@ export function useSchool() {
   return v;
 }
 
-const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/school', label: 'Översikt', icon: Home },
-  { href: '/school/pass', label: 'Pass', icon: Calendar },
-  { href: '/school/elever', label: 'Elever', icon: Users },
-  { href: '/school/fakturor', label: 'Fakturor', icon: FileText },
-  { href: '/school/priser', label: 'Priser', icon: Tag },
+const NAV: { href: string; label: string; icon: LucideIcon; /** färg i ljust tema */ ic: string }[] = [
+  { href: '/school', label: 'Översikt', icon: Home, ic: 'blue' },
+  { href: '/school/pass', label: 'Pass', icon: Calendar, ic: 'emerald' },
+  { href: '/school/elever', label: 'Elever', icon: Users, ic: 'violet' },
+  { href: '/school/fakturor', label: 'Fakturor', icon: FileText, ic: 'amber' },
+  { href: '/school/priser', label: 'Priser', icon: Tag, ic: 'pink' },
 ];
 
 export default function SchoolShell({ children }: { children: React.ReactNode }) {
@@ -110,7 +110,7 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
           active ? 'bg-white/10 text-white font-semibold' : 'text-white/60 hover:text-white hover:bg-white/5',
         )}
       >
-        <Icon className={rail ? 'w-5 h-5 shrink-0' : 'w-[18px] h-[18px] shrink-0'} strokeWidth={1.75} />
+        <Icon className={clsx(rail ? 'w-5 h-5 shrink-0' : 'w-[18px] h-[18px] shrink-0', `ic-${n.ic}`)} strokeWidth={1.75} />
         {n.label}
       </Link>
     );

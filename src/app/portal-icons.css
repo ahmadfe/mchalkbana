@@ -1,0 +1,28 @@
+/*
+ * Ikonfärger i portalernas LJUSA tema (handskriven – inte genererad).
+ * Menyn: varje val har sin färg (klassen ic-<färg> sätts i AdminSidebar / SchoolShell).
+ * Sidorna: grå ikoner blir turkosa. Pilar, kryss, papperskorg och redan färgade ikoner rörs inte.
+ */
+html[data-portal-theme="light"] .ic-blue { color: #2563eb; }
+html[data-portal-theme="light"] .ic-emerald { color: #059669; }
+html[data-portal-theme="light"] .ic-violet { color: #7c3aed; }
+html[data-portal-theme="light"] .ic-amber { color: #d97706; }
+html[data-portal-theme="light"] .ic-rose { color: #e11d48; }
+html[data-portal-theme="light"] .ic-teal { color: #0d9488; }
+html[data-portal-theme="light"] .ic-sky { color: #0284c7; }
+html[data-portal-theme="light"] .ic-indigo { color: #4f46e5; }
+html[data-portal-theme="light"] .ic-green { color: #16a34a; }
+html[data-portal-theme="light"] .ic-orange { color: #ea580c; }
+html[data-portal-theme="light"] .ic-pink { color: #db2777; }
+html[data-portal-theme="light"] .ic-cyan { color: #0891b2; }
+html[data-portal-theme="light"] .ic-slate { color: #475569; }
+html[data-portal-theme="light"] .ic-fuchsia { color: #c026d3; }
+
+/* Grå ikoner på sidorna (och i kurslistan bredvid) → turkos */
+html[data-portal-theme="light"] :is(main, aside) :is(.text-white\/30, .text-white\/35, .text-white\/40, .text-white\/45, .text-white\/50, .text-white\/55, .text-white\/60, .text-white\/65, .text-white\/70, .text-white\/80) > svg.lucide:not(.lucide-chevron-right, .lucide-chevron-left, .lucide-chevron-down, .lucide-chevron-up, .lucide-x, .lucide-trash, .lucide-trash-2, .lucide-trash2, .lucide-ellipsis, .lucide-more-horizontal, .lucide-grip-vertical, .lucide-log-out):not([class*="ic-"]),
+html[data-portal-theme="light"] :is(main, aside) svg.lucide:is(.text-white\/30, .text-white\/35, .text-white\/40, .text-white\/45, .text-white\/50, .text-white\/60, .text-white\/70):not(.lucide-chevron-right, .lucide-chevron-left, .lucide-chevron-down, .lucide-chevron-up, .lucide-x, .lucide-trash, .lucide-trash-2, .lucide-trash2):not([class*="ic-"]) {
+  color: #0891b2;
+}
+
+/* Ta bort-ikoner: röda i ljust tema */
+html[data-portal-theme="light"] :is(main, aside) svg.lucide:is(.lucide-trash, .lucide-trash2, .lucide-trash-2) { color: #dc2626; }

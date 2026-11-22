@@ -17,37 +17,37 @@ import { isOwner } from '@/lib/owner';
 /** Flikar som fortfarande ligger i den äldre admin-sidan (/admin?tab=…). */
 export type OldTab = 'overview' | 'courses' | 'sessions' | 'students' | 'cards' | 'hero' | 'whatsapp' | 'payments';
 
-type Item = { label: string; /** Kort namn i surfplattans ikonmeny */ short?: string; icon: LucideIcon; /** Bara för ägaren (intäkter) */ ownerOnly?: boolean } & ({ href: string } | { tab: OldTab });
+type Item = { label: string; /** Ikonens färg i ljust tema (portal-icons.css) */ ic?: string; /** Kort namn i surfplattans ikonmeny */ short?: string; icon: LucideIcon; /** Bara för ägaren (intäkter) */ ownerOnly?: boolean } & ({ href: string } | { tab: OldTab });
 
 const SECTIONS: { title?: string; items: Item[] }[] = [
   {
     items: [
-      { tab: 'overview', label: 'Översikt', icon: Home },
-      { href: '/admin/kurser', label: 'Kurser', icon: BookOpen },
-      { href: '/admin/elever', label: 'Elever', icon: Users },
-      { href: '/admin/fakturor', label: 'Fakturor', icon: Receipt },
-      { href: '/admin/tillsyn', label: 'Tillsyn', icon: ShieldCheck },
-      { href: '/admin/filialer', label: 'Filialer', icon: MapPin },
+      { tab: 'overview', label: 'Översikt', icon: Home, ic: 'blue' },
+      { href: '/admin/kurser', label: 'Kurser', icon: BookOpen, ic: 'emerald' },
+      { href: '/admin/elever', label: 'Elever', icon: Users, ic: 'violet' },
+      { href: '/admin/fakturor', label: 'Fakturor', icon: Receipt, ic: 'amber' },
+      { href: '/admin/tillsyn', label: 'Tillsyn', icon: ShieldCheck, ic: 'rose' },
+      { href: '/admin/filialer', label: 'Filialer', icon: MapPin, ic: 'teal' },
     ],
   },
   {
     title: 'Hantera',
     items: [
-      { tab: 'sessions', label: 'Pass och bokningar', short: 'Pass', icon: Calendar },
-      { tab: 'courses', label: 'Kursslag', icon: Layers },
-      { href: '/admin/betalningar', label: 'Betalningar', icon: CreditCard, ownerOnly: true },
-      { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School },
-      { href: '/admin/rabattkoder', label: 'Rabattkoder', short: 'Koder', icon: TicketPercent },
-      { href: '/admin/personal', label: 'Personal', icon: Contact },
-      { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2 },
+      { tab: 'sessions', label: 'Pass och bokningar', short: 'Pass', icon: Calendar, ic: 'sky' },
+      { tab: 'courses', label: 'Kursslag', icon: Layers, ic: 'indigo' },
+      { href: '/admin/betalningar', label: 'Betalningar', icon: CreditCard, ownerOnly: true, ic: 'green' },
+      { href: '/admin/trafikskolor', label: 'Trafikskolor', short: 'Skolor', icon: School, ic: 'orange' },
+      { href: '/admin/rabattkoder', label: 'Rabattkoder', short: 'Koder', icon: TicketPercent, ic: 'pink' },
+      { href: '/admin/personal', label: 'Personal', icon: Contact, ic: 'cyan' },
+      { tab: 'students', label: 'Elevprofiler (äldre)', short: 'Profiler', icon: UserCircle2, ic: 'slate' },
     ],
   },
   {
     title: 'Webbplats',
     items: [
-      { tab: 'cards', label: 'Informationskort', short: 'Kort', icon: Tag },
-      { tab: 'hero', label: 'Hero-media', short: 'Hero', icon: MonitorPlay },
-      { tab: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+      { tab: 'cards', label: 'Informationskort', short: 'Kort', icon: Tag, ic: 'fuchsia' },
+      { tab: 'hero', label: 'Hero-media', short: 'Hero', icon: MonitorPlay, ic: 'violet' },
+      { tab: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, ic: 'green' },
     ],
   },
 ];
@@ -85,8 +85,8 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
       active ? 'bg-white/10 text-white font-semibold' : 'text-white/60 hover:text-white hover:bg-white/5',
     );
     const content = rail
-      ? <><Icon className="w-5 h-5 shrink-0" strokeWidth={1.75} />{item.short ?? item.label}</>
-      : <><Icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />{item.label}</>;
+      ? <><Icon className={clsx('w-5 h-5 shrink-0', item.ic && `ic-${item.ic}`)} strokeWidth={1.75} />{item.short ?? item.label}</>
+      : <><Icon className={clsx('w-[18px] h-[18px] shrink-0', item.ic && `ic-${item.ic}`)} strokeWidth={1.75} />{item.label}</>;
 
     if ('href' in item) {
       return <Link key={item.href} href={`/${locale}${item.href}`} className={cls(path.startsWith(item.href))}>{content}</Link>;
