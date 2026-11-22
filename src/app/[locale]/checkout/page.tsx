@@ -1,5 +1,7 @@
 'use client';
 
+import SchoolRedirect from '@/components/SchoolRedirect';
+
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
@@ -732,6 +734,7 @@ function CheckoutContent() {
 export default function CheckoutPage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Laddar...</div>}>
+      <SchoolRedirect />
       <CheckoutContent />
     </Suspense>
   );

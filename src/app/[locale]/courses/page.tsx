@@ -1,5 +1,7 @@
 'use client';
 
+import SchoolRedirect from '@/components/SchoolRedirect';
+
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -212,6 +214,7 @@ export default function CoursesPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      <SchoolRedirect />
       <Navbar />
 
       <section className="bg-gradient-to-r from-swedish-blue to-brand-700 text-white py-10">

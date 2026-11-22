@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SessionCard from '@/components/SessionCard';
@@ -80,6 +81,9 @@ export default async function HomePage({ params }: { params: { locale: string } 
     }).catch(() => []),
     prisma.settings.findMany({ where: { key: { in: ['heroVideoUrl', 'heroImageUrl'] } } }).catch(() => []),
   ]);
+
+  // Inloggad trafikskola bokar via skolportalen, inte via de publika passen
+  if (authUser?.role === 'school') redirect(`/${locale}/school`);
 
   const isAdmin = authUser?.role === 'admin';
   const heroVideoUrl = heroSettings.find((s) => s.key === 'heroVideoUrl')?.value ?? '';
