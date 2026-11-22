@@ -407,7 +407,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
   const [swishReq, setSwishReq] = useState<{ id: string; status: string; error?: string } | null>(null);
   const sendSwish = async () => {
     setBusy(true);
-    const res = await fetch(`/api/admin/deltagare/${p.bookingId}/swish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: swishPhone }) });
+    const res = await fetch(`/api/admin/deltagare/${p.bookingId}/swish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: swishPhone, amount: Number(amount) }) });
     const d = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) { setSwishReq({ id: '', status: 'FAILED', error: d.error ?? 'Något gick fel' }); return; }
@@ -596,16 +596,14 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
             </div>
             {payer === 'student' ? (
               <div className="flex flex-wrap items-center gap-2">
-                {provider === 'swishreq' ? (
-                  <span className="h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-white/80 inline-flex items-center">{kr(p.price)}</span>
-                ) : <input
+                <input
                   type="number"
                   min={0}
                   value={amount}
                   onChange={e => { setAmount(e.target.value); if (e.target.value === '0') setProvider('free'); else if (provider === 'free') setProvider('cash'); }}
                   aria-label="Belopp (kr)"
                   className="w-28 h-10 px-3 rounded-xl bg-[#26262a] border border-white/10 text-white focus:outline-none focus:border-white/40"
-                />}
+                />
                 <Select value={provider} onChange={e => { setProvider(e.target.value); if (e.target.value === 'free') setAmount('0'); else if (amount === '0') setAmount(String(p.price)); }} className="!w-44 !h-10">
                   <option value="cash">Kontant</option>
                   <option value="card">Kort</option>
@@ -643,7 +641,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
               swishReq?.status === 'CREATED' ? (
                 <p className="text-sm text-sky-300 flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-sky-300 border-t-transparent rounded-full animate-spin" />
-                  Väntar på Swish… be eleven öppna Swish-appen och godkänna {kr(p.price)}.
+                  Väntar på Swish… be eleven öppna Swish-appen och godkänna {kr(Number(amount))}.
                 </p>
               ) : swishReq ? (
                 <p className="text-sm text-red-300">
@@ -654,7 +652,7 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
               )
             )}
             <div className="flex gap-2">
-              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || swishReq?.status === 'CREATED' || (payer === 'student' ? (provider === 'free' ? !payNote.trim() : provider === 'swishreq' ? !swishPhone.trim() : !(Number(amount) > 0)) : !schoolId)}>
+              <Button variant="primary" className="!h-10" onClick={pay} disabled={busy || swishReq?.status === 'CREATED' || (payer === 'student' ? (provider === 'free' ? !payNote.trim() : provider === 'swishreq' ? !swishPhone.trim() || !(Number(amount) > 0) : !(Number(amount) > 0)) : !schoolId)}>
                 {payer === 'student' && provider === 'swishreq' ? (swishReq ? 'Skicka igen' : 'Skicka') : 'Bekräfta'}
               </Button>
               <Button className="!h-10" onClick={() => { setPaying(false); setSwishReq(null); }}>Avbryt</Button>

@@ -15,7 +15,7 @@ import { bookingIdFromReference, createPaymentRequest, getPaymentRequest, swishF
 export async function POST(request: Request, { params }: { params: { bookingId: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   const id = Number(params.bookingId);
-  const { phone } = await request.json().catch(() => ({}));
+  const { phone, amount: custom } = await request.json().catch(() => ({}));
 
   const booking = await prisma.booking.findUnique({
     where: { id },
@@ -28,10 +28,14 @@ export async function POST(request: Request, { params }: { params: { bookingId: 
   const payerPhone = String(phone ?? booking.guestPhone ?? '').trim();
   if (payerPhone.replace(/\D/g, '').length < 8) return NextResponse.json({ error: 'Ange elevens Swish-nummer' }, { status: 400 });
 
-  // Elevens pris (handsatt pris, kombodel, rea …) sparas på bokningen – samma belopp registreras när Swish bekräftar
-  const amount = expectedPrice({ ...booking, payment: null }, booking.session, null);
-  if (!(amount > 0)) return NextResponse.json({ error: 'Priset är 0 kr – registrera som Gratis i stället' }, { status: 400 });
-  await prisma.booking.update({ where: { id }, data: { price: amount } });
+  // Eget belopp från admin, annars elevens pris
+  const normal = expectedPrice({ ...booking, payment: null }, booking.session, null);
+  const amount = custom === undefined || custom === null || custom === '' ? normal : Number(custom);
+  if (!Number.isInteger(amount) || amount < 1 || amount > 50000) {
+    return NextResponse.json({ error: amount === 0 ? 'Priset är 0 kr – registrera som Gratis i stället' : 'Beloppet ska vara hela kronor (1–50 000)' }, { status: 400 });
+  }
+  // Ett ändrat belopp blir elevens pris (som "Ändra pris") – så pris, förfrågan och betalning stämmer
+  await prisma.booking.update({ where: { id }, data: { price: amount, ...(amount !== normal ? { priceOverride: amount } : {}) } });
 
   try {
     const { swishRequestId } = await createPaymentRequest({
