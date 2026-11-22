@@ -183,6 +183,10 @@ function CheckoutContent() {
     if (!guest.personnummer.trim()) errs.personnummer = 'Personnummer krävs';
     else if (!/^\d{6,8}[-]?\d{4}$/.test(guest.personnummer.replace(/\s/g, '')))
       errs.personnummer = 'Format: YYYYMMDD-XXXX';
+    if (!guest.phone.trim()) errs.phone = 'Telefonnummer krävs';
+    // Svenskt nummer (07…, +46…) eller utländskt med landskod (+…)
+    else if (!/^(\+?46|0)[0-9\s\-]{7,12}$/.test(guest.phone.trim()) && !/^\+[0-9\s\-]{8,16}$/.test(guest.phone.trim()))
+      errs.phone = 'Ange ett giltigt telefonnummer';
     if (!guest.email.includes('@')) errs.email = 'Ogiltig e-postadress';
     if (free || method !== 'swish') { /* Swish-numret behövs inte */ }
     else if (!guest.swishPhone.trim()) errs.swishPhone = 'Swish-nummer krävs';
@@ -578,15 +582,16 @@ function CheckoutContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefonnummer <span className="text-gray-400 font-normal">(valfritt)</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefonnummer *</label>
                   <input
                     type="tel"
                     value={guest.phone}
                     onChange={(e) => setGuest({ ...guest, phone: e.target.value })}
                     autoComplete="tel"
                     placeholder="070-123 45 67"
-                    className="input-field"
+                    className={clsx('input-field', guestErrors.phone && 'border-red-400')}
                   />
+                  {guestErrors.phone && <p className="text-xs text-red-600 mt-1">{guestErrors.phone}</p>}
                 </div>
 
                 <div>

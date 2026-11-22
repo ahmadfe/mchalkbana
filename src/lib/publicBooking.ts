@@ -14,8 +14,8 @@ export async function createPendingBooking(
   guest: Partial<GuestInput>,
 ): Promise<{ booking: Booking } | { error: string; status: number }> {
   if (!sessionId) return { error: 'sessionId krävs', status: 400 };
-  if (!userId && (!guest.guestName || !guest.personnummer || !guest.guestEmail)) {
-    return { error: 'Namn, personnummer och e-post krävs', status: 400 };
+  if (!userId && (!guest.guestName || !guest.personnummer || !guest.guestEmail || !String(guest.guestPhone ?? '').trim())) {
+    return { error: 'Namn, personnummer, telefonnummer och e-post krävs', status: 400 };
   }
 
   const session = await prisma.session.findUnique({ where: { id: sessionId } });
