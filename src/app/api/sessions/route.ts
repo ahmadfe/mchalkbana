@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { publicSession } from '@/lib/publicData';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { releaseExpiredAllocations } from '@/lib/allocations';
 
@@ -74,12 +75,12 @@ export async function GET(request: Request) {
         const alloc = a?.allocatedSeats ?? null;
         const { schoolAllocations: _, ...rest } = s as any;
         return {
-          ...rest,
+          ...publicSession(rest),
           myAllocation: alloc,
           myReservation: a ? { meetingPlace: a.meetingPlace, fillBy: a.fillBy, message: a.message, released: !!a.releasedAt } : null,
         };
       })
-    : sessions;
+    : isAdmin ? sessions : sessions.map(publicSession);
 
   return NextResponse.json({ sessions: result });
 }

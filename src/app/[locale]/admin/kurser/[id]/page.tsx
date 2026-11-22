@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import clsx from 'clsx';
+import NoteEdit from '@/components/NoteEdit';
 import AdminShell from '@/components/admin/AdminShell';
 import { KurserSideList } from '@/components/admin/SideLists';
 import KindBadge from '@/components/admin/KindBadge';
@@ -443,7 +444,12 @@ function ParticipantRow({ p, locale, onChange, behorighet, canCheckIn, instructo
             ? <Link href={`/${locale}/admin/elever/${p.studentId}`} className="font-bold hover:underline">{p.name}</Link>
             : <span className="font-bold">{p.name}</span>}
           <p className="text-sm text-white/50 truncate">{[p.phone, p.email].filter(Boolean).join(' · ') || 'Inga kontaktuppgifter'}</p>
-          {p.note && <p className="text-sm text-amber-200/90 bg-amber-500/10 rounded-lg px-2.5 py-1.5 mt-1.5 whitespace-pre-wrap">📝 {p.note}{p.schoolName ? ` – ${p.schoolName}` : ''}</p>}
+          <NoteEdit key={p.note ?? ''} note={p.note} suffix={p.schoolName ? ` – delas med ${p.schoolName}` : ''} onSave={async (text) => {
+            const res = await fetch(`/api/admin/deltagare/${p.bookingId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: text }) });
+            if (!res.ok) return (await res.json().catch(() => ({}))).error ?? 'Något gick fel';
+            await onChange();
+            return null;
+          }} />
         </div>
         <div className="flex items-center gap-4 shrink-0">
           {!p.checkedInAt && !p.invoiced && <button onClick={() => setMoving(true)} disabled={busy} className="text-sm text-white/60 hover:text-white">Flytta</button>}

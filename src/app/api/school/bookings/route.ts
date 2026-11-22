@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { publicSession } from '@/lib/publicData';
 import { requireSchool } from '@/lib/auth';
 import { addSchoolBooking } from '@/lib/schoolBookings';
 
@@ -16,13 +17,14 @@ export async function GET(request: Request) {
       status: { not: 'Canceled' },
       bookedBySchoolUserId: authUser.userId,
     },
-    include: {
+    select: {
+      id: true, guestName: true, personnummer: true, guestPhone: true, guestEmail: true, note: true, status: true, bookingTime: true,
       session: { include: { course: true, school: true } },
     },
     orderBy: { bookingTime: 'desc' },
   });
 
-  return NextResponse.json({ bookings });
+  return NextResponse.json({ bookings: bookings.map(b => ({ ...b, session: publicSession(b.session) })) });
 }
 
 // POST: skolan lägger till en elev på ett pass (reglerna ligger i lib/schoolBookings)
@@ -34,6 +36,5 @@ export async function POST(request: Request) {
   const body = await request.json();
   const result = await addSchoolBooking(authUser.userId, { ...body, sessionId: Number(body.sessionId) }, { by: 'school' });
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  const booking = await prisma.booking.findUnique({ where: { id: result.bookingId } });
-  return NextResponse.json({ booking }, { status: 201 });
+  return NextResponse.json({ booking: { id: result.bookingId } }, { status: 201 });
 }

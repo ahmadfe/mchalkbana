@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { publicSession } from '@/lib/publicData';
 import { verifyBookingToken } from '@/lib/booking-token';
 
 const LOCK_HOURS = 48; // samma gräns som fri avbokning (bokningsvillkoren)
@@ -42,9 +43,9 @@ export async function GET(_request: Request, { params }: { params: { token: stri
       status: booking.status,
       guestName: booking.guestName,
       personnummer: booking.personnummer,
-      session: booking.session,
+      session: publicSession(booking.session),
     },
-    alternatives,
+    alternatives: alternatives.map(publicSession),
     locked,
     hoursUntilSession: Math.floor(hoursUntilSession),
     lockHours: LOCK_HOURS,

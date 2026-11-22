@@ -10,6 +10,7 @@ import { SchoolPage, useSchool } from '@/components/school/SchoolShell';
 import { buildPasses, hm, KIND, kr, tz, type PassItem } from '@/components/school/shared';
 import { Button, Checkbox, Field, Input, Textarea } from '@/components/admin/ui';
 import { courseKind } from '@/lib/courseKind';
+import NoteEdit from '@/components/NoteEdit';
 import type { Session } from '@/lib/types';
 
 interface StudentForm { name: string; personnummer: string; phone: string; email: string; note: string; sendConfirmation: boolean }
@@ -87,8 +88,15 @@ export default function SchoolPassPage() {
     await reload();
   };
 
+  const handleNote = async (bookingId: number, note: string) => {
+    const res = await fetch(`/api/school/bookings/${bookingId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }) });
+    if (!res.ok) return (await res.json().catch(() => ({}))).error ?? 'Något gick fel';
+    await reload();
+    return null;
+  };
+
   const detail = (item: PassItem) => (
-    <PassDetail item={item} onAdd={() => openModal(item.session, item.remaining)} onDelete={item.readOnly ? undefined : handleDeleteStudent} />
+    <PassDetail item={item} onAdd={() => openModal(item.session, item.remaining)} onDelete={item.readOnly ? undefined : handleDeleteStudent} onNote={handleNote} />
   );
 
   return (
@@ -277,7 +285,7 @@ function PassCard({ item, open, active, onClick }: { item: PassItem; open: boole
 }
 
 /** Ett pass i detalj: plats, pris, meddelande och skolans elever. */
-function PassDetail({ item, onAdd, onDelete }: { item: PassItem; onAdd: () => void; onDelete?: (bookingId: number) => void }) {
+function PassDetail({ item, onAdd, onDelete, onNote }: { item: PassItem; onAdd: () => void; onDelete?: (bookingId: number) => void; onNote: (bookingId: number, note: string) => Promise<string | null> }) {
   const r = item.reservation;
   return (
     <div className="rounded-3xl bg-[#1c1c1f] p-5 sm:p-6 space-y-5">
@@ -347,7 +355,7 @@ function PassDetail({ item, onAdd, onDelete }: { item: PassItem; onAdd: () => vo
                       {b.guestEmail?.includes('@') && <span className="inline-flex items-center gap-1 break-all"><Mail className="w-3 h-3 shrink-0" />{b.guestEmail}</span>}
                     </div>
                   )}
-                  {b.note && <p className="text-xs text-amber-200 bg-amber-500/10 rounded-lg px-2.5 py-1.5 mt-2 whitespace-pre-wrap">📝 {b.note}</p>}
+                  <NoteEdit key={b.note ?? ''} note={b.note} onSave={(text) => onNote(b.id, text)} />
                 </div>
                 {onDelete && (
                   <button

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { publicSession } from '@/lib/publicData';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await prisma.session.findUnique({
@@ -8,5 +9,5 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     include: { course: true, school: true },
   });
   if (!session) return NextResponse.json({ error: 'Inte hittad' }, { status: 404 });
-  return NextResponse.json({ session });
+  return NextResponse.json({ session: publicSession(session) });
 }

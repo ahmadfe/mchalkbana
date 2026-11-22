@@ -8,11 +8,11 @@ import { sendCancellationEmail } from '@/lib/email';
 import { setComboParts } from '@/lib/checkin';
 import { klarnaOnCancel } from '@/lib/klarnaSettle';
 
-/** Ändrar närvaro, delar (kombokurs), pris eller avbokar en deltagare. */
+/** Ändrar närvaro, delar (kombokurs), pris, anteckning eller avbokar en deltagare. */
 export async function PATCH(request: Request, { params }: { params: { bookingId: string } }) {
   if (!(await requireAdmin(request))) return NextResponse.json({ error: 'Ej behörig' }, { status: 403 });
   const id = Number(params.bookingId);
-  const { attendance, cancel, notify, comboParts, price } = await request.json();
+  const { attendance, cancel, notify, comboParts, price, note } = await request.json();
 
   const booking = await prisma.booking.findUnique({
     where: { id },
@@ -31,6 +31,11 @@ export async function PATCH(request: Request, { params }: { params: { bookingId:
     if (booking.invoiceId) return NextResponse.json({ error: 'Eleven finns redan på en faktura – kreditera fakturan först' }, { status: 400 });
     if (price !== null && (!Number.isInteger(price) || price < 0)) return NextResponse.json({ error: 'Priset ska vara hela kronor' }, { status: 400 });
     await prisma.booking.update({ where: { id }, data: { priceOverride: price } });
+  }
+
+  // Elevens anteckning – delad med trafikskolan (skolan ser och kan ändra den)
+  if (typeof note === 'string') {
+    await prisma.booking.update({ where: { id }, data: { note: note.trim().slice(0, 500) || null } });
   }
 
   if (attendance !== undefined) {

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { ownBooking, publicSession } from '@/lib/publicData';
 import { getAuthUserFromRequest } from '@/lib/auth';
 import { sendBookingConfirmationEmail } from '@/lib/email';
 
@@ -38,8 +39,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
   });
 
   return NextResponse.json({
-    booking,
-    alternatives,
+    booking: { ...ownBooking(booking), session: publicSession(booking.session) },
+    alternatives: alternatives.map(publicSession),
     locked,
     hoursUntilSession: Math.floor(hoursUntilSession),
     lockHours: LOCK_HOURS,
