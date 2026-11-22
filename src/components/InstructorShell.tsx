@@ -7,6 +7,7 @@ import { useLocale } from 'next-intl';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { InstallAppButton } from '@/components/pwa';
+import { PortalThemeRoot, ThemeToggle } from '@/components/PortalTheme';
 
 /** Lärarportalens ram: mörk som admin, med ett fast toppfält. Bara inloggade lärare. */
 export default function InstructorShell({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export default function InstructorShell({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[#0b0b0d] text-white">
+      <PortalThemeRoot />
       <header className="admin-dark sticky top-[env(safe-area-inset-top)] z-30 bg-[#161618] border-b border-white/5">
         <div className="max-w-5xl mx-auto h-14 px-4 sm:px-6 flex items-center gap-3">
           <Link href={`/${locale}/instruktor`} className="flex items-center gap-2.5 min-w-0">
@@ -30,6 +32,7 @@ export default function InstructorShell({ children }: { children: React.ReactNod
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <InstallAppButton dark iconOnly />
+            <ThemeToggle iconOnly />
             {user && (
               <span title={user.name} className="hidden sm:flex items-center gap-2 text-sm text-white/70">
                 <span className="w-8 h-8 rounded-full bg-white/10 text-xs font-bold flex items-center justify-center">{initials}</span>

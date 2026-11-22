@@ -11,6 +11,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 import { InstallAppButton } from '@/components/pwa';
+import { PortalThemeRoot, ThemeToggle } from '@/components/PortalTheme';
 import { isOwner } from '@/lib/owner';
 
 /** Flikar som fortfarande ligger i den äldre admin-sidan (/admin?tab=…). */
@@ -124,6 +125,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
           </div>
         </div>
         <InstallAppButton dark className="mt-3 w-full" />
+        <ThemeToggle className="mt-3 w-full" />
         <button
           onClick={logout}
           className="mt-3 w-full h-10 rounded-full border border-white/15 text-sm font-semibold text-white hover:bg-white/5 inline-flex items-center justify-center gap-2"
@@ -146,6 +148,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
       </nav>
       <div className="flex flex-col items-center gap-2 pt-3 mt-2 border-t border-white/5 w-full">
         <InstallAppButton dark iconOnly />
+        <ThemeToggle iconOnly />
         <button onClick={logout} title={`Logga ut ${user?.name ?? ''}`} aria-label="Logga ut" className="w-11 h-11 rounded-full text-white/60 hover:text-white hover:bg-white/5 flex items-center justify-center">
           <LogOut className="w-5 h-5" strokeWidth={1.75} />
         </button>
@@ -155,6 +158,7 @@ export default function AdminSidebar({ activeTab, onOldTab }: Props) {
 
   return (
     <>
+      <PortalThemeRoot />
       {rail}
       {/* Dator: fast sidomeny */}
       <aside className="admin-dark hidden xl:flex fixed inset-y-0 left-0 z-30 w-60 flex-col bg-[#161618] border-r border-white/5 px-3 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(1.25rem+env(safe-area-inset-bottom))] overflow-y-auto">

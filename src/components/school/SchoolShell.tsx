@@ -9,6 +9,7 @@ import { Calendar, FileText, Home, LogOut, Menu, Tag, Users, X, type LucideIcon 
 import clsx from 'clsx';
 import { useAuth } from '@/context/AuthContext';
 import { InstallAppButton } from '@/components/pwa';
+import { PortalThemeRoot, ThemeToggle } from '@/components/PortalTheme';
 import type { Session } from '@/lib/types';
 import type { SchoolBooking, SchoolInvoice, SchoolPrice } from './shared';
 
@@ -88,7 +89,7 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
 
   const brand = (
     <div className="flex items-center gap-2.5">
-      <span className="w-9 h-9 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0">
+      <span className="w-9 h-9 rounded-xl bg-white theme-keep overflow-hidden flex items-center justify-center shrink-0">
         <Image src="/logo.png" alt="Uppsala Halkbana" width={36} height={36} className="w-full h-full object-contain scale-110" />
       </span>
       <span className="font-headline font-extrabold text-[15px] text-white">Uppsala Halkbana</span>
@@ -130,6 +131,7 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
           </div>
         </div>
         <InstallAppButton dark className="mt-3 w-full" />
+        <ThemeToggle className="mt-3 w-full" />
         <button
           onClick={logout}
           className="mt-3 w-full h-10 rounded-full border border-white/15 text-sm font-semibold text-white hover:bg-white/5 inline-flex items-center justify-center gap-2"
@@ -143,14 +145,16 @@ export default function SchoolShell({ children }: { children: React.ReactNode })
   return (
     <Ctx.Provider value={{ ...data, reload }}>
       <div className="min-h-screen bg-[#0b0b0d] text-white">
+        <PortalThemeRoot />
         {/* Surfplatta: smal ikonmeny */}
         <aside className="admin-dark hidden md:flex xl:hidden fixed inset-y-0 left-0 z-30 w-[84px] flex-col items-center bg-[#161618] border-r border-white/5 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <span className="w-11 h-11 rounded-xl bg-white overflow-hidden flex items-center justify-center shrink-0 mb-3">
+          <span className="w-11 h-11 rounded-xl bg-white theme-keep overflow-hidden flex items-center justify-center shrink-0 mb-3">
             <Image src="/logo.png" alt="Uppsala Halkbana" width={44} height={44} className="w-full h-full object-contain scale-110" />
           </span>
           <nav className="flex-1 w-full overflow-y-auto flex flex-col items-center gap-1">{NAV.map(n => item(n, true))}</nav>
           <div className="flex flex-col items-center gap-2 pt-3 mt-2 border-t border-white/5 w-full">
             <InstallAppButton dark iconOnly />
+            <ThemeToggle iconOnly />
             <button onClick={logout} title={`Logga ut ${user.name ?? ''}`} aria-label="Logga ut" className="w-11 h-11 rounded-full text-white/60 hover:text-white hover:bg-white/5 flex items-center justify-center">
               <LogOut className="w-5 h-5" strokeWidth={1.75} />
             </button>
