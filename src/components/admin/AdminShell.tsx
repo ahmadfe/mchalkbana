@@ -15,10 +15,14 @@ interface Props {
   actions?: React.ReactNode;
   /** Lista som visas bredvid innehållet på breda skärmar (surfplatta liggande och dator) */
   aside?: React.ReactNode;
+  /** Visas till vänster om rubriken (t.ex. datumbricka) */
+  lead?: React.ReactNode;
+  /** Ersätter "Uppsala Halkbana" under rubriken */
+  subtitle?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export default function AdminShell({ title, back, actions, aside, children }: Props) {
+export default function AdminShell({ title, back, actions, aside, lead, subtitle, children }: Props) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const locale = useLocale();
@@ -54,9 +58,12 @@ export default function AdminShell({ title, back, actions, aside, children }: Pr
             </Link>
           )}
           <div className="flex items-start justify-between gap-4 mb-8">
-            <div className="min-w-0">
-              <h1 className="font-headline text-3xl sm:text-4xl font-extrabold tracking-tight break-words">{title}</h1>
-              <p className="text-sm text-white/50 mt-1">Uppsala Halkbana</p>
+            <div className="flex items-start gap-4 min-w-0">
+              {lead}
+              <div className="min-w-0">
+                <h1 className="font-headline text-3xl sm:text-4xl font-extrabold tracking-tight break-words">{title}</h1>
+                {subtitle ?? <p className="text-sm text-white/50 mt-1">Uppsala Halkbana</p>}
+              </div>
             </div>
             {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
           </div>

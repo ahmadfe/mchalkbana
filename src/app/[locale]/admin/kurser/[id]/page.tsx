@@ -6,6 +6,7 @@ import { useLocale } from 'next-intl';
 import clsx from 'clsx';
 import NoteEdit from '@/components/NoteEdit';
 import AdminShell from '@/components/admin/AdminShell';
+import { MapPin } from 'lucide-react';
 import { KurserSideList } from '@/components/admin/SideLists';
 import KindBadge from '@/components/admin/KindBadge';
 import CheckInModal from '@/components/CheckInModal';
@@ -146,10 +147,23 @@ export default function KursPage({ params }: { params: { id: string } }) {
   const isPast = new Date(kurs.endTime) < new Date();
   const isKombo = courseKind(kurs.courseType) === 'kombo';
 
+  const start = new Date(kurs.startTime);
   const dateLine = (() => {
-    const d = new Date(kurs.startTime).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...tz });
-    return `${d.charAt(0).toUpperCase()}${d.slice(1)} · ${hm(kurs.startTime)}–${hm(kurs.endTime)} · ${kurs.location} · ${kr(price)}`;
+    const d = start.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', ...tz });
+    return `${d.charAt(0).toUpperCase()}${d.slice(1)} · ${hm(kurs.startTime)}–${hm(kurs.endTime)}`;
   })();
+  // Hur långt till kursen (räknat i svenska kalenderdagar)
+  const countdown = (() => {
+    const day = (x: Date) => new Date(x.toLocaleDateString('sv-SE', tz) + 'T00:00:00Z').getTime();
+    const n = Math.round((day(start) - day(new Date())) / 86_400_000);
+    if (n === 0) return isPast ? 'idag (klar)' : 'idag';
+    if (n === 1) return 'imorgon';
+    if (n === -1) return 'igår';
+    return n > 0 ? `om ${n} dagar` : `för ${-n} dagar sedan`;
+  })();
+  const part = (o: Intl.DateTimeFormatOptions) => start.toLocaleDateString('sv-SE', { ...o, ...tz }).replace('.', '');
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(kurs.location)}`;
+  const free = kurs.seatLimit - active.length;
 
   const reportLabel = !kurs.reportToTS ? 'Rapporteras ej'
     : kurs.reportedAt ? `Rapporterad ${formatDate(kurs.reportedAt, { day: 'numeric', month: 'short' })}`
@@ -187,6 +201,19 @@ export default function KursPage({ params }: { params: { id: string } }) {
   return (
     <AdminShell aside={sideList}
       title={kurs.title}
+      lead={
+        <div className={clsx('hidden sm:block shrink-0 w-[72px] rounded-2xl bg-[#1c1c1f] border border-white/10 text-center py-2 mt-1', kurs.status === 'canceled' && 'opacity-50')}>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-red-400">{part({ month: 'short' })}</p>
+          <p className="font-headline text-2xl sm:text-3xl font-extrabold leading-none my-0.5">{part({ day: 'numeric' })}</p>
+          <p className="text-[11px] font-semibold uppercase text-white/50">{part({ weekday: 'short' })}</p>
+        </div>
+      }
+      subtitle={
+        <p className={clsx('mt-1.5 text-base sm:text-lg text-white/80', kurs.status === 'canceled' && 'line-through text-white/40')}>
+          {dateLine}
+          <span className={clsx('ml-2 text-sm font-semibold', isPast ? 'text-white/40' : 'text-emerald-300')}>· {countdown}</span>
+        </p>
+      }
       back={{ href: '/admin/kurser', label: 'Kurser' }}
       actions={<Link href={`/${locale}/admin/kurser/${kurs.id}/redigera`} className="inline-flex items-center h-11 px-5 rounded-full bg-white/10 border border-white/10 text-sm font-semibold hover:bg-white/15">Redigera</Link>}
     >
@@ -197,11 +224,23 @@ export default function KursPage({ params }: { params: { id: string } }) {
             {kurs.status === 'canceled' ? 'Inställd' : kurs.reportToTS && !kurs.reportedAt ? 'Ska rapporteras' : kurs.filial.name}
           </span>
         </div>
-        <p className={clsx('text-white/80', kurs.status === 'canceled' && 'line-through text-white/40')}>{dateLine}</p>
+        <p className="text-white/70">
+          <a href={mapUrl} target="_blank" rel="noopener noreferrer" title="Öppna i Google Maps" className="inline-flex items-center gap-1 hover:text-white underline-offset-2 hover:underline">
+            <MapPin className="w-4 h-4 shrink-0" strokeWidth={1.75} />{kurs.location}
+          </a>
+          <span className="text-white/40"> · </span>{kr(price)}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <Stat value={`${active.length}/${kurs.seatLimit}`} label="Anmälda av platser" />
+        <Stat value={`${active.length}/${kurs.seatLimit}`} label="Anmälda av platser">
+          <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className={clsx('h-full rounded-full', free <= 0 ? 'bg-red-500' : free <= 2 ? 'bg-amber-400' : 'bg-emerald-400')} style={{ width: `${Math.min(100, (active.length / Math.max(1, kurs.seatLimit)) * 100)}%` }} />
+          </div>
+          <p className={clsx('text-xs font-semibold mt-1.5', free <= 0 ? 'text-red-400' : free <= 2 ? 'text-amber-300' : 'text-emerald-300')}>
+            {free < 0 ? `Överbokad med ${-free}` : free === 0 ? 'Fullt' : free === 1 ? '1 plats kvar' : `${free} platser kvar`}
+          </p>
+        </Stat>
         <Stat value={STATUS_LABEL[kurs.status]} label="Status" tone={kurs.status === 'canceled' ? 'red' : kurs.status === 'completed' ? 'green' : undefined} />
         <Stat value={reportLabel} label="Rapportering" tone={kurs.reportedAt ? 'green' : undefined} muted={!kurs.reportToTS} />
         <Stat value={kr(value)} label="Värde" muted={value === 0} />
@@ -337,14 +376,18 @@ export default function KursPage({ params }: { params: { id: string } }) {
   );
 }
 
-function Stat({ value, label, tone, muted }: { value: string; label: string; tone?: 'green' | 'red'; muted?: boolean }) {
+function Stat({ value, label, tone, muted, children }: { value: string; label: string; tone?: 'green' | 'red'; muted?: boolean; children?: React.ReactNode }) {
+  // Långa värden (t.ex. "Inte rapporterad") får mindre text så att ordet inte bryts mitt i
+  const long = value.length > 10;
   return (
-    <div className="rounded-3xl bg-[#1c1c1f] p-5">
-      <p className={clsx('font-headline text-lg sm:text-xl xl:text-2xl font-extrabold leading-tight break-words',
+    <div className="rounded-3xl bg-[#1c1c1f] p-5 min-w-0">
+      <p className={clsx('font-headline font-extrabold leading-tight [overflow-wrap:normal] [word-break:normal] hyphens-manual',
+        long ? 'text-base sm:text-lg xl:text-xl' : 'text-lg sm:text-xl xl:text-2xl',
         tone === 'green' && 'text-emerald-300', tone === 'red' && 'text-red-400', muted && 'text-white/40')}>
         {value}
       </p>
       <p className="text-sm text-white/50 mt-1">{label}</p>
+      {children}
     </div>
   );
 }
